@@ -1,0 +1,282 @@
+// speed.js — Speed tier matrix for the top ~20 species. Per species, the real
+// most-common speed comes from (1) open team sheets, (2) this reg's ladder
+// spreads, or (3) a labelled theoretical [min,max] range from base stats when
+// neither exists. Toggles apply stage/field speed modifiers (combinable,
+// floored after each step); a benchmark form compares a hypothetical mon
+// against the field.
+import { usage, speedTiers, ladderMerge } from '../lib/aggregate.js';
+import { calcStat, parseSP } from '../lib/stats.js';
+
+function card(title) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const head = document.createElement('div');
+  head.className = 'card__head';
+  const h3 = document.createElement('h3');
+  h3.textContent = title;
+  const meta = document.createElement('div');
+  meta.className = 'meta-line';
+  head.append(h3, meta);
+  const body = document.createElement('div');
+  body.className = 'card__body';
+  el.append(head, body);
+  return { el, body, meta };
+}
+
+function emptyState(msg, title = 'Insufficient data') {
+  const div = document.createElement('div');
+  div.className = 'empty-state';
+  const t = document.createElement('div');
+  t.className = 'empty-state__title';
+  t.textContent = title;
+  const p = document.createElement('div');
+  p.textContent = msg;
+  div.append(t, p);
+  return div;
+}
+
+function richKey(k) { return `sp_${k.replace(/[^a-zA-Z0-9]/g, '_')}`; }
+
+// Order documented in the toggle row's [data-tip]; each step floors before the next.
+const MOD_STEPS = [
+  ['paralysis', 0.5, 'Paralysis'],
+  ['icy', 2 / 3, '−1 stage / Icy Wind'],
+  ['plus1', 1.5, '+1 stage'],
+  ['tailwind', 2, 'Tailwind'],
+  ['scarf', 1.5, 'Choice Scarf'],
+];
+const MOD_ORDER_TIP = `Applied in order, flooring after each step: ${MOD_STEPS.map((m) => m[2]).join(' -> ')}. Trick Room reverses turn order instead of scaling Speed.`;
+
+function applyMods(v, mods) {
+  let x = v;
+  for (const [key, mult] of MOD_STEPS) if (mods[key]) x = Math.floor(x * mult);
+  return x;
+}
+
+// Real most-common speed per species: team sheets -> this reg's ladder -> bounds.
+function buildRows(view, dex) {
+  const tiers = speedTiers(view.teams, dex, 20);
+  const merged = ladderMerge(view.ladder, view.state.from, view.state.to);
+  const rows = [];
+  for (const t of tiers) {
+    const bs = dex.species[t.key]?.bs;
+    if (!bs) continue;
+    if (t.spe != null) {
+      rows.push({ key: t.key, n: t.n, source: 'sheet', detail: `${t.nature}, ${t.sp} SP (${Math.round(t.share * 100)}% of open sheets)`, min: t.spe, max: t.spe });
+      continue;
+    }
+    const mon = merged?.mons.find((m) => m.key === t.key);
+    const spread = mon?.spreads?.[0];
+    const ci = spread ? spread.name.indexOf(':') : -1;
+    const sp = ci > 0 ? parseSP(spread.name.slice(ci + 1)) : null;
+    if (spread && sp) {
+      const nature = spread.name.slice(0, ci);
+      const spe = calcStat(bs[5], sp[5], 5, nature);
+      rows.push({ key: t.key, n: t.n, source: 'ladder', detail: `${nature}, ${sp[5]} SP (${Math.round(spread.pct * 100)}% of ladder sets)`, min: spe, max: spe });
+      continue;
+    }
+    const max = calcStat(bs[5], 32, 5, 'Timid');
+    const min = calcStat(bs[5], 0, 5, 'Sassy');
+    rows.push({ key: t.key, n: t.n, source: 'bounds', detail: 'no open-sheet or ladder spread — theoretical range', min, max });
+  }
+  return rows;
+}
+
+const SOURCE_LABEL = { sheet: 'Team sheets', ladder: 'Ladder', bounds: 'Theoretical bounds' };
+const BENCH_NATURES = { plus: 'Timid', neutral: 'Serious', minus: 'Sassy' };
+
+export default {
+  id: 'speed',
+  title: 'Speed Tiers',
+  mount(el, ctx) {
+    el.classList.add('sb-grid');
+    const main = card('Speed tier matrix');
+    main.el.classList.add('sb-full');
+    el.append(main.el);
+
+    // --- toggles -------------------------------------------------------
+    const controls = document.createElement('div');
+    controls.className = 'sb-controls';
+    controls.setAttribute('data-tip', MOD_ORDER_TIP);
+    const mods = { paralysis: false, icy: false, plus1: false, tailwind: false, scarf: false, trickRoom: false };
+    const TOGGLE_DEFS = [
+      ['tailwind', 'Tailwind ×2'], ['scarf', 'Choice Scarf ×1.5'], ['plus1', '+1 ×1.5'],
+      ['icy', '−1 / Icy Wind ×2/3'], ['paralysis', 'Paralysis ×0.5'], ['trickRoom', 'Trick Room (reverse order)'],
+    ];
+    for (const [key, label] of TOGGLE_DEFS) {
+      const l = document.createElement('label');
+      l.className = 'toggle';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.addEventListener('change', () => { mods[key] = input.checked; render(); });
+      const track = document.createElement('span');
+      track.className = 'toggle__track';
+      l.append(input, track, document.createTextNode(label));
+      controls.appendChild(l);
+    }
+    main.body.appendChild(controls);
+
+    // --- legend ----------------------------------------------------------
+    const legend = document.createElement('div');
+    legend.className = 'sb-controls';
+    for (const [src, label] of Object.entries(SOURCE_LABEL)) {
+      const item = document.createElement('span');
+      item.className = 'pill';
+      item.style.background = src === 'sheet' ? 'var(--series-1)' : src === 'ladder' ? 'var(--series-3)' : 'var(--muted)';
+      item.textContent = label;
+      legend.appendChild(item);
+    }
+    main.body.appendChild(legend);
+
+    const chartEl = document.createElement('div');
+    chartEl.className = 'sb-chart--tall';
+    chartEl.style.width = '100%';
+    const emptyEl = document.createElement('div');
+    main.body.append(chartEl, emptyEl);
+    const chart = ctx.echarts.init(chartEl);
+    new ResizeObserver(() => chart.resize()).observe(chartEl);
+
+    // --- benchmark form ----------------------------------------------------
+    const bench = document.createElement('div');
+    bench.className = 'sb-bench';
+    const benchLabelSp = document.createElement('span');
+    benchLabelSp.className = 'filterbar__label';
+    benchLabelSp.textContent = 'My Pokémon';
+    const speciesInput = document.createElement('input');
+    speciesInput.type = 'text';
+    speciesInput.setAttribute('list', 'speed-species-list');
+    speciesInput.placeholder = 'Species…';
+    const datalist = document.createElement('datalist');
+    datalist.id = 'speed-species-list';
+    const spLabel = document.createElement('span');
+    spLabel.className = 'filterbar__label';
+    spLabel.textContent = 'Speed SP';
+    const spSlider = document.createElement('input');
+    spSlider.type = 'range'; spSlider.min = '0'; spSlider.max = '32'; spSlider.step = '1'; spSlider.value = '32';
+    const spVal = document.createElement('span');
+    spVal.className = 'filterbar__label';
+    spVal.textContent = '32';
+    const natureSelect = document.createElement('select');
+    for (const [v, t] of [['plus', '+Spe nature'], ['neutral', 'Neutral nature'], ['minus', '−Spe nature']]) {
+      const o = document.createElement('option'); o.value = v; o.textContent = t; natureSelect.appendChild(o);
+    }
+    const result = document.createElement('div');
+    result.className = 'sb-bench__result';
+    bench.append(benchLabelSp, speciesInput, datalist, spLabel, spSlider, spVal, natureSelect, result);
+    main.body.appendChild(bench);
+
+    speciesInput.addEventListener('change', render);
+    natureSelect.addEventListener('change', render);
+    spSlider.addEventListener('input', () => { spVal.textContent = spSlider.value; render(); });
+
+    let lastView = null;
+    let lastDex = null;
+
+    function benchmarkValue() {
+      const key = speciesInput.value.trim();
+      const sp = lastDex?.species?.[key];
+      if (!sp) return null;
+      const nature = BENCH_NATURES[natureSelect.value];
+      const base = calcStat(sp.bs[5], Number(spSlider.value), 5, nature);
+      return { key, base, modded: applyMods(base, mods) };
+    }
+
+    function render() {
+      const view = lastView;
+      if (!view) return;
+      lastDex = view.dex;
+      const rows = buildRows(view, view.dex);
+      ctx.meta(main.meta, { source: 'Team sheets + Ladder + bounds (per species)', n: view.teams.length, unit: 'teams' });
+      main.body.querySelector('.empty-state')?.remove();
+
+      if (!datalist.childElementCount && view.dex?.species) {
+        for (const key of Object.keys(view.dex.species)) {
+          const o = document.createElement('option');
+          o.value = key;
+          datalist.appendChild(o);
+        }
+      }
+
+      if (!rows.length) {
+        chartEl.style.display = 'none';
+        bench.style.display = 'none';
+        controls.style.display = 'none';
+        legend.style.display = 'none';
+        main.body.appendChild(emptyState('Insufficient data'));
+        return;
+      }
+      chartEl.style.display = '';
+      bench.style.display = '';
+      controls.style.display = '';
+      legend.style.display = '';
+
+      const modded = rows.map((r) => {
+        const min = applyMods(r.min, mods);
+        const max = applyMods(r.max, mods);
+        return { ...r, modMin: min, modMax: max, modAvg: (min + max) / 2 };
+      });
+      modded.sort((a, b) => (mods.trickRoom ? a.modAvg - b.modAvg : b.modAvg - a.modAvg));
+
+      chartEl.style.height = `${Math.max(220, modded.length * 26 + 70)}px`;
+      chart.resize();
+
+      const theme = ctx.chartTheme();
+      const keys = modded.map((r) => r.key).reverse(); // ECharts category axis renders bottom-up
+      const rich = {};
+      for (const k of keys) rich[richKey(k)] = { height: 20, width: 20, backgroundColor: { image: ctx.spriteUrl(k) } };
+      const colorOf = (src) => (src === 'sheet' ? theme.series[0] : src === 'ladder' ? theme.series[2] : theme.muted);
+
+      const bench0 = benchmarkValue();
+      const markLine = bench0 ? {
+        silent: false,
+        symbol: 'none',
+        lineStyle: { color: theme.status.warning, type: 'dashed', width: 2 },
+        label: { formatter: `You (${bench0.key})`, color: theme.ink, fontFamily: theme.fontFamily, position: 'insideEndTop' },
+        data: [{ xAxis: bench0.modded }],
+      } : { data: [] };
+
+      chart.setOption({
+        tooltip: {
+          backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
+          formatter: (p) => {
+            const r = modded.slice().reverse()[p.dataIndex];
+            const rangeTxt = r.modMin === r.modMax ? `${r.modMin}` : `${r.modMin}–${r.modMax}`;
+            return `<b>${r.key}</b><br/>Speed: ${rangeTxt}<br/>${SOURCE_LABEL[r.source]} — ${r.detail}<br/>n=${ctx.fmt.n(r.n)}`;
+          },
+        },
+        grid: { left: 30, right: 30, top: 10, bottom: 20, containLabel: false },
+        xAxis: { type: 'value', name: 'Speed', nameLocation: 'middle', nameGap: 26, axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily }, splitLine: { lineStyle: { color: theme.grid } } },
+        yAxis: { type: 'category', data: keys, axisLabel: { formatter: (v) => `{${richKey(v)}|}`, rich, margin: 10 }, axisLine: { lineStyle: { color: theme.axis } } },
+        series: [{
+          type: 'bar', barMaxWidth: 16,
+          data: modded.slice().reverse().map((r) => ({
+            value: r.source === 'bounds' ? r.modMax : r.modAvg,
+            itemStyle: { color: colorOf(r.source), opacity: r.source === 'bounds' ? 0.55 : 1, borderRadius: [0, 3, 3, 0] },
+          })),
+          markLine,
+        }],
+      }, true);
+
+      if (bench0) {
+        const cmp = mods.trickRoom
+          ? modded.filter((r) => r.modAvg > bench0.modded).length
+          : modded.filter((r) => r.modAvg < bench0.modded).length;
+        const ties = modded.filter((r) => r.modAvg === bench0.modded).length;
+        result.textContent = mods.trickRoom
+          ? `Under Trick Room, acts before ${cmp} of ${modded.length} · ties ${ties} (Speed ${bench0.modded})`
+          : `Outspeeds ${cmp} of ${modded.length} · ties ${ties} (Speed ${bench0.modded})`;
+      } else {
+        result.textContent = speciesInput.value.trim() ? 'Unknown species.' : 'Pick a species to benchmark it against the field.';
+      }
+    }
+
+    ctx.onTheme(() => render());
+
+    return {
+      update(view) { lastView = view; render(); },
+      highlight() {
+        // Chart rows aren't individually addressable by hover from other sections.
+      },
+    };
+  },
+};

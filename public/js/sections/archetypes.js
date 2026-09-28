@@ -1,0 +1,301 @@
+// Archetypes section: primary-archetype split donut, archetype-vs-archetype
+// win-rate heatmap (real match results only), and a classification disclosure.
+import { archetypeSplit, archetypeMatrix } from '../lib/aggregate.js';
+import { ARCHETYPES } from '../lib/archetypes.js';
+
+function card(title) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const head = document.createElement('div');
+  head.className = 'card__head';
+  const h3 = document.createElement('h3');
+  h3.textContent = title;
+  const meta = document.createElement('div');
+  meta.className = 'meta-line';
+  head.append(h3, meta);
+  const body = document.createElement('div');
+  body.className = 'card__body';
+  el.append(head, body);
+  return { el, body, meta };
+}
+
+function emptyState(msg, title = 'Insufficient data') {
+  const div = document.createElement('div');
+  div.className = 'empty-state';
+  const t = document.createElement('div');
+  t.className = 'empty-state__title';
+  t.textContent = title;
+  const p = document.createElement('div');
+  p.textContent = msg;
+  div.append(t, p);
+  return div;
+}
+
+function labelOf(id) {
+  if (id === 'other') return 'Other';
+  return ARCHETYPES.find((a) => a.id === id)?.label || id;
+}
+
+// aggregate.js#archetypeMatrix only records the "a" side of each match into
+// cell (ia|ib); it never mirrors the same match into (ib|ia) from b's
+// perspective. For a true row-vs-col win-rate matrix every match must count
+// once from each side. Local workaround (reported, not editing the lib).
+function fullMatrix(mat) {
+  const m = new Map();
+  const add = (row, col, w, l, n) => {
+    const k = `${row}|${col}`;
+    const c = m.get(k) || { w: 0, l: 0, n: 0 };
+    c.w += w; c.l += l; c.n += n;
+    m.set(k, c);
+  };
+  for (const c of mat.cells) {
+    add(c.a, c.b, c.w, c.l, c.n);
+    add(c.b, c.a, c.l, c.w, c.n);
+  }
+  return m;
+}
+
+export default {
+  id: 'archetypes',
+  title: 'Archetypes',
+  mount(el, ctx) {
+    el.classList.add('sb-grid');
+
+    const donut = card('Archetype split');
+    const heat = card('Archetype matchup win rate');
+    const disc = card('How archetypes are classified');
+    donut.el.classList.add('sb-full');
+    heat.el.classList.add('sb-full');
+    disc.el.classList.add('sb-full');
+    el.append(donut.el, heat.el, disc.el);
+
+    // --- static disclosure -------------------------------------------------
+    const discWrap = document.createElement('div');
+    discWrap.className = 'sb-disclosure';
+    for (const a of ARCHETYPES) {
+      const d = document.createElement('details');
+      const s = document.createElement('summary');
+      s.textContent = a.label;
+      const p = document.createElement('p');
+      p.textContent = a.desc;
+      d.append(s, p);
+      discWrap.appendChild(d);
+    }
+    {
+      const d = document.createElement('details');
+      const s = document.createElement('summary');
+      s.textContent = 'Other';
+      const p = document.createElement('p');
+      p.textContent = 'None of the rules above matched this team.';
+      d.append(s, p);
+      discWrap.appendChild(d);
+    }
+    disc.body.appendChild(discWrap);
+
+    // --- donut + legend side by side (falls back to stacked on narrow screens) ---
+    const donutRow = document.createElement('div');
+    donutRow.className = 'sb-split';
+    donut.body.appendChild(donutRow);
+
+    const donutChartEl = document.createElement('div');
+    donutChartEl.className = 'sb-chart';
+    donutRow.appendChild(donutChartEl);
+    const donutChart = ctx.echarts.init(donutChartEl);
+    new ResizeObserver(() => donutChart.resize()).observe(donutChartEl);
+
+    const listWrap = document.createElement('div');
+    listWrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    table.innerHTML = '<thead><tr><th>Archetype</th><th>n</th><th>Share</th><th>Win %</th></tr></thead><tbody></tbody>';
+    listWrap.appendChild(table);
+    donutRow.appendChild(listWrap);
+
+    // --- heatmap ---------------------------------------------------------
+    const heatChartEl = document.createElement('div');
+    heatChartEl.className = 'sb-chart sb-chart--tall';
+    const heatEmptyEl = document.createElement('div');
+    heat.body.append(heatChartEl, heatEmptyEl);
+    const heatChart = ctx.echarts.init(heatChartEl);
+    new ResizeObserver(() => heatChart.resize()).observe(heatChartEl);
+
+    let lastSplit = [];
+    let lastIds = [];
+
+    function renderDonut(theme) {
+      donutChartEl.style.display = lastSplit.length ? '' : 'none';
+      if (!lastSplit.length) return;
+      donutChart.setOption({
+        color: theme.series,
+        tooltip: {
+          trigger: 'item',
+          backgroundColor: theme.tooltipBg, borderColor: theme.border,
+          textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
+          formatter: (p) => {
+            const r = lastSplit[p.dataIndex];
+            const win = r.winPct != null ? `${(r.winPct * 100).toFixed(1)}%` : '—';
+            return `<b>${labelOf(r.id)}</b><br/>n=${r.n} (${(r.pct * 100).toFixed(1)}%)<br/>win rate ${win}`;
+          },
+        },
+        series: [{
+          type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: true,
+          itemStyle: { borderColor: theme.surface, borderWidth: 2 },
+          label: { color: theme.ink, fontFamily: theme.fontFamily, formatter: '{b}: {d}%' },
+          labelLine: { lineStyle: { color: theme.axis } },
+          data: lastSplit.map((r) => ({ name: labelOf(r.id), value: r.n, archId: r.id })),
+        }],
+      }, true);
+    }
+
+    function renderList() {
+      const tbody = table.querySelector('tbody');
+      tbody.textContent = '';
+      for (const r of lastSplit) {
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        tdName.textContent = labelOf(r.id);
+        const tdN = document.createElement('td');
+        tdN.className = 'num';
+        tdN.textContent = ctx.fmt.n(r.n);
+        const tdPct = document.createElement('td');
+        tdPct.className = 'num';
+        tdPct.textContent = ctx.fmt.pct(r.pct);
+        const tdWin = document.createElement('td');
+        tdWin.className = 'num';
+        tdWin.textContent = r.winPct != null ? ctx.fmt.pct(r.winPct) : '—';
+        tr.append(tdName, tdN, tdPct, tdWin);
+        tr.addEventListener('click', (e) => ctx.chip('archetype', r.id, e));
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderHeatmap(view, theme) {
+      const mat = archetypeMatrix(view.teams, view.matches);
+      if (!mat) {
+        heatChartEl.style.display = 'none';
+        heatEmptyEl.textContent = '';
+        heatEmptyEl.appendChild(emptyState('No head-to-head match results for the current filters.'));
+        lastIds = [];
+        return;
+      }
+      heatChartEl.style.display = '';
+      heatEmptyEl.textContent = '';
+      const full = fullMatrix(mat);
+      const order = new Map(lastSplit.map((r, i) => [r.id, i]));
+      const ids = mat.ids.slice().sort((a, b) => (order.get(a) ?? 999) - (order.get(b) ?? 999));
+      lastIds = ids;
+      const good = [];
+      const bad = [];
+      for (let r = 0; r < ids.length; r++) {
+        for (let c = 0; c < ids.length; c++) {
+          const cell = full.get(`${ids[r]}|${ids[c]}`);
+          const n = cell?.n || 0;
+          const games = cell ? cell.w + cell.l : 0;
+          if (n >= 10 && games > 0) good.push([c, r, +(cell.w / games * 100).toFixed(1), n]);
+          else bad.push([c, r, null, n]);
+        }
+      }
+      const labels = ids.map(labelOf);
+      const div = theme.diverging;
+      heatChart.setOption({
+        tooltip: {
+          backgroundColor: theme.tooltipBg, borderColor: theme.border,
+          textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
+          formatter: (p) => {
+            const [c, r, val, n] = p.data;
+            const row = labels[r]; const col = labels[c];
+            if (val == null) return `<b>${row}</b> vs <b>${col}</b><br/>insufficient data (n=${n})`;
+            return `<b>${row}</b> vs <b>${col}</b><br/>${row} wins ${val}% (n=${n})`;
+          },
+        },
+        grid: { left: 110, right: 20, top: 10, bottom: 70, containLabel: false },
+        xAxis: { type: 'category', data: labels, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily, rotate: 35, interval: 0 }, axisLine: { lineStyle: { color: theme.axis } }, splitArea: { show: false } },
+        yAxis: { type: 'category', data: labels, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily }, axisLine: { lineStyle: { color: theme.axis } }, splitArea: { show: false } },
+        visualMap: {
+          // dimension must be explicit: this ECharts build doesn't auto-pick
+          // the value dim (index 2) for heatmap series, and silently paints
+          // every cell the same fallback color without it. Reported upstream.
+          min: 0, max: 100, dimension: 2, seriesIndex: 0, show: true, calculable: false,
+          orient: 'horizontal', left: 'center', bottom: 0, itemWidth: 12, itemHeight: 80,
+          text: ['row wins more', 'col wins more'],
+          textStyle: { color: theme.muted, fontFamily: theme.fontFamily, fontSize: 10 },
+          inRange: { color: [div.neg2, div.neg1, div.mid, div.pos1, div.pos2] },
+        },
+        series: [
+          {
+            type: 'heatmap', data: good,
+            label: {
+              show: true, formatter: (p) => `${p.data[2].toFixed(0)}%`,
+              // Diverging ramp is dark at both saturated ends (near 0/100)
+              // and light in the middle (near 50) — ink text needs to flip.
+              color: (p) => {
+                const norm = p.data[2] / 100;
+                return (norm < 0.25 || norm > 0.75) ? '#fff' : theme.ink;
+              },
+              fontFamily: theme.fontFamily, fontSize: 10,
+            },
+            itemStyle: { borderColor: theme.surface, borderWidth: 2 },
+            emphasis: { itemStyle: { borderColor: theme.ink, borderWidth: 2 } },
+          },
+          {
+            type: 'heatmap', data: bad,
+            label: { show: false },
+            itemStyle: { color: theme.grid, borderColor: theme.surface, borderWidth: 2 },
+          },
+        ],
+      }, true);
+    }
+
+    function rerender(view) {
+      const theme = ctx.chartTheme();
+      renderDonut(theme);
+      renderList();
+      renderHeatmap(view, theme);
+    }
+
+    let lastView = null;
+    ctx.onTheme(() => { if (lastView) rerender(lastView); });
+
+    donutChart.on('click', (p) => {
+      const r = lastSplit[p.dataIndex];
+      if (r) ctx.chip('archetype', r.id, p.event?.event);
+    });
+    heatChart.on('click', (p) => {
+      if (p.seriesIndex == null || !p.data) return;
+      const rowId = lastIds[p.data[1]];
+      if (rowId) ctx.chip('archetype', rowId, p.event?.event);
+    });
+
+    return {
+      update(view) {
+        lastView = view;
+        if (view.state.source === 'ladder') {
+          lastSplit = [];
+          donutChartEl.style.display = 'none';
+          listWrap.style.display = 'none';
+          heatChartEl.style.display = 'none';
+          heatEmptyEl.textContent = '';
+          heatEmptyEl.appendChild(emptyState('Switch Source to Tournaments to see archetype splits and matchups.', 'Tournament-only view'));
+          ctx.meta(donut.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
+          ctx.meta(heat.meta, { source: 'Tournaments', n: 0, unit: 'matches' });
+          return;
+        }
+        listWrap.style.display = '';
+        lastSplit = archetypeSplit(view.teams).filter((r) => r.n >= view.state.minN);
+        if (!lastSplit.length) {
+          donutChartEl.style.display = 'none';
+          listWrap.style.display = 'none';
+        } else {
+          donutChartEl.style.display = '';
+          listWrap.style.display = '';
+        }
+        rerender(view);
+        ctx.meta(donut.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+        ctx.meta(heat.meta, { source: 'Tournaments', n: view.matches?.length || 0, unit: 'matches' });
+      },
+      highlight() {
+        // No species-keyed marks in this section.
+      },
+    };
+  },
+};

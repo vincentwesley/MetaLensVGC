@@ -1,0 +1,80 @@
+/* sections-b.css — layout/components for archetypes, teammates, speed, trends.
+   Owned by the same agent as those four section modules. Reuses app.css tokens
+   and components (.card, .segmented, .toggle, .table-wrap, .empty-state, etc.);
+   only adds what those components don't already cover. */
+
+/* Grid-item blowout fix (same issue/fix as sections-a.css): let these section
+   tracks shrink below their content's min-content width so wide tables/charts
+   scroll inside .table-wrap/.sb-chart instead of stretching the page grid. */
+main.grid .section[data-section="archetypes"],
+main.grid .section[data-section="teammates"],
+main.grid .section[data-section="speed"],
+main.grid .section[data-section="trends"] {
+  min-width: 0;
+}
+
+/* Multi-card sections: a .section__mount becomes a 2-col grid; .sb-full spans both. */
+.sb-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); align-items: start; }
+.sb-grid > .card { min-width: 0; }
+.sb-full { grid-column: 1 / -1; }
+@media (max-width: 640px) { .sb-grid { grid-template-columns: 1fr; } }
+
+/* Chart containers (ECharts needs an explicit sized parent). */
+.sb-chart { width: 100%; height: 320px; }
+.sb-chart--tall { height: 440px; }
+.sb-chart--short { height: 220px; }
+
+/* Side-by-side sub-panels inside one card (e.g. chart + legend table) that
+   stack on narrow screens instead of leaving a blank grid track. */
+.sb-split { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: flex-start; }
+.sb-split > * { flex: 1 1 280px; min-width: 0; }
+
+/* Classification / methodology disclosure list. */
+.sb-disclosure { display: flex; flex-direction: column; gap: 2px; }
+.sb-disclosure details { border-bottom: 1px solid var(--grid); padding: var(--space-2) 0; }
+.sb-disclosure details:last-child { border-bottom: 0; }
+.sb-disclosure summary { cursor: pointer; font-family: var(--font-label); font-size: var(--fs-label); color: var(--ink-2); }
+.sb-disclosure p { margin: var(--space-2) 0 0; color: var(--muted); font-size: var(--fs-small); }
+
+/* Generic clickable data row (cores, ladder teammates, movers). */
+.sb-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--grid); }
+.sb-row:last-child { border-bottom: 0; }
+.sb-row--clickable { cursor: pointer; }
+.sb-row--clickable:hover { background: var(--surface-2); }
+.sb-row--you { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: var(--radius); }
+.sb-row.is-hovered { background: var(--surface-2); }
+[data-section="speed"] table.data-table tbody tr.is-hovered,
+[data-section="trends"] table.data-table tbody tr.is-hovered { background: var(--surface-2); }
+
+.sb-sprites { display: flex; flex: none; }
+.sb-sprites img { margin-right: -6px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); }
+.sb-sprites img:last-child { margin-right: 0; }
+
+.sb-names { flex: 1; min-width: 0; font-size: var(--fs-small); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-stat { font-variant-numeric: tabular-nums; font-size: var(--fs-small); color: var(--ink); min-width: 56px; text-align: right; flex: none; }
+.sb-stat--muted { color: var(--muted); }
+.sb-stat--up { color: var(--status-good); }
+.sb-stat--down { color: var(--status-critical); }
+
+.sb-badge { font-family: var(--font-label); font-size: 10px; text-transform: uppercase; padding: 1px 6px; border-radius: 8px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); flex: none; white-space: nowrap; }
+.sb-badge--you { background: var(--accent); color: var(--surface-1); border-color: var(--accent); }
+
+.sb-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.sb-controls .filterbar__label { font-size: var(--fs-small); }
+
+/* "My Pokémon" benchmark form. */
+.sb-bench { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--grid); margin-top: var(--space-3); }
+.sb-bench input[type="text"], .sb-bench select {
+  background: var(--surface-2); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--radius);
+  padding: 4px 6px; font-family: var(--font-body); font-size: var(--fs-small);
+}
+[data-skin="pro"] .sb-bench input[type="text"], [data-skin="pro"] .sb-bench select { border: 1px solid var(--border); }
+.sb-bench input[type="range"] { width: 120px; accent-color: var(--accent); }
+.sb-bench__result { flex-basis: 100%; font-size: var(--fs-small); color: var(--ink-2); }
+
+.sb-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+@media (max-width: 640px) { .sb-two-col { grid-template-columns: 1fr; } }
+
+.sb-subhead { font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase; color: var(--muted); margin: 0 0 var(--space-2); }
+
+.sb-link-btn { border: 0; background: transparent; color: var(--accent); cursor: pointer; font-family: var(--font-label); font-size: var(--fs-small); text-decoration: underline; padding: 4px; }
