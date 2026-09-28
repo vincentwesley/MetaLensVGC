@@ -69,13 +69,14 @@ function decodeExistingTeamsFile(file) {
   return rawEvents.map(({ eventIdx, ...rest }) => rest);
 }
 
+// Official events are always fully rebuilt (see fetchOfficialEvents), so the same id
+// can appear twice here: once from the stale decoded teams-<REG>.json, once freshly
+// rebuilt (pushed after). Map dedup keeps the later value but not its insertion slot,
+// so the freshly rebuilt event wins while event order (and eventIdx) stays stable.
 function dedupeEvents(rawEvents) {
-  const seen = new Set();
-  return rawEvents.filter((ev) => {
-    if (seen.has(ev.id)) return false;
-    seen.add(ev.id);
-    return true;
-  });
+  const byId = new Map();
+  for (const ev of rawEvents) byId.set(ev.id, ev);
+  return [...byId.values()];
 }
 
 function assembleTeamsFile(reg, rawEvents) {
@@ -161,11 +162,11 @@ async function main() {
     rawEventsByReg[reg] = decodeExistingTeamsFile(existingFiles[reg]);
   }
 
-  // 2) Official events (all regs, always — cheap relative to the online API).
-  const existingOfficialKeys = new Set();
-  for (const reg of REG_IDS) for (const ev of rawEventsByReg[reg]) if (ev.source === 'limitlessvgc') existingOfficialKeys.add(ev.key);
+  // 2) Official events (all regs, always — fully rebuilt every run, but every
+  // request uses ttl: PERMANENT, so this only costs network time on first fetch;
+  // subsequent runs replay from the disk cache. See dedupeEvents below.
   log('Fetching official events (limitlessvgc.com)...');
-  const official = await fetchOfficialEvents(null, { existingKeys: existingOfficialKeys, log });
+  const official = await fetchOfficialEvents(null, { log });
   for (const reg of REG_IDS) rawEventsByReg[reg].push(...official.byReg[reg]);
   log(`  official: ${JSON.stringify(official.stats)}`);
 
