@@ -1,0 +1,35 @@
+// Fetch + cache layer for public/data/*.json. No DOM, no decoding logic of its
+// own beyond calling the supplied `decode` (from js/lib/aggregate.js) once per
+// regulation, and caching the result so switching regs back and forth (needed
+// for "previous period" comparisons) doesn't re-fetch or re-decode.
+
+const rawCache = new Map(); // path -> parsed JSON
+const decodedCache = new Map(); // reg -> { teams, events, matches }
+
+async function fetchJSON(path) {
+  if (rawCache.has(path)) return rawCache.get(path);
+  const res = await fetch(path, { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+  const json = await res.json();
+  rawCache.set(path, json);
+  return json;
+}
+
+export function loadManifest() { return fetchJSON('data/manifest.json'); }
+export function loadDex() { return fetchJSON('data/dex.json'); }
+export function loadTeamsFile(reg) { return fetchJSON(`data/teams-${reg}.json`); }
+export function loadLadderFile(reg) {
+  return fetchJSON(`data/ladder-${reg}.json`).catch(() => ({ reg, source: 'smogon', cutoff: null, months: [] }));
+}
+
+/** Decode (and cache) a regulation's teams file. Kept for the lifetime of the
+ *  page so a previously-viewed reg's teams stay available for previousPeriod. */
+export async function getDecoded(reg, dex, decode) {
+  if (decodedCache.has(reg)) return decodedCache.get(reg);
+  const file = await loadTeamsFile(reg);
+  const decoded = decode(file, dex);
+  decodedCache.set(reg, decoded);
+  return decoded;
+}
+
+export function getDecodedSync(reg) { return decodedCache.get(reg) || null; }

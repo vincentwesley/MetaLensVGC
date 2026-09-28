@@ -230,3 +230,18 @@ test('toCSV / toJSONRows: header row + one row per team, values escaped', () => 
   assert.equal(lines.length, teams.length + 1);
   assert.ok(lines[0].startsWith('id,player,country'));
 });
+
+test('ladderMerge weights months by battles and filters by date', async () => {
+  const { ladderMerge } = await import('../public/js/lib/aggregate.js');
+  const ladder = { cutoff: 1760, months: [
+    { month: '2026-07', battles: 100, url: 'a', mons: { A: { usage: 0.5, raw: 50, items: { X: 1 } } } },
+    { month: '2026-08', battles: 300, url: 'b', mons: { A: { usage: 0.1, raw: 30, items: { Y: 1 } }, B: { usage: 0.2, raw: 60 } } },
+  ] };
+  const all = ladderMerge(ladder);
+  assert.equal(all.battles, 400);
+  const a = all.mons.find((m) => m.key === 'A');
+  assert.ok(Math.abs(a.usage - (0.5 * 0.25 + 0.1 * 0.75)) < 1e-9);
+  assert.ok(Math.abs(a.items.find((i) => i.name === 'X').pct - 0.125 / 0.2) < 1e-9);
+  assert.equal(ladderMerge(ladder, '2026-08-01').mons[0].key, 'B');
+  assert.equal(ladderMerge(ladder, '2026-09-01'), null);
+});
