@@ -1,4 +1,7 @@
-// Sprite <img> factory with fallback chain: exact form -> base species -> type-coloured placeholder.
+// Sprite <img> factory. dex.species[key].sprite/.ani are build-time-resolved (scripts/sprites.js):
+// only URLs known to exist (via HEAD) ever get requested, so the client never triggers a 404.
+// sprite: spriteid whose gen5 png exists (own or base species'), or null (placeholder only).
+// ani: existing animated sprite's URL path segment, or null.
 // Pulls TYPE_COLORS from js/lib/types.js (owned by the lib agent).
 // ctx.sprite / ctx.spriteUrl in main.js bind `dex` so section modules call sprite(key, opts) only.
 
@@ -24,18 +27,9 @@ function placeholderDataUri(key, type) {
 function candidates(key, dex, { animated = false } = {}) {
   const sp = dex?.species?.[key];
   const chain = [];
-  if (sp?.sprite) {
-    if (animated) chain.push(`${PS}/gen5ani/${sp.sprite}.gif`, `${PS}/ani/${sp.sprite}.gif`);
-    chain.push(`${PS}/gen5/${sp.sprite}.png`);
-  }
-  const baseKey = sp?.base && sp.base !== key ? sp.base : null;
-  const baseSp = baseKey ? dex?.species?.[baseKey] : null;
-  if (baseSp?.sprite) {
-    if (animated) chain.push(`${PS}/gen5ani/${baseSp.sprite}.gif`, `${PS}/ani/${baseSp.sprite}.gif`);
-    chain.push(`${PS}/gen5/${baseSp.sprite}.png`);
-  }
-  const primaryType = sp?.types?.[0] || baseSp?.types?.[0] || 'Normal';
-  chain.push(placeholderDataUri(key, primaryType));
+  if (animated && sp?.ani) chain.push(`${PS}/${sp.ani}`);
+  if (sp?.sprite) chain.push(`${PS}/gen5/${sp.sprite}.png`);
+  chain.push(placeholderDataUri(key, sp?.types?.[0] || 'Normal'));
   return chain;
 }
 

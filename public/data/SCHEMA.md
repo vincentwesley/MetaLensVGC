@@ -27,10 +27,10 @@ Only species/moves/items that appear in the data (plus every Mega form of a spec
 {
   "species": {
     "Charizard-Mega-Y": { "id": "charizardmegay", "num": 6, "types": ["Fire","Flying"],
-      "bs": [78,104,78,159,115,100], "abilities": ["Drought"], "sprite": "charizard-megay",
+      "bs": [78,104,78,159,115,100], "abilities": ["Drought"], "sprite": "charizard-megay", "ani": null,
       "base": "Charizard", "megaOf": "Charizard", "stone": "Charizardite Y" },
     "Charizard": { "id": "charizard", "num": 6, "types": ["Fire","Flying"],
-      "bs": [78,84,78,109,85,100], "abilities": ["Blaze","Solar Power"], "sprite": "charizard",
+      "bs": [78,84,78,109,85,100], "abilities": ["Blaze","Solar Power"], "sprite": "charizard", "ani": "gen5ani/charizard.gif",
       "base": "Charizard" }
   },
   "moves": { "Heat Wave": { "type": "Fire", "cat": "Special", "bp": 95, "pri": 0, "target": "allAdjacentFoes" } },
@@ -39,7 +39,14 @@ Only species/moves/items that appear in the data (plus every Mega form of a spec
 ```
 `bs` order is always `[hp, atk, def, spa, spd, spe]`. `cat` is `"Physical" | "Special" | "Status"`.
 Species names are Showdown display names (`Floette-Eternal`, `Basculegion-F`, `Indeedee-F`, `Raichu-Alola`,
-`Charizard-Mega-Y`, `Garchomp-Mega-Z`). `sprite` is Showdown's `spriteid` (URL path segment).
+`Charizard-Mega-Y`, `Garchomp-Mega-Z`).
+`sprite` and `ani` are resolved at build time (`scripts/sprites.js`) by HEAD-checking Showdown sprite URLs, so the
+client only ever requests URLs known to exist:
+- `sprite`: the `spriteid` (URL path segment) whose `https://play.pokemonshowdown.com/sprites/gen5/<spriteid>.png`
+  exists — own form's spriteid, else the base species' spriteid, else `null` (no gen5 png anywhere in the chain;
+  client shows the type-coloured placeholder).
+- `ani`: the URL path segment of an existing animated sprite for the resolved `sprite` id — `"gen5ani/<id>.gif"`
+  preferred, else `"ani/<id>.gif"` — or `null` if neither exists.
 
 ## teams-<REG>.json (e.g. teams-M-C.json), string-interned for size
 ```json

@@ -8,6 +8,8 @@ const API = 'https://play.limitlesstcg.com/api';
 const MIN_PLAYERS = 16;
 const LIST_TTL = 1000 * 60 * 60 * 6; // tournament lists change often; short-ish TTL
 const PERMANENT = Infinity; // completed tournaments' standings/pairings never change
+export const SETTLED_BEFORE = new Date(Date.now() - 48 * 3600e3).toISOString();
+export const RECENT_BEFORE = new Date(Date.now() - 7 * 24 * 3600e3).toISOString();
 
 async function listTournaments(format) {
   const out = [];
@@ -45,7 +47,9 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
       stats.excludedAlreadyHave++;
       continue;
     }
-    if (t.date >= new Date().toISOString()) continue; // must already be completed
+    if (t.date >= SETTLED_BEFORE) continue; // skip events that may still be running
+    // results of fresh events can still change; don't cache them forever
+    const ttl = t.date >= RECENT_BEFORE ? 6 * 3600e3 : PERMANENT;
     if (t.players < MIN_PLAYERS) {
       stats.excludedPlayers++;
       continue;
@@ -59,13 +63,13 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
     fetchedCount++;
     stats.fetchedNew++;
 
-    const details = await fetchJSON(`${API}/tournaments/${t.id}/details`, { ttl: PERMANENT });
+    const details = await fetchJSON(`${API}/tournaments/${t.id}/details`, { ttl: ttl });
     if (!details.decklists) {
       stats.excludedNoDecklists++;
       continue;
     }
 
-    const standings = await fetchJSON(`${API}/tournaments/${t.id}/standings`, { ttl: PERMANENT });
+    const standings = await fetchJSON(`${API}/tournaments/${t.id}/standings`, { ttl: ttl });
     const rows = [];
     for (const p of standings) {
       if (!p.decklist || !p.decklist.length) continue;
@@ -94,7 +98,7 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
       continue;
     }
 
-    const pairings = await fetchJSON(`${API}/tournaments/${t.id}/pairings`, { ttl: PERMANENT });
+    const pairings = await fetchJSON(`${API}/tournaments/${t.id}/pairings`, { ttl: ttl });
     const bracketPlayers = new Set();
     const matches = [];
     for (const pr of pairings) {
