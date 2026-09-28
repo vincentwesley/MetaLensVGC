@@ -557,3 +557,35 @@ export function toCSV(teams) {
   for (const r of rows) lines.push(headers.map((h) => csvEscape(r[h])).join(','));
   return lines.join('\n');
 }
+
+// --- ladder (Smogon chaos, see SCHEMA ladder-<REG>.json) ------------------
+// Merge the months inside [from, to] (YYYY-MM-DD, "" = open), weighting each month by its battle count.
+// Returns null when no month qualifies. Sub-tables are weighted by the mon's usage share in each month.
+export function ladderMerge(ladder, from = '', to = '') {
+  const months = (ladder?.months || []).filter((m) => (!from || m.month >= from.slice(0, 7)) && (!to || m.month <= to.slice(0, 7)));
+  if (!months.length) return null;
+  const battles = months.reduce((a, m) => a + m.battles, 0);
+  const acc = new Map();
+  for (const m of months) {
+    const w = m.battles / battles;
+    for (const [key, d] of Object.entries(m.mons)) {
+      let o = acc.get(key);
+      if (!o) acc.set(key, (o = { key, usage: 0, raw: 0, tables: {} }));
+      o.usage += d.usage * w;
+      o.raw += d.raw;
+      for (const t of ['items', 'abilities', 'moves', 'spreads', 'teammates']) {
+        const dst = (o.tables[t] ||= {});
+        for (const [name, v] of Object.entries(d[t] || {})) dst[name] = (dst[name] || 0) + v * d.usage * w;
+      }
+      const c = (o.tables.counters ||= {});
+      for (const [name, v] of Object.entries(d.counters || {})) c[name] ||= v; // latest-first not guaranteed; keep first seen
+    }
+  }
+  const mons = [...acc.values()].map((o) => {
+    const norm = (tbl) => Object.entries(tbl || {}).map(([name, v]) => ({ name, pct: o.usage ? v / o.usage : 0 })).sort((a, b) => b.pct - a.pct);
+    return { key: o.key, usage: o.usage, raw: o.raw, items: norm(o.tables.items), abilities: norm(o.tables.abilities), moves: norm(o.tables.moves),
+      spreads: norm(o.tables.spreads), teammates: norm(o.tables.teammates),
+      counters: Object.entries(o.tables.counters).map(([name, [score, dev]]) => ({ name, score, dev })).sort((a, b) => b.score - a.score) };
+  }).sort((a, b) => b.usage - a.usage);
+  return { battles, months: months.map((m) => m.month), cutoff: ladder.cutoff, urls: months.map((m) => m.url), mons };
+}

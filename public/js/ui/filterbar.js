@@ -1,0 +1,175 @@
+// Global sticky filter bar. Builds all controls from `manifest`, wires them to
+// `ctx.store.set`, and mirrors state on every store change (so back/forward and
+// hash edits stay in sync). Exposes update(view) to paint the live sample line.
+
+const TIERS = [
+  ['worlds', 'Worlds'],
+  ['international', 'Internationals'],
+  ['regional', 'Regionals'],
+  ['online', 'Online'],
+];
+const PLACEMENTS = [
+  ['all', 'All'],
+  ['topcut', 'Top Cut'],
+  ['top8', 'Top 8'],
+  ['winner', 'Winner'],
+];
+
+function segmented(name, options, onPick) {
+  const wrap = document.createElement('div');
+  wrap.className = 'segmented';
+  wrap.setAttribute('role', 'radiogroup');
+  wrap.setAttribute('aria-label', name);
+  const buttons = new Map();
+  for (const [value, label] of options) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.dataset.value = value;
+    btn.setAttribute('aria-pressed', 'false');
+    btn.addEventListener('click', () => onPick(value));
+    wrap.appendChild(btn);
+    buttons.set(value, btn);
+  }
+  return { el: wrap, buttons };
+}
+
+export function mountFilterbar(root, ctx, manifest) {
+  const toggleBtn = document.getElementById('filterbar-toggle');
+  const body = document.getElementById('filterbar-body');
+  toggleBtn?.addEventListener('click', () => {
+    const open = root.classList.toggle('is-open');
+    toggleBtn.setAttribute('aria-expanded', String(open));
+  });
+
+  const regs = manifest?.regs || [];
+  const regIds = regs.map((r) => r.id);
+
+  // Regulation
+  const regGroup = document.createElement('div');
+  regGroup.className = 'filterbar__group';
+  const regLabel = document.createElement('span');
+  regLabel.className = 'filterbar__label';
+  regLabel.textContent = 'Reg';
+  const reg = segmented('Regulation', regIds.map((id) => [id, id]), (id) => ctx.store.set({ reg: id }));
+  regGroup.append(regLabel, reg.el);
+
+  // Source
+  const srcGroup = document.createElement('div');
+  srcGroup.className = 'filterbar__group';
+  const srcLabel = document.createElement('span');
+  srcLabel.className = 'filterbar__label';
+  srcLabel.textContent = 'Source';
+  const source = segmented('Source', [['tournaments', 'Tournaments'], ['ladder', 'Ladder']], (v) => ctx.store.set({ source: v }));
+  srcGroup.append(srcLabel, source.el);
+
+  // Event tiers
+  const tierGroup = document.createElement('div');
+  tierGroup.className = 'filterbar__group';
+  const tierLabel = document.createElement('span');
+  tierLabel.className = 'filterbar__label';
+  tierLabel.textContent = 'Tier';
+  const tierMulti = document.createElement('div');
+  tierMulti.className = 'filterbar__multi';
+  const tierInputs = new Map();
+  for (const [value, label] of TIERS) {
+    const l = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = value;
+    cb.addEventListener('change', () => {
+      const tiers = TIERS.map(([v]) => v).filter((v) => tierInputs.get(v).checked);
+      ctx.store.set({ tiers });
+    });
+    tierInputs.set(value, cb);
+    l.append(cb, document.createTextNode(label));
+    tierMulti.appendChild(l);
+  }
+  tierGroup.append(tierLabel, tierMulti);
+
+  // Placement
+  const placeGroup = document.createElement('div');
+  placeGroup.className = 'filterbar__group';
+  const placeLabel = document.createElement('span');
+  placeLabel.className = 'filterbar__label';
+  placeLabel.textContent = 'Placement';
+  const place = segmented('Placement', PLACEMENTS, (v) => ctx.store.set({ place: v }));
+  placeGroup.append(placeLabel, place.el);
+
+  // Date range
+  const dateGroup = document.createElement('div');
+  dateGroup.className = 'filterbar__group';
+  const dateLabel = document.createElement('span');
+  dateLabel.className = 'filterbar__label';
+  dateLabel.textContent = 'Dates';
+  const fromInput = document.createElement('input');
+  fromInput.type = 'date';
+  fromInput.setAttribute('aria-label', 'From date');
+  const toInput = document.createElement('input');
+  toInput.type = 'date';
+  toInput.setAttribute('aria-label', 'To date');
+  fromInput.addEventListener('change', () => ctx.store.set({ from: fromInput.value }));
+  toInput.addEventListener('change', () => ctx.store.set({ to: toInput.value }));
+  dateGroup.append(dateLabel, fromInput, toInput);
+
+  // Min-sample slider
+  const sliderGroup = document.createElement('div');
+  sliderGroup.className = 'filterbar__group';
+  const sliderLabel = document.createElement('span');
+  sliderLabel.className = 'filterbar__label';
+  sliderLabel.textContent = 'Min n';
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = '200';
+  slider.step = '5';
+  const sliderVal = document.createElement('span');
+  sliderVal.className = 'filterbar__label';
+  slider.addEventListener('input', () => {
+    sliderVal.textContent = slider.value;
+    ctx.store.set({ minN: Number(slider.value) }, { replace: true });
+  });
+  sliderGroup.append(sliderLabel, slider, sliderVal);
+
+  const sample = document.createElement('span');
+  sample.className = 'filterbar__sample';
+  sample.textContent = 'Loading…';
+
+  body.append(regGroup, srcGroup, tierGroup, placeGroup, dateGroup, sliderGroup, sample);
+
+  function regMeta(id) { return regs.find((r) => r.id === id); }
+
+  function sync(state) {
+    for (const [id, btn] of reg.buttons) btn.setAttribute('aria-pressed', String(id === state.reg));
+    for (const [id, btn] of source.buttons) btn.setAttribute('aria-pressed', String(id === state.source));
+    for (const [id, btn] of place.buttons) btn.setAttribute('aria-pressed', String(id === state.place));
+    for (const [value, cb] of tierInputs) cb.checked = state.tiers.includes(value);
+
+    const rm = regMeta(state.reg);
+    const hasLadder = (rm?.ladderMonths?.length || 0) > 0;
+    const ladderBtn = source.buttons.get('ladder');
+    if (ladderBtn) {
+      ladderBtn.disabled = !hasLadder;
+      ladderBtn.title = hasLadder ? '' : 'No ladder data for this regulation';
+      if (!hasLadder) ladderBtn.setAttribute('data-tip', 'No ladder data for this regulation');
+      else ladderBtn.removeAttribute('data-tip');
+    }
+    if (rm) { fromInput.min = toInput.min = rm.start; fromInput.max = toInput.max = rm.end; }
+    if (fromInput.value !== (state.from || '')) fromInput.value = state.from || '';
+    if (toInput.value !== (state.to || '')) toInput.value = state.to || '';
+    if (String(slider.value) !== String(state.minN)) slider.value = String(state.minN);
+    sliderVal.textContent = String(state.minN);
+  }
+
+  sync(ctx.store.get());
+  ctx.store.subscribe(sync);
+
+  function update(view) {
+    const n = view?.teams?.length ?? 0;
+    const events = view?.teams ? new Set(view.teams.map((t) => t.ev?.id)).size : 0;
+    const updated = manifest?.generated ? manifest.generated.slice(0, 10) : '—';
+    sample.textContent = `${n.toLocaleString('en-US')} teams · ${events.toLocaleString('en-US')} events · updated ${updated}`;
+  }
+
+  return { update };
+}
