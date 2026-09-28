@@ -92,12 +92,13 @@ A regulation with no ladder data has `"months": []`.
 ## Decoded in-memory shape (browser, `js/lib/aggregate.js#decode`)
 ```js
 Team = {
-  i, id: "lt:6ab4...:3",           // eventId + ":" + row index within the event
+  i, id: "lt:6ab4...:playername",  // eventId + ":" + lowercased alnum player name (stable across rebuilds)
   player, country, ev: Event, reg, date, tier, placing, w, l, t,
   topCut: boolean,                   // placing <= ev.cut; if cut unknown: placing <= 8
   mons: [Mon x6],
   keys: string[6],                   // Mon.k per slot
-  mega: string|null,                 // Mega form key if any mon holds its own stone
+  megas: string[],                   // Mega form keys of every mon holding its own stone (sheets may carry 2+)
+  mega: string|null,                 // megas[0]
   arch: string[],                    // archetypes (js/lib/archetypes.js), primary first
 }
 Mon = { s, k, item, ability, moves: string[], nature, sp: number[6]|null, mega: boolean }
