@@ -1,0 +1,107 @@
+/* sections-a.css — Meta Snapshot, Usage Leaderboard, Type Landscape, Quadrant.
+   Owned by the sections-a agent. Uses only tokens/classes from app.css. */
+
+/* Grid-item blowout fix, scoped to our sections only (app.css's
+   `main.grid .section` leaves the default min-width:auto, so a nested
+   nowrap table's min-content forces the whole grid track wider than the
+   viewport). min-width:0 lets the track shrink to the actual column size
+   so .table-wrap's own overflow-x:auto can do its job. */
+main.grid .section[data-section="snapshot"],
+main.grid .section[data-section="usage"],
+main.grid .section[data-section="types"],
+main.grid .section[data-section="quadrant"] {
+  min-width: 0;
+}
+
+/* ---------- snapshot (hero) ---------- */
+.snapshot-card .card__head { border-bottom-width: 2px; }
+[data-skin="pro"] .snapshot-card .card__head { border-bottom-width: 1px; }
+
+.snapshot__hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.snapshot__mon {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--surface-2);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-2);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+[data-skin="pro"] .snapshot__mon { border: 1px solid var(--border); }
+.snapshot__mon:hover, .snapshot__mon:focus-visible, .snapshot__mon.is-hovered {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .15);
+}
+.snapshot__mon-sprite { width: 56px; height: 56px; margin-bottom: 2px; }
+.snapshot__mon-name {
+  font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase;
+  color: var(--ink); overflow-wrap: anywhere;
+}
+.snapshot__mon-stats {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--font-head); font-size: 17px; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+[data-skin="retro"] .snapshot__mon-stats { font-family: var(--font-body); font-size: 22px; }
+.snapshot__mon-win { color: var(--muted); font-size: .8em; }
+.snapshot__mon .kpi__delta {
+  font-size: 11px; font-family: var(--font-label); white-space: normal; line-height: 1.3;
+}
+[data-skin="retro"] .snapshot__mon .kpi__delta { font-family: var(--font-body); font-size: 13px; }
+
+.snapshot__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+  border-top: 2px solid var(--border);
+  padding-top: var(--space-3);
+}
+[data-skin="pro"] .snapshot__kpis { border-top: 1px solid var(--border); }
+.snapshot__kpis .kpi { padding: var(--space-2) var(--space-2); }
+.snapshot__kpis .kpi__value { display: flex; align-items: center; gap: 6px; }
+.snapshot__kpis .kpi__value img.sprite { width: 20px; height: 20px; }
+
+/* ---------- usage leaderboard ---------- */
+[data-section="usage"] .card__head { flex-wrap: wrap; row-gap: var(--space-2); }
+[data-section="usage"] .card__head > span.meta-line { margin-left: auto; }
+
+.usage-bar {
+  width: 96px; height: 8px; border-radius: 4px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  overflow: hidden;
+}
+.usage-bar__fill { height: 100%; border-radius: 4px; }
+
+.ci-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 130px; }
+.ci-cell span { font-variant-numeric: tabular-nums; }
+.ci-bar { position: relative; width: 110px; height: 6px; background: var(--surface-2); border-radius: 3px; }
+.ci-bar__range { position: absolute; top: 0; height: 100%; background: var(--seq-4); border-radius: 3px; opacity: .6; }
+.ci-bar__dot {
+  position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ink); border: 1px solid var(--surface-1);
+  transform: translate(-50%, -50%);
+}
+[data-section="usage"] table.data-table tbody tr.is-hovered { background: var(--surface-2); }
+[data-section="usage"] table.data-table tbody tr:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
+
+/* ---------- type landscape ---------- */
+.types-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.types-panel__chart { height: 300px; width: 100%; }
+@media (max-width: 700px) { .types-panel__chart { height: 260px; } }
+
+/* ---------- usage x win quadrant ---------- */
+.quadrant__chart { height: 440px; width: 100%; }
+@media (max-width: 700px) { .quadrant__chart { height: 360px; } }

@@ -1,0 +1,250 @@
+// usage.js — Usage leaderboard: sortable table, rank/sprite/name/usage bar/
+// usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
+// ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
+import { usage, ladderMerge } from '../lib/aggregate.js';
+import { TYPE_COLORS } from '../lib/types.js';
+
+const COLS_TEAM = [
+  { key: 'rank', label: '#' },
+  { key: 'sprite', label: '' },
+  { key: 'name', label: 'Pokémon' },
+  { key: 'bar', label: 'Usage' },
+  { key: 'pct', label: 'Usage %', sortable: true },
+  { key: 'win', label: 'Win % (95% CI)', sortable: true, sortKey: 'winPct' },
+  { key: 'n', label: 'N', sortable: true },
+];
+const COLS_LADDER = [
+  { key: 'rank', label: '#' },
+  { key: 'sprite', label: '' },
+  { key: 'name', label: 'Pokémon' },
+  { key: 'bar', label: 'Usage' },
+  { key: 'pct', label: 'Usage %', sortable: true },
+  { key: 'n', label: 'N (battles)', sortable: true },
+];
+
+function emptyState(el, title) {
+  el.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'empty-state';
+  const h = document.createElement('div');
+  h.className = 'empty-state__title';
+  h.textContent = title;
+  box.appendChild(h);
+  el.appendChild(box);
+}
+
+function primaryTypeColor(dex, key) {
+  const sp = dex.species[key];
+  const type = sp?.types?.[0];
+  return TYPE_COLORS[type] || 'var(--muted)';
+}
+
+export default {
+  id: 'usage',
+  title: 'Usage Leaderboard',
+  mount(el, ctx) {
+    el.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'card';
+    const head = document.createElement('div');
+    head.className = 'card__head';
+    const h = document.createElement('h3');
+    h.textContent = 'Usage Leaderboard';
+    const controls = document.createElement('div');
+    controls.className = 'segmented';
+    controls.setAttribute('role', 'radiogroup');
+    controls.setAttribute('aria-label', 'Rows shown');
+    const btnTop = document.createElement('button');
+    btnTop.type = 'button'; btnTop.textContent = 'Top 30';
+    const btnAll = document.createElement('button');
+    btnAll.type = 'button'; btnAll.textContent = 'Show all';
+    controls.append(btnTop, btnAll);
+    const meta = document.createElement('span');
+    head.append(h, controls, meta);
+    const body = document.createElement('div');
+    body.className = 'card__body';
+    card.append(head, body);
+    el.appendChild(card);
+
+    let showAll = false;
+    let sortKey = 'n';
+    let sortDir = 'desc';
+    let lastView = null;
+
+    function setShowAll(v) {
+      showAll = v;
+      btnTop.setAttribute('aria-pressed', String(!v));
+      btnAll.setAttribute('aria-pressed', String(v));
+      render();
+    }
+    btnTop.addEventListener('click', () => setShowAll(false));
+    btnAll.addEventListener('click', () => setShowAll(true));
+    setShowAll(false);
+
+    function sortRows(rows) {
+      const key = sortKey === 'win' ? 'winPct' : sortKey === 'pct' ? 'pct' : sortKey === 'n' ? 'n' : sortKey;
+      const sorted = rows.slice().sort((a, b) => {
+        const av = a[key], bv = b[key];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return sortDir === 'asc' ? av - bv : bv - av;
+      });
+      return sorted;
+    }
+
+    function render() {
+      const view = lastView;
+      if (!view) return;
+      const state = view.state;
+      const dex = view.dex;
+      let rows, cols, unit, source, n;
+
+      if (state.source === 'ladder') {
+        const merged = ladderMerge(view.ladder, state.from, state.to);
+        cols = COLS_LADDER; unit = 'battles'; source = 'Ladder (Smogon)';
+        if (!merged) {
+          n = 0;
+          ctx.meta(meta, { source, n, unit });
+          emptyState(body, 'No ladder data for this regulation yet');
+          return;
+        }
+        n = merged.battles;
+        rows = merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null }))
+          .filter((r) => r.n >= state.minN);
+      } else {
+        cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.teams.length;
+        rows = usage(view.teams).filter((r) => r.n >= state.minN);
+      }
+
+      ctx.meta(meta, { source, n, unit });
+      body.querySelector('.empty-state')?.remove();
+      if (!rows.length) {
+        emptyState(body, 'Insufficient data');
+        return;
+      }
+
+      // 'win' isn't a column in ladder mode; fall back to sorting by N.
+      if (cols === COLS_LADDER && sortKey === 'win') sortKey = 'n';
+
+      rows = sortRows(rows);
+      const shown = showAll ? rows : rows.slice(0, 30);
+      const maxPct = Math.max(...rows.map((r) => r.pct), 0.0001);
+
+      let wrap = body.querySelector('.table-wrap');
+      if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        body.appendChild(wrap);
+      }
+      wrap.innerHTML = '';
+      const table = document.createElement('table');
+      table.className = 'data-table';
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      for (const c of cols) {
+        const th = document.createElement('th');
+        th.textContent = c.label;
+        if (c.sortable) {
+          th.style.cursor = 'pointer';
+          th.tabIndex = 0;
+          const active = (c.sortKey || c.key) === sortKey;
+          th.textContent = c.label + (active ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '');
+          const doSort = () => {
+            const k = c.sortKey || c.key;
+            if (sortKey === k) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+            else { sortKey = k; sortDir = 'desc'; }
+            render();
+          };
+          th.addEventListener('click', doSort);
+          th.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doSort(); } });
+        }
+        trh.appendChild(th);
+      }
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      shown.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        tr.tabIndex = 0;
+        tr.setAttribute('role', 'button');
+        tr.dataset.key = r.key;
+        tr.setAttribute('aria-label', `Filter by ${r.key}`);
+        const act = (e) => ctx.chip('species', r.key, e);
+        tr.addEventListener('click', act);
+        tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(e); } });
+        tr.addEventListener('mouseenter', () => ctx.hover(r.key));
+        tr.addEventListener('mouseleave', () => ctx.hover(null));
+        tr.addEventListener('focus', () => ctx.hover(r.key));
+        tr.addEventListener('blur', () => ctx.hover(null));
+
+        const tdRank = document.createElement('td');
+        tdRank.className = 'num';
+        tdRank.textContent = String(i + 1);
+        const tdSprite = document.createElement('td');
+        tdSprite.appendChild(ctx.sprite(r.key, { size: 24, animated: state.anim }));
+        const tdName = document.createElement('td');
+        tdName.textContent = r.key;
+        const tdBar = document.createElement('td');
+        const barWrap = document.createElement('div');
+        barWrap.className = 'usage-bar';
+        const barFill = document.createElement('div');
+        barFill.className = 'usage-bar__fill';
+        barFill.style.width = `${(r.pct / maxPct) * 100}%`;
+        barFill.style.background = primaryTypeColor(dex, r.key);
+        barWrap.appendChild(barFill);
+        tdBar.appendChild(barWrap);
+        const tdPct = document.createElement('td');
+        tdPct.className = 'num';
+        tdPct.textContent = ctx.fmt.pct(r.pct);
+
+        tr.append(tdRank, tdSprite, tdName, tdBar, tdPct);
+
+        if (cols === COLS_TEAM) {
+          const tdWin = document.createElement('td');
+          tdWin.className = 'num';
+          if (r.winPct != null && r.ci) {
+            const wrapCi = document.createElement('div');
+            wrapCi.className = 'ci-cell';
+            const text = document.createElement('span');
+            text.textContent = `${(r.winPct * 100).toFixed(1)}% (${(r.ci[0] * 100).toFixed(1)}–${(r.ci[1] * 100).toFixed(1)})`;
+            const bar = document.createElement('div');
+            bar.className = 'ci-bar';
+            const range = document.createElement('div');
+            range.className = 'ci-bar__range';
+            range.style.left = `${r.ci[0] * 100}%`;
+            range.style.width = `${(r.ci[1] - r.ci[0]) * 100}%`;
+            const dot = document.createElement('div');
+            dot.className = 'ci-bar__dot';
+            dot.style.left = `${r.winPct * 100}%`;
+            bar.append(range, dot);
+            wrapCi.append(text, bar);
+            tdWin.appendChild(wrapCi);
+          } else {
+            tdWin.textContent = '—';
+          }
+          const tdN = document.createElement('td');
+          tdN.className = 'num';
+          tdN.textContent = ctx.fmt.n(r.n);
+          tr.append(tdWin, tdN);
+        } else {
+          const tdN = document.createElement('td');
+          tdN.className = 'num';
+          tdN.textContent = ctx.fmt.n(r.n);
+          tr.append(tdN);
+        }
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+    }
+
+    return {
+      update(view) { lastView = view; render(); },
+      highlight(key) {
+        body.querySelectorAll('tbody tr').forEach((tr) => tr.classList.toggle('is-hovered', key && tr.dataset.key === key));
+      },
+    };
+  },
+};
