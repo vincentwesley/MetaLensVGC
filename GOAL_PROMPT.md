@@ -127,3 +127,24 @@ Keep what's useful. Add better ideas if you find them.
    - the layout works at 390px
 4. Screenshots in both skins, desktop and mobile. Review them critically and polish anything that doesn't look great.
 5. Everything is committed and pushed. Finish with a short summary: what was built, the data coverage, any known gaps, and the exact Cloudflare Pages steps I need to click.
+
+### 7. How to work: you are the orchestrator
+- **You orchestrate; you don't write the bulk of the code yourself.** Your job is to plan, split the work into well-scoped tasks, hand them to subagents, review what comes back, integrate it, and keep quality high. Keep your own context for decisions, reviews and fixing what agents get wrong.
+- **Use lighter models for the work itself.** Set a `model` on every Agent call:
+  - **`haiku`** for mechanical, high-volume work: fetching and caching raw data, probing APIs and endpoints, grepping and reading files, normalizing names, validating JSON, running tests or scripts and reporting the results, and first-pass screenshot checks.
+  - **`sonnet`** for real coding: pipeline scripts, each dashboard section or chart module, CSS and skins, the scanner, the tests, and the Playwright checks.
+  - Only do the work yourself, on the main model, when it's architecture, a cross-module contract, a tricky bug that two agent attempts couldn't fix, or the final design review.
+- **Write self-contained briefs.** Each subagent starts from nothing, so every brief must include:
+  - the goal and the exact files it owns
+  - the interfaces or data shapes it must follow (point it at the shared schema file)
+  - the acceptance checks it must run before reporting back
+  - an explicit "don't touch other files" rule
+- **Freeze the contracts first, then parallelize.** Write the data schema (`public/data/SCHEMA.md` plus a sample JSON) and the module interfaces (state/filter API, chart module signature) yourself before fanning out. After that, run independent tasks in parallel: for example, a data ingester, a chart module and CSS at the same time. Use `isolation: "worktree"` when parallel agents might touch overlapping files.
+- **Suggested waves:**
+  1. **Recon (haiku, in parallel):** verify the format facts, probe every data source, and save sample payloads.
+  2. **Contracts (you):** write the schema, the interfaces and the skeleton.
+  3. **Build (sonnet, in parallel):** the pipeline, the core state/filter module, one agent per group of sections, and styling.
+  4. **Verify (haiku runs, sonnet fixes):** tests, Playwright checks and screenshots.
+  5. **Review (you):** read the diffs, look at the screenshots critically, and send targeted fix tasks back out.
+- **Trust but verify.** Never mark a task done just because an agent says it passed. Re-run the tests yourself, spot-check the data against the anchors, and look at the screenshots. If an agent's output is wrong twice, rescope the task or take it over.
+- **Keep your own context lean.** Ask agents to report short summaries (what changed, which files, test results) rather than full file dumps.
