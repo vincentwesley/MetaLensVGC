@@ -7,10 +7,11 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { REG_IDS, REGULATIONS } from './lib/regs.js';
-import { fetchLimitlessOnline } from './sources/limitless.js';
+import { fetchLimitlessOnline, RECENT_BEFORE } from './sources/limitless.js';
 import { fetchOfficialEvents } from './sources/official.js';
 import { fetchLadder } from './sources/ladder.js';
 import { buildDex } from './dex.js';
+import { resolveSprites } from './sprites.js';
 import { normalizeSpecies } from '../public/js/lib/names.js';
 import { validateAll } from './validate.js';
 import { printReport } from './report.js';
@@ -159,7 +160,9 @@ async function main() {
   const existingFiles = {};
   for (const reg of REG_IDS) {
     existingFiles[reg] = await readJSONIfExists(path.join(DATA_DIR, `teams-${reg}.json`));
-    rawEventsByReg[reg] = decodeExistingTeamsFile(existingFiles[reg]);
+    // online events from the last 7 days may have been captured mid-tournament: refetch them
+    rawEventsByReg[reg] = decodeExistingTeamsFile(existingFiles[reg])
+      .filter((e) => e.source !== 'limitless' || e.date < RECENT_BEFORE.slice(0, 10));
   }
 
   // 2) Official events (all regs, always — fully rebuilt every run, but every
@@ -219,6 +222,8 @@ async function main() {
   // 6) Build the dex, then re-run species normalization through it for consistency.
   const { dex, missing } = buildDex(allSpecies, allMoves, allItems);
   if (missing.length) log(`dex: could not resolve ${missing.length} species (${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ', ...' : ''})`);
+  log('Resolving sprite availability (play.pokemonshowdown.com)...');
+  await resolveSprites(dex.species);
   for (const reg of REG_IDS) {
     for (const ev of rawEventsByReg[reg]) {
       for (const row of ev.rows) {
