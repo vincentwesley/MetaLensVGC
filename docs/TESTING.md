@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 115 tests)
+### Automated: unit (`npm test`, 120 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -46,10 +46,14 @@ Cloud-session notes:
 - `lib/scan.js` (scanner evidence: similar teams, matchups, archetype fallback, items +
   item clause, teammate picks, weakest link) on synthetic fixtures.
 - Chart defaults (`withChartDefaults`: confine, wrapping, aria) and `clampTip` positioning.
-- WCAG contrast of `--ink`/`--ink-2`/`--muted` on every surface in all four skin/theme combos
-  (reads app.css).
+- WCAG contrast of `--ink`/`--ink-2`/`--muted` on every surface, text on `--accent`, and `--accent-2`
+  links, in all four skin/theme combos (reads app.css).
+- Cross-filter invariants on the real M-C file (`test/crossfilter.test.js`): after a type / weak /
+  item / species / archetype / core chip, the chart it came from shows that selection at 100%;
+  the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
+- Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 20 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 22 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -58,7 +62,9 @@ Cloud-session notes:
 - Leaderboard sprite opens the drawer without adding a chip.
 - Filter bar collapse: summary line, persists across reload, `F` toggles; defaults Pro + dark.
 - Items section: per-Pokémon items render, item click adds a chip, search narrows the table.
-- Type charts add the matching chip kind (weak-to), and every leaderboard row matches it.
+- Both type charts add a plain `Type:` chip and the leaderboard then lists only that type.
+- Hover sweep over the type charts: no NaN / undefined in any tooltip.
+- Teammate rate uses tournament sheets when there is no ladder data (M-C) and a row adds a core chip.
 - Species chip leaves one leaderboard row; archetype chip leaves one donut/table row.
 - Active-filter bar stays pinned while scrolling; Clear all empties it and the hash.
 - Every chart's tooltip (grid of hover points, 390px) and a long `[data-tip]` tip stay inside
@@ -84,6 +90,18 @@ Cloud-session notes:
   top-item line, Retro dark/light palettes, Electric/Tailwind/weak-to/move-type filtered
   views, active-filter bar (desktop, collapsed, Retro, 390px).
 - Data normalization: unknown item strings −80%, ~200 lowercase Mega Stones now recognized.
+
+UX round (2026-09-29, after the smoke pass; screenshots reviewed):
+- Type section: 'usage: NaN%' tooltip fixed; the averaged-multiplier chart ("1.69×") removed; the
+  weakness chart shows real multipliers (Ground filter: Water 2× 38%, 4× 10%, 1× 52%; Electric 100% immune).
+- Click hints (`clickHint`) on every clickable chart/table: present once, survive filter changes,
+  no horizontal scroll at 390px.
+- Scanner evidence cards (archetype, Pokémon/archetype matchups, item check, teammate picks,
+  weakest link) in M-A/M-B/M-C: no errors/NaN; 20-115 ms per scan; two-column layout from 1200px
+  reviewed at 1440 and 1280, one column below.
+- Green palettes (Pro = vwesley.dev tokens, Retro = Game Boy greens) screenshotted in all four
+  combos; background pixel field visible behind 88%-opaque cards, pauses while rendering.
+- Credits card (character art, fireflies, sparkles, name glow) in Pro dark/light, Retro, 390px.
 
 Smoke/edge-case pass (2026-09-29; haiku sweeps + own probes; bugs found are fixed and in the suites above):
 - Hash/filter edge cases: from > to, dates outside the reg, one side only, malformed dates;
@@ -117,14 +135,14 @@ Smoke/edge-case pass (2026-09-29; haiku sweeps + own probes; bugs found are fixe
 
 ## Not yet tested (candidates for the next pass)
 
-- Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache`
-  revalidation) and the sprite fallback chain with real network.
-- The GitHub Action end to end (needs GitHub's network): `npm run data` -> validate -> rebase-push.
-- Real screen readers (NVDA/VoiceOver) reading the ECharts aria descriptions; only the DOM
-  attributes were checked. Chart bars themselves are mouse/touch only (every chart has a
-  keyboard-reachable table or leaderboard with the same chips).
-- Real touch devices: tap-to-show tooltips and `[data-tip]` on iOS/Android, the Android back
-  gesture on the drawer (emulated Back was tested).
-- The scanner evidence cards in M-A/M-B were checked programmatically (no errors/NaN) but
-  only M-C was reviewed visually; Retro dark not screenshotted.
+- **The weekly refresh Action end to end.** It has run once (2026-09-29, manual) and failed at the
+  push (the race since fixed by rebase + retry). The fixed version has never run on GitHub. It
+  fires Mondays 06:00 UTC from the default branch (`claude/pokemon-vgc-metagame-dashboard-9whe1a`)
+  or via Actions -> Refresh data -> Run workflow.
+- Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
+  the sprite fallback chain with real network, the creator image and pixel field on a real device.
+- Pixel field cost on low-end / mobile CPUs and battery (only desktop Chromium was profiled).
+- Real screen readers (NVDA/VoiceOver) with the ECharts aria descriptions; real touch devices
+  (tap tooltips, `[data-tip]`, Android back gesture on the drawer).
 - Browser zoom via the real zoom control (only DPR emulation was used).
+- A full smoke pass over everything changed in the UX round above (only targeted checks ran).

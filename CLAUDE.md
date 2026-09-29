@@ -48,12 +48,13 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   `speciesChipFilter(chips, dex)` applies species/mega/core/type/weak there (main filters `view.ladder` / `view.ranked`) and
   reports the rest as unsupported (shown under the chips). `archetypeMatrix(teams, matches, opponents)` counts the view's
   teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots.
-  Owner's call: both type charts add a plain `type` chip. The weakness chart shows only real multipliers
-  (share of the field at 4×/2×/½×/¼×/0×), never an averaged multiplier (the old "1.69×" chart read as a type-chart value) (no weak-to / move-type variants from clicks;
-  `weak` / `movetype` chips still work from old links).
+  Owner's call: both type charts add a plain `type` chip (no weak-to / move-type variants from clicks; `weak` /
+  `movetype` chips still work from old links). The weakness chart shows only real multipliers (share of the field at
+  4×/2×/½×/¼×/0×), never an averaged multiplier (an average like "1.69×" reads as a type-chart value).
 - `paste.js`: `toPaste(team, dex) → Showdown text` (Showdown's Champions formats store SP in the `EVs:` line, e.g. `EVs: 32 Atk / 2 SpD / 32 Spe`), `parsePaste(text, dex) → Mon[]` (accepts `EVs:` and `SPs:` lines; a value above 32 means a classic EV spread, which is dropped as `sp: null`).
 - `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`,
   `sanitizeState(state, {regs})` (every state the store accepts goes through it; unknown values fall back).
+- `pixelfield-core.js`: background pixel field logic (sprites, placement, dither), painted by `ui/pixelfield.js`.
 - `scan.js`: the Team Scanner's evidence (`scanTeam` → archetype, matchups vs Pokémon/archetypes from real
   match results of "teams like yours", item check with item clause, teammate picks, weakest link). Thresholds in `LIMITS`.
 
@@ -64,7 +65,7 @@ state = {
   tiers: ["worlds","international","regional","online"],   // enabled tiers
   place: "all" | "topcut" | "top8" | "winner",
   from: "" | "YYYY-MM-DD", to: "" | "YYYY-MM-DD", minN: 20,
-  chips: [ { kind: "species"|"type"|"archetype"|"item"|"move"|"mega"|"core"|"team", value: string | string[], neg: false } ],
+  chips: [ { kind: "species"|"mega"|"core"|"type"|"weak"|"item"|"move"|"movetype"|"archetype"|"team", value: string | string[], neg: false } ],
   skin: "pro" | "retro", theme: "dark" | "light" | "auto", anim: false,   // defaults: pro, dark
 }
 store.get(), store.set(patch), store.addChip(chip), store.removeChip(i), store.clearChips(), store.subscribe(fn)
@@ -102,12 +103,35 @@ The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It w
 Creator credits (owner's request): the "Credits" card at the end of `index.html` ("Made by Vin", no full name) links vwesley.dev, Instagram @vinnql
 and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white keyed out); the footer links vwesley.dev.
 
-## Project status (handover, 2026-09-29, updated after the performance/filter/UX rounds)
-- Live on Cloudflare Pages from branch `claude/pokemon-vgc-metagame-dashboard-9whe1a` (no `main` branch yet). Commit and push
+## Sections at a glance (page order)
+Header (skin/theme/animated toggles) -> sticky filter bar + active-filter chips -> Meta Snapshot (top cards + KPIs) ->
+Usage leaderboard (Wilson CI, top item) | Usage x Win-rate quadrant -> Type landscape (type usage | move types the field
+is weak to, by real multiplier) -> Item usage | Most common items by Pokémon -> Archetype split + matchup heatmap |
+Teammate co-usage heatmap + top cores + Teammate rate -> Speed tiers (modifiers, benchmark) -> Weekly trends + risers /
+fallers + regulation shift -> Team Sheet Library -> My Team Scanner (weaknesses, threats, speed position, closest teams,
+archetype, matchups vs Pokémon/archetypes, item check, teammate picks, weakest link) -> Data & methodology (downloads,
+sources) -> Credits. Deep dive drawer (any Pokémon: items, abilities, moves, sets, spreads, teammates, win rate).
+Background: pixel field canvas.
+
+## Where the data is (and isn't)
+- Tournament team sheets (`teams-<REG>.json`): species, item, ability, moves, Mega; **no SP spreads or natures in any
+  regulation** (`openSheets: 0` in the manifest). Match results: M-A 64k, M-B 85k, M-C 9k.
+- In-game ranked (`ranked-<REG>.json`, all regs, seasons M1-M6): per species rank, moves, items, abilities, **natures and
+  SP spreads as separate distributions** (not joint), teammate ranks. Ranks only: never a usage %.
+- Smogon ladder (`ladder-<REG>.json`): usage, items, abilities, moves, **joint "Nature:hp/atk/def/spa/spd/spe" spreads**,
+  teammates, checks/counters. M-A and M-B have 3 months; M-C has none until Smogon publishes (early October).
+- So any spread / stat analysis uses ranked (+ Smogon where present) and must say which, with its sample.
+
+## Project status (handover, 2026-09-29, end of the UX round)
+- Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
+  `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
+- **Weekly refresh Action** (`.github/workflows/refresh-data.yml`, Mondays 06:00 UTC + manual): its only run so far
+  (2026-09-29, manual) failed at the push (race, since fixed with rebase + retries); the fixed version has not run yet.
 - Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
 - Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
-- Where things stand: the in-game ranked data does not exist per team, so team-level sections show an explicit "not available" state under that source. Smogon M-C (September) stats are expected in early October and the weekly Action picks them up automatically.
+- Team-level sections show an explicit "not available" state under the ranked source (no per-team ranked data).
+- Next-session prompt: `docs/prompts/next-session.md`. Testing ledger: `docs/TESTING.md`.
 
 ### Invariants learned the hard way (keep them)
 - **Rendering** (`main.js`): sections update on-screen first, yielding between them; off-screen ones are marked dirty and
