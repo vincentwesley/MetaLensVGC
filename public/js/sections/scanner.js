@@ -25,8 +25,18 @@ function emptyState(parent, title) {
   return box;
 }
 
+// Grid slot per card (css: .scn-results grid-template-areas), so short cards
+// sit side by side on wide screens instead of each spanning the full width.
+const CARD_AREA = {
+  'Parsed team': 'parsed', "Your team's archetype": 'arch', 'Weaknesses vs. the current meta': 'weak',
+  'Top meta threats with no answer': 'threats', 'Speed position': 'speed', 'Matchups: Pokémon': 'mpoke',
+  'Matchups: archetypes': 'march', 'Item check': 'items', 'Common teammate picks': 'picks',
+  'Weakest link': 'link', 'Closest tournament teams': 'closest',
+};
+
 function sectionCard(title) {
   const card = elm('div', 'card scn-block');
+  if (CARD_AREA[title]) card.style.gridArea = CARD_AREA[title];
   const head = elm('div', 'card__head');
   head.appendChild(elm('h3', null, title));
   const bodyEl = elm('div', 'card__body');
