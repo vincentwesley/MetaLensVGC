@@ -236,6 +236,14 @@ html { scroll-padding-top: calc(var(--header-real, var(--header-h)) + var(--stic
 .toggle input:checked + .toggle__track::after { transform: translateX(16px); background: var(--surface-1); }
 .toggle input:focus-visible + .toggle__track { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 
+/* Shown by main.js when manifest.generated is over 10 days old (weekly refresh may have failed). */
+.stale-notice {
+  margin: 0; padding: var(--space-2) var(--space-4);
+  background: var(--surface-2); color: var(--ink-2); border-bottom: 2px solid var(--frame);
+  font-family: var(--font-body); font-size: var(--fs-small); line-height: 1.4; overflow-wrap: anywhere;
+}
+.stale-notice[hidden] { display: none; }
+
 /* ---------- filter bar ---------- */
 /* Filter bar + active-filter chips stick together under the header, so the
    filters in effect (and Clear all) stay visible while scrolling. */

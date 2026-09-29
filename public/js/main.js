@@ -13,6 +13,7 @@ import { toast } from './ui/toast.js';
 import { installTips } from './ui/tip.js';
 import { installKeyActivation } from './ui/keys.js';
 import { installPixelField } from './ui/pixelfield.js';
+import { isStale } from './lib/stale.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
@@ -141,6 +142,11 @@ async function boot() {
     return;
   }
   store.setRegs((manifest.regs || []).map((r) => r.id));
+  if (isStale(manifest.generated)) {
+    const note = document.getElementById('stale-notice');
+    note.textContent = `Data last refreshed ${manifest.generated.slice(0, 10)} — the weekly update may have failed; figures may be out of date.`;
+    note.hidden = false;
+  }
 
   let lib;
   try {
