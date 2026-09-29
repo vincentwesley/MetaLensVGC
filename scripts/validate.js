@@ -92,6 +92,36 @@ function validateLadderFile(file, data, errors) {
   }
 }
 
+function validateRankedFile(file, data, errors) {
+  if (!REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
+  if (data.source !== 'championsbattledata') errors.push(`${file}: source must be "championsbattledata"`);
+  if (data.format !== 'Doubles') errors.push(`${file}: format must be "Doubles"`);
+  if (!Array.isArray(data.seasons)) {
+    errors.push(`${file}: seasons must be an array`);
+    return;
+  }
+  const pctFields = ['moves', 'items', 'abilities', 'natures', 'spreads'];
+  for (const s of data.seasons) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.snapshot || '')) errors.push(`${file}: ${s.season} bad snapshot "${s.snapshot}"`);
+    if (s.ranking != null && !Array.isArray(s.ranking)) errors.push(`${file}: ${s.season} ranking must be an array or null`);
+    if (typeof s.mons !== 'object' || s.mons == null) {
+      errors.push(`${file}: ${s.season} mons must be an object`);
+      continue;
+    }
+    for (const [name, mon] of Object.entries(s.mons)) {
+      if (mon.rank != null && (!Number.isInteger(mon.rank) || mon.rank < 1)) {
+        errors.push(`${file}: ${s.season} ${name}.rank invalid: ${mon.rank}`);
+      }
+      for (const table of pctFields) {
+        for (const [k, v] of Object.entries(mon[table] || {})) {
+          if (typeof v !== 'number' || v < 0 || v > 1) errors.push(`${file}: ${s.season} ${name}.${table}["${k}"] not a 0-1 fraction: ${v}`);
+        }
+      }
+      if (!Array.isArray(mon.teammates)) errors.push(`${file}: ${s.season} ${name}.teammates must be an array`);
+    }
+  }
+}
+
 function validateDexFile(data, errors) {
   const CATS = ['Physical', 'Special', 'Status'];
   for (const [name, sp] of Object.entries(data.species || {})) {
@@ -140,6 +170,13 @@ export async function validateAll(dataDir) {
       return null;
     });
     if (ladder) validateLadderFile(`ladder-${reg}.json`, ladder, errors);
+
+    const rankedPath = path.join(dataDir, `ranked-${reg}.json`);
+    const ranked = await readJSON(rankedPath).catch((e) => {
+      errors.push(`ranked-${reg}.json: ${e.message}`);
+      return null;
+    });
+    if (ranked) validateRankedFile(`ranked-${reg}.json`, ranked, errors);
   }
 
   return errors;

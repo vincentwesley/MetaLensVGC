@@ -14,11 +14,12 @@ Regulation ids everywhere: `"M-A" | "M-B" | "M-C"`. Dates: `"YYYY-MM-DD"` (UTC).
   "regs": [
     { "id": "M-A", "start": "2026-04-08", "end": "2026-06-17",
       "teams": 24143, "events": 339, "openSheets": 0, "matches": 51234,
-      "ladderMonths": ["2026-05", "2026-06"] }
+      "ladderMonths": ["2026-05", "2026-06"], "rankedSeasons": ["M1", "M2"] }
   ],
   "sources": [ { "id": "limitless", "name": "Limitless (play.limitlesstcg.com)", "url": "https://play.limitlesstcg.com" } ]
 }
 ```
+`rankedSeasons`: in-game "Battle Data" season ids present in that regulation's `ranked-<REG>.json` (see below).
 `end` is exclusive. `openSheets` = teams with an SP spread.
 
 ## dex.json
@@ -95,6 +96,54 @@ client only ever requests URLs known to exist:
 All shares are fractions (0–1) of that Pokémon's usage. Keep the top 12 entries per sub-table (top 20 teammates).
 `counters` is `{name: [score, stdev]}` from "Checks and Counters", `{}` if Smogon left it empty.
 A regulation with no ladder data has `"months": []`.
+
+## ranked-<REG>.json (official in-game ranked ladder, Doubles only)
+Source: [championsbattledata.com](https://championsbattledata.com) (unofficial fan API/site for the
+official Pokémon Champions ranked-ladder "Battle Data"; see `/api_guide`, `/api-rules/`). Per their
+terms: attribution required, no mirroring/redistribution as a standalone data service — so this file
+keeps only what the site itself displays (however many entries it provides per category, ~10) and only
+the *last* snapshot of each finished in-game season (no daily-archive dump).
+```json
+{
+  "reg": "M-C", "source": "championsbattledata", "format": "Doubles",
+  "attribution": { "text": "Battle data provided by Pokémon Champions Battle Data", "url": "https://championsbattledata.com/" },
+  "seasons": [
+    { "season": "M6", "snapshot": "2026-09-29", "url": "https://championsbattledata.com/api/battle/Doubles/:name?season=M6",
+      "ranking": ["Rillaboom", "Sneasler", "..."],
+      "mons": {
+        "Rillaboom": { "rank": 1,
+          "moves": {"Grassy Glide": 0.974}, "items": {"Miracle Seed": 0.576}, "abilities": {"Grassy Surge": 0.999},
+          "natures": {"Adamant": 0.849}, "spreads": {"32/32/0/0/0/2": 0.114}, "teammates": ["Incineroar", "..."] }
+      } }
+  ]
+}
+```
+- One `seasons[]` entry per official in-game season (`"M1"`.."M6", etc.), mapped to a regulation by
+  when the season *started* (the day after the previous season's last snapshot), not by its own last
+  day — a season's final archived snapshot is often dated exactly at (or just past) the next
+  regulation's boundary. See `scripts/sources/ranked.js#deriveSeasonMeta`.
+- `snapshot`: UTC date of that season's last daily data folder. For a finished season this is fixed;
+  for the season currently being collected it's today's date and is refetched every `npm run data` run
+  (finished seasons are reused from the existing file — incremental, like `ladder-<REG>.json` months).
+- `url`: template for the per-Pokémon battle endpoint that produced this season's rows (`:name` is a
+  Showdown id).
+- `ranking`: the site's Doubles "usage ranking" table (rank order only — **no usage shares**; the game
+  publishes ranks, not percentages). This is server-rendered static content that only ever reflects the
+  *current* season — there is no historical per-season ranking anywhere on the site — so `ranking` is
+  `null` for every season except the current one.
+- `mons[name].rank`: that mon's position in `ranking` when it appears there, else `null`. Always `null`
+  for a non-current season (since `ranking` itself is `null` there).
+- `moves` / `items` / `abilities` / `natures`: fractions (0–1), one API row's `percentage_value / 100`.
+  `natures` comes from the API's `stat_alignment` category.
+- `spreads`: keyed by raw SP order `"hp/atk/def/spa/spd/spe"` (unlike ladder's `"Nature:sp"` keys —
+  nature is already reported separately here via `natures`). Comes from the API's `stat_points` rows.
+- `teammates`: rank-ordered names only, **no shares** (the API reports teammate `rank` but a null
+  `percentage_value`).
+- Megas have no separate species entry: the API tracks a Mega as the **base** species holding its own
+  Mega Stone as a top `items` entry (e.g. `"Salamence"` with `"Salamencite"` near 100% `items` share,
+  not a `"Salamence-Mega"` entry). Verified directly against the API: no `pokemon[]` index entry
+  anywhere has a `-Mega` showdownId or showdownName.
+- A regulation with no ranked data yet has `"seasons": []`.
 
 ## Decoded in-memory shape (browser, `js/lib/aggregate.js#decode`)
 ```js
