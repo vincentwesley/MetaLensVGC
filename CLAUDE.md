@@ -96,8 +96,8 @@ Plain modern JS, no TypeScript, no frameworks, no new runtime deps. Small module
 type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback exact form → base species → type-coloured placeholder.
 
 ## Name
-The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It was "VGC MetaScope"
-(`vgcmetascope.pages.dev`) until 2026-09-29; `public/js/moved.js` forwards the old address. Use the new name everywhere.
+The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It was "VGC MetaScope" until
+2026-09-29; the old `vgcmetascope` Pages project has been deleted. Use the new name everywhere.
 Creator credits (owner's request): the "Credits" card at the end of `index.html` ("Made by Vin", no full name) links vwesley.dev, Instagram @vinnql
 and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white keyed out); the footer links vwesley.dev.
 
