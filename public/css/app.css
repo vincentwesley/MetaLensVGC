@@ -429,14 +429,17 @@ table.data-table tbody tr:hover { background: var(--surface-2); cursor: pointer;
 }
 [data-skin="pro"] .pill { border-radius: 3px; }
 
-/* ---------- tooltip (ECharts uses tooltip-bg var; this is for native title tooltips / help icons) ---------- */
-[data-tip] { position: relative; }
-[data-tip]:hover::after, [data-tip]:focus-visible::after {
-  content: attr(data-tip);
-  position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+/* ---------- tooltip for [data-tip] (js/ui/tip.js positions it; ECharts tooltips use --tooltip-bg too) ---------- */
+[data-tip] { cursor: help; }
+button[data-tip] { cursor: pointer; }
+.tip {
+  position: fixed; z-index: 1000; pointer-events: none;
+  max-width: min(320px, calc(100vw - 16px)); width: max-content;
   background: var(--tooltip-bg); color: var(--ink); border: 1px solid var(--border);
-  padding: 4px 8px; border-radius: var(--radius); font-size: var(--fs-small); white-space: nowrap; z-index: 400;
+  padding: 6px 10px; border-radius: var(--radius); font-family: var(--font-body); font-size: var(--fs-small);
+  line-height: 1.4; white-space: normal; overflow-wrap: anywhere; box-shadow: 0 4px 16px rgba(0,0,0,.25);
 }
+.tip[hidden] { display: none; }
 
 /* ---------- empty / insufficient-data state ---------- */
 .empty-state {
