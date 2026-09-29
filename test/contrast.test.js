@@ -32,6 +32,13 @@ for (const skin of ['pro', 'retro']) {
   for (const theme of ['light', 'dark']) {
     test(`contrast: ${skin} ${theme} text tokens >= 4.5:1 on every surface`, () => {
       const t = theme === 'light' ? lightBlock(skin) : block(`[data-skin="${skin}"][data-theme="dark"]`);
+      // Selected buttons / chips: --surface-1 text on --accent. Links and focus rings: --accent-2.
+      const accent = t.accent || lightBlock(skin).accent || block(`[data-skin="${skin}"]`).accent;
+      const accent2 = t['accent-2'] || block(`[data-skin="${skin}"]`)['accent-2'];
+      assert.ok(ratio(t['surface-1'], accent) >= 4.5, `${skin} ${theme}: text on --accent ${accent} is ${ratio(t['surface-1'], accent).toFixed(2)}:1`);
+      for (const bg of ['surface-0', 'surface-1', 'surface-2']) {
+        assert.ok(ratio(accent2, t[bg]) >= 4.5, `${skin} ${theme}: --accent-2 ${accent2} on --${bg} is ${ratio(accent2, t[bg]).toFixed(2)}:1`);
+      }
       for (const fg of ['ink', 'ink-2', 'muted']) {
         for (const bg of ['surface-0', 'surface-1', 'surface-2']) {
           assert.ok(t[fg] && t[bg], `${skin} ${theme}: missing --${fg} or --${bg}`);

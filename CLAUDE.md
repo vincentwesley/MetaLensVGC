@@ -126,7 +126,11 @@ and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white
   (Shift kept). The deep-dive drawer owns a history entry (Back closes it).
 - **Speed** of a species always comes from `metaSpeed()` (sheets -> in-game ranked -> Smogon -> bounds). No
   sheet has SP spreads, and Smogon months lag, so the ranked spreads are usually what's used.
-- **Colours**: text tokens must stay >= 4.5:1 on every surface (`test/contrast.test.js`).
+- **Colours**: green palettes (owner's request). Pro = the owner's vwesley.dev tokens (portfolio repo, `restructure`
+  branch), Retro = Game Boy greens. Text tokens, text on `--accent` and `--accent-2` must stay >= 4.5:1 on every
+  surface (`test/contrast.test.js`). `--fx-1/2/3` colour the background pixel field (`ui/pixelfield.js` +
+  `lib/pixelfield-core.js`, ported from the portfolio's fx-personal field; pauses while `data-rendering`, still under
+  reduced motion). Cards are 88% opaque so the field shows through faintly.
 - **Hand-typed sheet strings** go through `normalizeTerm` (decode + pipeline); ladder names through `ladderMerge(..., dex)`.
 - **Hot aggregations** are memoized per filtered array (`usage`, `itemsBySpecies`); results are shared, so treat them as read-only.
 - **UI chrome**: the filter bar and active-filter chips share one sticky wrapper (`.stickybar`); collapse state is a

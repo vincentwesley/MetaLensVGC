@@ -23,10 +23,10 @@
   --filterbar-h: 64px;
 
   /* categorical (light-mode step; overridden dark below) */
-  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a; --series-4:#eda100;
-  --series-5:#e87ba4; --series-6:#008300; --series-7:#4a3aa7; --series-8:#e34948;
-  /* sequential blue ramp, low->high */
-  --seq-1:#cde2fb; --seq-2:#9ec5f4; --seq-3:#6da7ec; --seq-4:#3987e5; --seq-5:#2a78d6; --seq-6:#1c5cab; --seq-7:#104281;
+  --series-1:#1f8a4c; --series-2:#2a78d6; --series-3:#d98a1a; --series-4:#8a5cc7;
+  --series-5:#d1566e; --series-6:#15999a; --series-7:#7a9a1f; --series-8:#c0503a;
+  /* sequential green ramp, low->high */
+  --seq-1:#e1f3e6; --seq-2:#bfe6cb; --seq-3:#93d3a8; --seq-4:#5fbd82; --seq-5:#379f60; --seq-6:#217d46; --seq-7:#135a31;
   /* diverging blue<->red, neutral mid overridden per theme */
   --div-neg-2:#104281; --div-neg-1:#3987e5; --div-mid:#f0efec; --div-pos-1:#e66767; --div-pos-2:#8a1f1f;
   /* status: fixed, never themed */
@@ -47,20 +47,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
-    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
-    --series-5:#d55181; --series-6:#008300; --series-7:#9085e9; --series-8:#e66767;
-    --div-mid:#383835;
+    --series-1:#5fd38a; --series-2:#5b9cf0; --series-3:#f0b44c; --series-4:#a98bf0;
+    --series-5:#f07a92; --series-6:#3cc8c8; --series-7:#b5d65a; --series-8:#e8765c;
+    --div-mid:#2a332d;
   }
 }
 :root[data-theme="dark"] {
-  --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70; --series-4:#c98500;
-  --series-5:#d55181; --series-6:#008300; --series-7:#9085e9; --series-8:#e66767;
-  --div-mid:#383835;
+  --series-1:#5fd38a; --series-2:#5b9cf0; --series-3:#f0b44c; --series-4:#a98bf0;
+  --series-5:#f07a92; --series-6:#3cc8c8; --series-7:#b5d65a; --series-8:#e8765c;
+  --div-mid:#2a332d;
 }
 
 /* ---------- skin: retro ---------- */
-/* Handheld-console chrome in a low-glare palette: warm charcoal with antique
-   gold and muted crimson (dark), soft parchment with burgundy (light). Pixel
+/* Handheld-console chrome in a low-glare green palette: deep moss-black with
+   lime and mint (dark), pale Game Boy green with forest green (light). Pixel
    borders use --frame, a quiet tone, instead of full-contrast ink. */
 [data-skin="retro"] {
   --font-head: var(--font-retro-head);
@@ -76,32 +76,35 @@
    [data-theme="dark"] or the prefers-color-scheme media query. */
 [data-skin="retro"] {
   color-scheme: light;
-  --surface-0: #d9d3c1; --surface-1: #e6e0cf; --surface-2: #eee9da;
-  --ink: #23201a; --ink-2: #4b463a; --muted: #615b4d;
-  --grid: #cfc8b4; --axis: #b0a892; --border: rgba(35,32,26,.25);
-  --frame: #8a8272;
-  --tooltip-bg: #eee9da;
-  --accent: #8e2c32;   /* burgundy */
-  --accent-2: #9a7412; /* dark gold */
+  --surface-0: #cfd9bf; --surface-1: #dce5cc; --surface-2: #e6edd8;
+  --ink: #17220f; --ink-2: #33432a; --muted: #4a5a3f;
+  --grid: #c3cfb0; --axis: #a3b18e; --border: rgba(23,34,15,.25);
+  --frame: #71826a;
+  --tooltip-bg: #e6edd8;
+  --accent: #2d6a2f;   /* forest green */
+  --accent-2: #1d5e4d; /* deep teal-green */
+  --fx-1: #3f8f2a; --fx-2: #b8683f; --fx-3: #6f5fb3;
 }
 [data-skin="retro"][data-theme="dark"] {
-  --surface-0: #121110; --surface-1: #191816; --surface-2: #22201d;
-  --ink: #e4dfcf; --ink-2: #b0aa96; --muted: #8f8a7c;
-  --grid: #2e2b27; --axis: #403c36; --border: rgba(228,223,207,.16);
-  --frame: #4a453d;
-  --tooltip-bg: #22201d;
-  --accent: #c8a24c;   /* antique gold */
-  --accent-2: #d4736a; /* muted crimson */
+  --surface-0: #0d110e; --surface-1: #131913; --surface-2: #1a221b;
+  --ink: #e1ebd4; --ink-2: #aebb9f; --muted: #8e9d83;
+  --grid: #243026; --axis: #344337; --border: rgba(225,235,212,.15);
+  --frame: #3c4c3e;
+  --tooltip-bg: #1a221b;
+  --accent: #a6d65e;   /* lime */
+  --accent-2: #7fd6a8; /* mint */
+  --fx-1: #7fd34a; --fx-2: #e9a07f; --fx-3: #a996e0;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   [data-skin="retro"]:not([data-theme="light"]) {
-    --surface-0: #121110; --surface-1: #191816; --surface-2: #22201d;
-    --ink: #e4dfcf; --ink-2: #b0aa96; --muted: #8f8a7c;
-    --grid: #2e2b27; --axis: #403c36; --border: rgba(228,223,207,.16);
-    --frame: #4a453d;
-    --tooltip-bg: #22201d;
-    --accent: #c8a24c; --accent-2: #d4736a;
+    --surface-0: #0d110e; --surface-1: #131913; --surface-2: #1a221b;
+    --ink: #e1ebd4; --ink-2: #aebb9f; --muted: #8e9d83;
+    --grid: #243026; --axis: #344337; --border: rgba(225,235,212,.15);
+    --frame: #3c4c3e;
+    --tooltip-bg: #1a221b;
+    --accent: #a6d65e; --accent-2: #7fd6a8;
+    --fx-1: #7fd34a; --fx-2: #e9a07f; --fx-3: #a996e0;
     color-scheme: dark;
   }
 }
@@ -116,36 +119,39 @@
   --fs-label: 11px; --fs-body: 14px; --fs-small: 12px;
   --ls-head: .02em;
   --radius: 3px;
-  --accent: #b9770e;   /* amber */
-  --accent-2: #0f9b8e; /* teal */
+  --accent: #2f6a17;   /* forest green (vwesley.dev light accent) */
+  --accent-2: #14673a; /* mint-forest (links, focus) */
+  --fx-1: #35a52a; --fx-2: #c7704a; --fx-3: #7d68c4; /* background pixel field */
 }
 [data-skin="pro"] {
-  --surface-0: #eeeeec; --surface-1: #f7f7f5; --surface-2: #ffffff;
-  --ink: #101010; --ink-2: #4d4d4a; --muted: #676763;
-  --grid: #e3e2dd; --axis: #c7c6c0; --border: rgba(11,11,11,.12);
-  --tooltip-bg: #17171a;
+  --surface-0: #f3f7ec; --surface-1: #f9fbf5; --surface-2: #ffffff;
+  --ink: #1b2712; --ink-2: #3a4a2f; --muted: #52623f;
+  --grid: #dfe8d2; --axis: #c9d6b8; --border: rgba(27,39,18,.14);
+  --tooltip-bg: #ffffff;
   color-scheme: light;
 }
 [data-skin="pro"][data-theme="dark"] {
-  --surface-0: #0a0a0a; --surface-1: #0e0e0e; --surface-2: #161616;
-  --ink: #f5f5f3; --ink-2: #b8b8b3; --muted: #8a8a85;
-  --grid: #232323; --axis: #333333; --border: rgba(255,255,255,.12);
-  --tooltip-bg: #161616;
-  --accent: #f0a93c; --accent-2: #2dd4bf;
+  --surface-0: #11150e; --surface-1: #151a11; --surface-2: #1a2015;
+  --ink: #e9f0df; --ink-2: #aebb9f; --muted: #8e9d80;
+  --grid: #232c1d; --axis: #2f3a26; --border: rgba(233,240,223,.12);
+  --tooltip-bg: #1a2015;
+  --accent: #8fd15a; --accent-2: #4fe0a0;
+  --fx-1: #6fe23c; --fx-2: #e9a07f; --fx-3: #a996e0;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   [data-skin="pro"]:not([data-theme="light"]) {
-    --surface-0: #0a0a0a; --surface-1: #0e0e0e; --surface-2: #161616;
-    --ink: #f5f5f3; --ink-2: #b8b8b3; --muted: #8a8a85;
-    --grid: #232323; --axis: #333333; --border: rgba(255,255,255,.12);
-    --tooltip-bg: #161616;
-    --accent: #f0a93c; --accent-2: #2dd4bf;
+    --surface-0: #11150e; --surface-1: #151a11; --surface-2: #1a2015;
+    --ink: #e9f0df; --ink-2: #aebb9f; --muted: #8e9d80;
+    --grid: #232c1d; --axis: #2f3a26; --border: rgba(233,240,223,.12);
+    --tooltip-bg: #1a2015;
+    --accent: #8fd15a; --accent-2: #4fe0a0;
+    --fx-1: #6fe23c; --fx-2: #e9a07f; --fx-3: #a996e0;
     color-scheme: dark;
   }
 }
 /* default before JS sets data-theme: assume retro+light so first paint isn't unstyled */
-html:not([data-skin]) { --surface-0:#e9e0ba; --surface-1:#f4efd9; --surface-2:#fbf6e3; --ink:#1c1810; }
+html:not([data-skin]) { --surface-0:#11150e; --surface-1:#151a11; --surface-2:#1a2015; --ink:#e9f0df; }
 
 /* ---------- base ---------- */
 * { box-sizing: border-box; }
@@ -375,7 +381,8 @@ main.grid .section.span-4 { grid-column: span 4; }
 
 /* ---------- card ---------- */
 .card {
-  background: var(--surface-1);
+  /* slightly see-through, so the background pixel field shimmers behind the cards */
+  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
   border: 2px solid var(--frame);
   border-radius: var(--radius);
   transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
@@ -579,3 +586,9 @@ button[data-tip] { cursor: pointer; }
   :root[data-theme="auto"] .creator__fx i { background: #5fbf4a; box-shadow: 0 0 3px 1px #7fd65f, 0 0 10px 3px color-mix(in srgb, #3fae6a 45%, transparent); }
   :root[data-theme="auto"] .creator__fx .spark { color: #2f9a55; }
 }
+
+/* ---------- background pixel field (js/ui/pixelfield.js; the vwesley.dev look) ---------- */
+.fx-region { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; }
+.fx-region[data-ready] { opacity: 1; transition: opacity .8s; }
+.fx-region canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+@media print { .fx-region { display: none; } }

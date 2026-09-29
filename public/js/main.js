@@ -13,6 +13,7 @@ import { chartTheme, onTheme, notifyThemeSubs, withChartDefaults } from './ui/ec
 import { toast } from './ui/toast.js';
 import { installTips } from './ui/tip.js';
 import { installKeyActivation } from './ui/keys.js';
+import { installPixelField } from './ui/pixelfield.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
@@ -113,6 +114,7 @@ async function loadLib() {
 async function boot() {
   installTips();
   installKeyActivation();
+  installPixelField();
   // Keyboard focus and anchor jumps scroll things below the sticky header +
   // filter bar instead of behind them (html scroll-padding-top uses this).
   // The header wraps to two rows on narrow screens, so its real height is
