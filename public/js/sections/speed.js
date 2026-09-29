@@ -4,7 +4,7 @@
 // (4) a labelled theoretical [min,max] range from base stats when none exists. Toggles apply stage/field speed modifiers (combinable,
 // floored after each step); a benchmark form compares a hypothetical mon
 // against the field.
-import { usage, speedTiers, ladderMerge, rankedSeason, rankedMegaKey, metaSpeed } from '../lib/aggregate.js';
+import { usage, ladderMerge, rankedSeason, metaSpeed, speedSpecies } from '../lib/aggregate.js';
 import { rankedSource } from '../ui/meta.js';
 import { calcStat } from '../lib/stats.js';
 
@@ -74,21 +74,10 @@ function applyMods(v, mods) {
   return x;
 }
 
-// Species list: top 20 by in-game rank under source=ranked (when the season publishes a ranking),
-// else top 20 tournament species. Mega-stone holders are shown as their Mega form.
-function speciesList(view, dex, season) {
-  if (view.state.source !== 'ranked' || !season?.ranking) return speedTiers(view.monTeams, dex, 20);
-  const byKey = new Map(speedTiers(view.monTeams, dex, 99999).map((t) => [t.key, t]));
-  return season.ranking.filter((name) => season.mons[name]).slice(0, 20).map((name) => {
-    const key = rankedMegaKey(name, season.mons[name], dex) || name;
-    return { ...(byKey.get(key) || { key, spe: null }), key, n: null, rank: season.mons[name].rank };
-  });
-}
-
 // Real most-common speed per species: team sheets -> in-game ranked spread -> Smogon ladder -> bounds.
 function buildRows(view, dex) {
   const season = rankedSeason(view.ranked, view.state.from, view.state.to);
-  const tiers = speciesList(view, dex, season);
+  const tiers = speedSpecies(view.state.source, view.monTeams, season, dex, 20);
   const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
   const rows = [];
   const sheetByKey = new Map(tiers.map((t) => [t.key, t]));

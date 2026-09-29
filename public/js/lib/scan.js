@@ -7,7 +7,9 @@
 import { wilson } from './stats.js';
 import { effectiveness } from './types.js';
 import { classify, ARCHETYPES } from './archetypes.js';
-import { archetypeMatrix, itemsBySpecies, usage } from './aggregate.js';
+import { archetypeMatrix, itemsBySpecies, usage, rankedEntries } from './aggregate.js';
+import { calcStat } from './stats.js';
+import { rankedSpreadRows, speedBenchmarks, nearestSpread } from './spreads.js';
 
 /** Thresholds, exported so the UI can quote them. */
 export const LIMITS = {
@@ -354,4 +356,35 @@ export function scanTeam({ mons, base, matches, dex, minN = 20, types }) {
     items: itemSuggestions(mons, base),
     picks, link: weakestLink(keys, base, counts),
   };
+}
+
+/** A pasted nature is flagged when fewer than this share of the species' ranked players use it. */
+export const RARE_NATURE = 0.05;
+
+/**
+ * "SP check" for one pasted Pokémon against the in-game ranked spreads of its species.
+ * @param mon    parsePaste Mon (`sp` array or null, `nature` or null)
+ * @param entry  `{name, mon}` from rankedMon(season, key, dex) or null
+ * @param field  `[{key, spe}]` meta speeds (own species is skipped)
+ * @returns {{kind:'insufficient'|'assumed'|'exact'|'near', ...}}
+ *  exact: `{rank, row}`; near: `{row, dist, diff: number[6], mySpe, commonSpe, changes:[{key, spe, mine, common}]}`;
+ *  every kind but 'insufficient' also has `rows` and `rarity: null | {nature, share|null}`.
+ */
+export function spCheck(mon, entry, dex, field = []) {
+  const bs = (dex.species[mon.k] || dex.species[mon.s])?.bs;
+  const rows = bs && entry ? rankedSpreadRows(entry.mon, bs) : [];
+  if (!rows.length) return { kind: 'insufficient' };
+  const natShare = rankedEntries(entry.mon.natures).find((n) => n.name === mon.nature)?.pct ?? null;
+  const rarity = mon.nature && (natShare ?? 0) < RARE_NATURE ? { nature: mon.nature, share: natShare } : null;
+  const out = { rows, rarity };
+  if (!mon.sp) return { kind: 'assumed', ...out };
+  const near = nearestSpread(mon.sp, rows);
+  if (near.dist === 0) return { kind: 'exact', rank: rows.indexOf(near.row) + 1, row: near.row, ...out };
+  const rest = field.filter((f) => f.key !== mon.k);
+  const mySpe = calcStat(bs[5], mon.sp[5], 5, mon.nature || near.row.nature);
+  const commonSpe = near.row.stats[5];
+  const rel = (spe, f) => (spe > f.spe ? 'outspeeds' : spe < f.spe ? 'underspeeds' : 'ties');
+  const changes = rest.filter((f) => typeof f.spe === 'number' && rel(mySpe, f) !== rel(commonSpe, f))
+    .sort((a, b) => b.spe - a.spe).map((f) => ({ key: f.key, spe: f.spe, mine: rel(mySpe, f), common: rel(commonSpe, f) }));
+  return { kind: 'near', row: near.row, dist: near.dist, diff: mon.sp.map((v, i) => v - near.row.sp[i]), mySpe, commonSpe, changes, bench: speedBenchmarks(mySpe, rest), ...out };
 }

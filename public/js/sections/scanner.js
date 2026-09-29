@@ -2,14 +2,14 @@
 // the current filtered meta view. No prefilled team (real data only); the
 // "load random" helper fills the textarea from a real team via toPaste so the
 // demo path never fabricates a spread.
-import { usage, ladderMerge, closestTeams, speedTiers, metaSpeed, rankedSeason } from '../lib/aggregate.js';
+import { usage, ladderMerge, closestTeams, speedTiers, metaSpeed, rankedSeason, rankedMon } from '../lib/aggregate.js';
 import { parsePaste, toPaste, anyKnownSpecies } from '../lib/paste.js';
 import { calcStat } from '../lib/stats.js';
 import { TYPES, TYPE_COLORS, effectiveness } from '../lib/types.js';
 import { inkOn } from '../lib/contrast.js';
 import { toast } from '../ui/toast.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
-import { scanTeam, LIMITS, archLabel } from '../lib/scan.js';
+import { scanTeam, spCheck, LIMITS, RARE_NATURE, archLabel } from '../lib/scan.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
 
 function elm(tag, className, text) {
@@ -32,7 +32,7 @@ const CARD_AREA = {
   'Parsed team': 'parsed', "Your team's archetype": 'arch', 'Weaknesses vs. the current meta': 'weak',
   'Top meta threats with no answer': 'threats', 'Speed position': 'speed', 'Matchups: Pokémon': 'mpoke',
   'Matchups: archetypes': 'march', 'Item check': 'items', 'Common teammate picks': 'picks',
-  'Weakest link': 'link', 'Closest tournament teams': 'closest',
+  'Weakest link': 'link', 'Closest tournament teams': 'closest', 'SP check': 'spcheck',
 };
 
 function sectionCard(title) {
@@ -418,11 +418,11 @@ export default {
       }
       results.appendChild(cCard);
 
-      renderEvidence(view, mons, results);
+      renderEvidence(view, mons, results, metaList);
     }
 
     // --- evidence cards: archetype, matchups, items, team-comp (all from real games/teams) ---
-    function renderEvidence(view, mons, into) {
+    function renderEvidence(view, mons, into, speedField = []) {
       const dex = view.dex;
       const base = view.base || view.teams;
       const t0 = performance.now();
@@ -641,6 +641,43 @@ export default {
             ? `Teams sharing your other Pokémon without ${top.key}: ${pct(top.without.winPct)} over ${top.without.w + top.without.l} games; with it: ${pct(top.with.winPct)} over ${top.with.w + top.with.l} games.`
             : 'No member stands out: every with/without difference is within the noise.'));
         }
+        into.appendChild(card);
+      }
+      // 6. SP check: pasted SP vs the latest ranked season's common spreads of each species
+      {
+        const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+        const { card, body: b } = sectionCard('SP check');
+        const m = elm('span');
+        card.querySelector('.card__head').appendChild(m);
+        ctx.meta(m, { source: `${rankedSource(season)} · sample size not published` });
+        const STAT = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
+        const list = elm('div', 'scn-items');
+        for (const mon of mons) {
+          const key = dex.species[mon.k] ? mon.k : mon.s;
+          if (!dex.species[key]) continue;
+          const c = spCheck(mon, rankedMon(season, key, dex), dex, speedField);
+          const row = elm('div', 'scn-item');
+          const info = elm('div', 'scn-item__info');
+          const line = (text, cls) => info.appendChild(elm('div', cls || 'ddv-note', text));
+          if (c.kind === 'insufficient') line(`Insufficient data: no in-game ranked spreads for ${key}${season ? ` in ${season.season}` : ''}.`);
+          else if (c.kind === 'assumed') line('no SP line — assumed most common spread', 'ddv-note scn-muted');
+          else if (c.kind === 'exact') line(`Common spread (#${c.rank}, ${pct(c.row.share)} of ranked spreads): ${c.row.sp.join('/')}`, 'scn-ok');
+          else {
+            const diff = c.diff.map((d, i) => (d ? `${STAT[i]} ${d > 0 ? '+' : ''}${d}` : null)).filter(Boolean).join(', ');
+            line(`Nearest common spread ${c.row.sp.join('/')} (${pct(c.row.share)} of ranked spreads); yours ${mon.sp.join('/')} (${diff}).`);
+            if (speedField.length) {
+              const head = `Speed: your ${c.mySpe} Spe vs common ${c.commonSpe}`;
+              line(c.changes.length
+                ? `${head}: ${c.changes.slice(0, 3).map((x) => `${x.mine} ${x.key} (${x.spe})`).join(', ')}${c.changes.length > 3 ? ` +${c.changes.length - 3} more` : ''}, unlike the common spread.`
+                : `${head}: same results against the meta list.`, c.changes.length ? 'scn-note' : 'ddv-note');
+            }
+          }
+          if (c.rarity) line(`Nature ${c.rarity.nature}: ${c.rarity.share == null ? 'not among the reported ranked natures' : `${pct(c.rarity.share)} of ranked players`} (under ${pct(RARE_NATURE)}).`, 'scn-note');
+          row.append(monLabel(key, 24), info);
+          list.appendChild(row);
+        }
+        b.appendChild(list);
+        b.appendChild(elm('div', 'ddv-note', "Compares your SP line with this species' top ranked spreads (they cover only part of its players). Ranked natures are reported separately, so the common spread's stats assume its most common nature."));
         into.appendChild(card);
       }
       into.dataset.scanMs = String(Math.round(performance.now() - t0));

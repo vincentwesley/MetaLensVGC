@@ -195,3 +195,44 @@ test('scanTeam: end to end on a small fixture, no NaN', () => {
   assert.doesNotMatch(JSON.stringify(r), /NaN|Infinity|undefined/);
   assert.ok(LIMITS.matchGames > 0);
 });
+
+// --- spCheck (scanner SP check) ---
+import { readFileSync } from 'node:fs';
+import { spCheck, RARE_NATURE } from '../public/js/lib/scan.js';
+import { calcStat } from '../public/js/lib/stats.js';
+import { rankedMon } from '../public/js/lib/aggregate.js';
+
+test('spCheck: exact / near / assumed / insufficient / rare nature, real Rillaboom', () => {
+  const load = (f) => JSON.parse(readFileSync(new URL(`../public/data/${f}`, import.meta.url), 'utf8'));
+  const rdex = load('dex.json');
+  const season = load('ranked-M-C.json').seasons[0];
+  const entry = rankedMon(season, 'Rillaboom', rdex);
+  const field = [{ key: 'Rillaboom', spe: 1 }, { key: 'Slow', spe: 100 }, { key: 'Mid', spe: 110 }, { key: 'Fast', spe: 200 }];
+  const m = (sp, nature = null) => ({ s: 'Rillaboom', k: 'Rillaboom', nature, sp, moves: [] });
+
+  const exact = spCheck(m([32, 32, 0, 0, 0, 2]), entry, rdex, field);
+  assert.equal(exact.kind, 'exact');
+  assert.equal(exact.rank, 1);
+  assert.equal(exact.rarity, null);
+
+  const near = spCheck(m([32, 32, 0, 0, 0, 0], 'Adamant'), entry, rdex, field);
+  assert.equal(near.kind, 'near');
+  assert.equal(near.dist, 2);
+  assert.deepEqual(near.diff, [0, 0, 0, 0, 0, -2]);
+  assert.equal(near.mySpe, calcStat(rdex.species.Rillaboom.bs[5], 0, 5, 'Adamant'));
+  assert.equal(near.commonSpe, near.row.stats[5]);
+  assert.ok(near.mySpe < near.commonSpe);
+  for (const c of near.changes) assert.notEqual(c.mine, c.common);
+  assert.ok(!near.changes.some((c) => c.key === 'Rillaboom')); // own species is not its own benchmark
+
+  const rare = spCheck(m(null, 'Relaxed'), entry, rdex, field);
+  assert.equal(rare.kind, 'assumed');
+  assert.deepEqual(rare.rarity, { nature: 'Relaxed', share: entry.mon.natures.Relaxed });
+  assert.ok(entry.mon.natures.Relaxed < RARE_NATURE);
+  assert.equal(spCheck(m(null, 'Adamant'), entry, rdex, field).rarity, null);
+  assert.equal(spCheck(m(null, 'Serious'), entry, rdex, field).rarity.share, null); // not reported at all
+
+  assert.equal(spCheck(m([1, 2, 3, 4, 5, 6]), null, rdex, field).kind, 'insufficient');
+  assert.equal(spCheck({ ...m(null), k: 'Nope', s: 'Nope' }, entry, rdex, field).kind, 'insufficient');
+  assert.doesNotMatch(JSON.stringify([exact, near, rare]), /NaN|Infinity|undefined/);
+});
