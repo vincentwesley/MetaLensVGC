@@ -4,3 +4,6 @@ screenshots/tmp/
 test-results/
 playwright-report/
 .DS_Store
+
+# Instagram / promo screenshots (generated locally)
+promo/
