@@ -64,7 +64,7 @@ export function deriveSeasonMeta(dailyDataFolders) {
 }
 
 function pct(row) {
-  return typeof row.percentage_value === 'number' ? row.percentage_value / 100 : null;
+  return typeof row.percentage_value === 'number' ? Math.round(row.percentage_value * 10) / 1000 : null;
 }
 
 /**
