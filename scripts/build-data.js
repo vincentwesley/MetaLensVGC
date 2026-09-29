@@ -14,7 +14,7 @@ import { fetchLadder } from './sources/ladder.js';
 import { fetchRanked, renormalizeRanked } from './sources/ranked.js';
 import { buildDex } from './dex.js';
 import { resolveSprites } from './sprites.js';
-import { normalizeSpecies } from '../public/js/lib/names.js';
+import { normalizeSpecies, normalizeTerm } from '../public/js/lib/names.js';
 import { validateAll } from './validate.js';
 import { printReport } from './report.js';
 
@@ -253,7 +253,13 @@ async function main() {
   for (const reg of REG_IDS) {
     for (const ev of rawEventsByReg[reg]) {
       for (const row of ev.rows) {
-        for (const mon of row.mons) mon.species = normalizeSpecies(mon.species, dex);
+        for (const mon of row.mons) {
+          mon.species = normalizeSpecies(mon.species, dex);
+          // hand-typed sheets: "focus sash" / "U-Turn" / "None" -> dex names or null
+          mon.item = normalizeTerm(mon.item, dex, 'item');
+          mon.ability = normalizeTerm(mon.ability, dex, 'ability');
+          mon.moves = mon.moves.map((m) => normalizeTerm(m, dex, 'move')).filter(Boolean);
+        }
       }
     }
     renormalizeRanked(rankedByReg[reg], dex);

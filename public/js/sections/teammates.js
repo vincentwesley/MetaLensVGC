@@ -381,7 +381,7 @@ export default {
     ladderSelect.addEventListener('change', renderLadderList);
 
     function renderLadder(view) {
-      const merged = ladderMerge(view.ladder, view.state.from, view.state.to);
+      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       lastMerged = merged;
       ctx.meta(ladderCard.meta, { source: 'Ladder (Smogon)', n: merged ? merged.battles : 0, unit: 'battles' });
       if (!merged) { renderLadderList(); return; }

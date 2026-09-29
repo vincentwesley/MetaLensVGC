@@ -160,7 +160,7 @@ export default {
       }
 
       if (state.source === 'ladder') {
-        const merged = ladderMerge(view.ladder, state.from, state.to);
+        const merged = ladderMerge(view.ladder, state.from, state.to, view.dex);
         if (!merged) {
           ctx.meta(meta, { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
           emptyState(body, 'No ladder data for this regulation yet');

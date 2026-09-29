@@ -223,7 +223,7 @@ export default {
       content.appendChild(wrCard);
 
       const useLadder = view.state.source === 'ladder';
-      const merged = ladderMerge(view.ladder, view.state.from, view.state.to);
+      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       const ladderRow = useLadder ? merged?.mons.find((m) => m.key === key) : null;
 
       // items

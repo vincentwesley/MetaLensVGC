@@ -3,6 +3,7 @@
 import { parseSP, wilson, effectiveSpecies, calcStats, calcStat } from './stats.js';
 import { TYPES, effectiveness } from './types.js';
 import { classify } from './archetypes.js';
+import { displayName, normalizeTerm } from './names.js';
 
 // --- decode -----------------------------------------------------------
 // Ambiguity resolved: a team sheet can legally hold two different Mega
@@ -13,6 +14,15 @@ import { classify } from './archetypes.js';
 export function decode(file, dex) {
   const strings = file.strings;
   const str = (i) => (i == null || i < 0 ? null : strings[i]);
+  // Team sheets are hand-typed ("focus sash", "U-Turn", "None"); resolve each
+  // string index once to its canonical dex name (see names.normalizeTerm).
+  const termMemo = { item: new Map(), move: new Map(), ability: new Map() };
+  const term = (i, kind) => {
+    if (i == null || i < 0) return null;
+    const memo = termMemo[kind];
+    if (!memo.has(i)) memo.set(i, normalizeTerm(strings[i], dex, kind));
+    return memo.get(i);
+  };
   const events = file.events;
   const teams = file.teams.map((row, i) => {
     const [evIdx, player, country, placing, w, l, t, monsRaw] = row;
@@ -20,9 +30,9 @@ export function decode(file, dex) {
     const mons = monsRaw.map((mr) => {
       const [sIdx, itemIdx, abilityIdx, moveIdxs, natureIdx, spRaw] = mr;
       const s = str(sIdx);
-      const item = str(itemIdx);
-      const ability = str(abilityIdx);
-      const moves = moveIdxs.map(str);
+      const item = term(itemIdx, 'item');
+      const ability = term(abilityIdx, 'ability');
+      const moves = moveIdxs.map((mi) => term(mi, 'move')).filter(Boolean);
       const nature = str(natureIdx);
       const sp = typeof spRaw === 'string' ? parseSP(spRaw) : null;
       const itemDex = item && dex.items ? dex.items[item] : null;
@@ -425,6 +435,99 @@ function topFromCounts(counts, n, limit = 12) {
     .slice(0, limit);
 }
 
+// --- items -----------------------------------------------------------------
+const itemsBySpeciesMemo = new WeakMap();
+/**
+ * Held-item split per species key, in one pass over `teams`:
+ * Map<key, { n, items: [{ name, n, pct }] }> where n counts that key's slots and
+ * pct is the share of those slots holding the item; items sorted by n desc. Memoized per array; treat the result as read-only.
+ */
+export function itemsBySpecies(teams) {
+  let out = itemsBySpeciesMemo.get(teams);
+  if (out) return out;
+  const acc = new Map();
+  for (const t of teams) {
+    for (const m of t.mons) {
+      let a = acc.get(m.k);
+      if (!a) acc.set(m.k, (a = { n: 0, counts: new Map() }));
+      a.n++;
+      if (m.item) a.counts.set(m.item, (a.counts.get(m.item) || 0) + 1);
+    }
+  }
+  out = new Map();
+  for (const [key, a] of acc) {
+    const items = [...a.counts].map(([name, c]) => ({ name, n: c, pct: a.n ? c / a.n : 0 })).sort((x, y) => y.n - x.n);
+    out.set(key, { n: a.n, items });
+  }
+  itemsBySpeciesMemo.set(teams, out);
+  return out;
+}
+
+/** True for a Mega Stone per dex.items. */
+export function isMegaStone(item, dex) {
+  const e = dex?.items?.[item];
+  return !!(e && (e.megaOf || e.megaMap));
+}
+
+/**
+ * Item usage across teams: [{ name, n, pct, slots, winPct, ci, holders: [{ key, n, pct }] }],
+ * sorted by n. n / pct = teams carrying the item (at least once); holders' pct is the
+ * share of this item's slots held by that species.
+ * opts.megaStones=false drops Mega Stones (they just mirror Mega usage).
+ */
+export function itemUsage(teams, dex, opts = {}) {
+  const { megaStones = true } = opts;
+  const acc = new Map();
+  for (const t of teams) {
+    const seen = new Set();
+    for (const m of t.mons) {
+      if (!m.item) continue;
+      if (!megaStones && isMegaStone(m.item, dex)) continue;
+      let a = acc.get(m.item);
+      if (!a) acc.set(m.item, (a = { n: 0, slots: 0, w: 0, l: 0, holders: new Map() }));
+      a.slots++;
+      a.holders.set(m.k, (a.holders.get(m.k) || 0) + 1);
+      if (!seen.has(m.item)) { seen.add(m.item); a.n++; a.w += t.w; a.l += t.l; }
+    }
+  }
+  const nTeams = teams.length;
+  return [...acc].map(([name, a]) => {
+    const games = a.w + a.l;
+    return {
+      name, n: a.n, pct: nTeams ? a.n / nTeams : 0, slots: a.slots,
+      winPct: games > 0 ? a.w / games : null, ci: wilson(a.w, games),
+      holders: [...a.holders].map(([key, c]) => ({ key, n: c, pct: c / a.slots })).sort((x, y) => y.n - x.n).slice(0, 5),
+    };
+  }).sort((x, y) => y.n - x.n);
+}
+
+/**
+ * Ladder item usage from ladderMerge() output: share of all Pokemon slots holding
+ * each item (Smogon's per-Pokemon usage sums to ~6 per team, so this is
+ * sum(usage * itemShare) / sum(usage)). [{ name, pct, holders: [{ key, pct }] }].
+ */
+export function ladderItemUsage(merged, dex, opts = {}) {
+  const { megaStones = true } = opts;
+  if (!merged) return [];
+  let total = 0;
+  const acc = new Map();
+  for (const mon of merged.mons) {
+    total += mon.usage;
+    for (const it of mon.items) {
+      if (it.name === 'No item' || (!megaStones && isMegaStone(it.name, dex))) continue;
+      let a = acc.get(it.name);
+      if (!a) acc.set(it.name, (a = { w: 0, holders: [] }));
+      const w = mon.usage * it.pct;
+      a.w += w;
+      a.holders.push({ key: mon.key, w });
+    }
+  }
+  return [...acc].map(([name, a]) => ({
+    name, pct: total ? a.w / total : 0,
+    holders: a.holders.sort((x, y) => y.w - x.w).slice(0, 5).map((h) => ({ key: h.key, pct: a.w ? h.w / a.w : 0 })),
+  })).sort((x, y) => y.pct - x.pct);
+}
+
 export function speciesDetail(teams, key, dex) {
   const withKey = teams.filter((t) => t.keys.includes(key));
   const n = withKey.length;
@@ -634,7 +737,9 @@ export function toCSV(teams) {
 // --- ladder (Smogon chaos, see SCHEMA ladder-<REG>.json) ------------------
 // Merge the months inside [from, to] (YYYY-MM-DD, "" = open), weighting each month by its battle count.
 // Returns null when no month qualifies. Sub-tables are weighted by the mon's usage share in each month.
-export function ladderMerge(ladder, from = '', to = '') {
+/** Pass `dex` to get display names ("Life Orb") instead of Smogon ids ("lifeorb")
+ *  in the items / abilities / moves tables. */
+export function ladderMerge(ladder, from = '', to = '', dex = null) {
   const months = (ladder?.months || []).filter((m) => (!from || m.month >= from.slice(0, 7)) && (!to || m.month <= to.slice(0, 7)));
   if (!months.length) return null;
   const battles = months.reduce((a, m) => a + m.battles, 0);
@@ -656,7 +761,11 @@ export function ladderMerge(ladder, from = '', to = '') {
   }
   const mons = [...acc.values()].map((o) => {
     const norm = (tbl) => Object.entries(tbl || {}).map(([name, v]) => ({ name, pct: o.usage ? v / o.usage : 0 })).sort((a, b) => b.pct - a.pct);
-    return { key: o.key, usage: o.usage, raw: o.raw, items: norm(o.tables.items), abilities: norm(o.tables.abilities), moves: norm(o.tables.moves),
+    const named = (tbl) => {
+      const rows = norm(tbl).filter((r) => r.name !== '');
+      return dex ? rows.map((r) => ({ ...r, name: displayName(r.name, dex) })) : rows;
+    };
+    return { key: o.key, usage: o.usage, raw: o.raw, items: named(o.tables.items), abilities: named(o.tables.abilities), moves: named(o.tables.moves),
       spreads: norm(o.tables.spreads), teammates: norm(o.tables.teammates),
       counters: Object.entries(o.tables.counters).map(([name, [score, dev]]) => ({ name, score, dev })).sort((a, b) => b.score - a.score) };
   }).sort((a, b) => b.usage - a.usage);
