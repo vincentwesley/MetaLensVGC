@@ -63,7 +63,7 @@
   --font-label: var(--font-retro-label);
   --font-body: var(--font-retro-body);
   --fs-head: 11px; --fs-head-lg: 13px;
-  --fs-label: 13px; --fs-body: 19px; --fs-small: 15px;
+  --fs-label: 13px; --fs-body: 20px; --fs-small: 17px;
   --ls-head: .06em;
   --radius: 0px;
   --accent: #cc3333;      /* poké-red */
@@ -288,21 +288,34 @@ button, input, select { font-family: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) { .chip { animation: none; } }
 
 /* ---------- layout ---------- */
+/* 12-column dashboard grid (>=1100px). Generic span utilities: put
+   `.span-4/.span-6/.span-8/.span-12` directly on any .section (or other
+   grid child) to size it; sections with no span class default to full
+   width. Collapses to a 2-col grid between 900-1099px, then 1 column
+   below 900px so nothing needs its own responsive rules. */
 main.grid {
   display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-4);
   padding: var(--space-4);
   max-width: 1440px; margin: 0 auto;
 }
 main.grid .section { grid-column: span 12; }
-main.grid .section[data-size="6"] { grid-column: span 6; }
-main.grid .section[data-size="4"] { grid-column: span 4; }
-@media (max-width: 1080px) {
+/* Same specificity family as `main.grid .section` above (both two classes +
+   one type), so source order alone would be fragile; scope every span rule
+   under `.grid` too so it always wins over the bare default. */
+main.grid .section.span-12 { grid-column: span 12; }
+main.grid .section.span-8 { grid-column: span 8; }
+main.grid .section.span-6 { grid-column: span 6; }
+main.grid .section.span-4 { grid-column: span 4; }
+
+@media (max-width: 1099px) and (min-width: 900px) {
   main.grid { grid-template-columns: repeat(2, 1fr); }
-  main.grid .section, main.grid .section[data-size="6"], main.grid .section[data-size="4"] { grid-column: span 2; }
+  main.grid .section,
+  main.grid .section.span-12, main.grid .section.span-8, main.grid .section.span-6, main.grid .section.span-4 { grid-column: span 2; }
 }
-@media (max-width: 700px) {
+@media (max-width: 899px) {
   main.grid { grid-template-columns: 1fr; padding: var(--space-3); gap: var(--space-3); }
-  main.grid .section { grid-column: span 1; }
+  main.grid .section,
+  main.grid .section.span-12, main.grid .section.span-8, main.grid .section.span-6, main.grid .section.span-4 { grid-column: span 1; }
 }
 
 /* ---------- card ---------- */
@@ -338,7 +351,7 @@ main.grid .section[data-size="4"] { grid-column: span 4; }
 table.data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-family: var(--font-body); }
 table.data-table th, table.data-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 table.data-table th { font-family: var(--font-label); text-transform: uppercase; color: var(--muted); font-size: var(--fs-small); }
-table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data-table td.num, table.data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.data-table tbody tr:hover { background: var(--surface-2); cursor: pointer; }
 
 /* ---------- pill / chip (static, for legends etc.) ---------- */
