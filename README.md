@@ -197,7 +197,9 @@ See `docs/TESTING.md` for what is covered, what has been verified by hand, and w
 2. Pick the GitHub repo **`vincentwesley/MetaLensVGC`**.
 3. Project name: **`metalensvgc`**, which gives the site `https://metalensvgc.pages.dev`.
 4. Production branch: the branch you deploy from (merge this branch into `main`, or pick this branch).
-5. Framework preset: **None**. Build command: **leave empty**. Build output directory: **`public`**.
+5. Framework preset: **None**. Build command: **leave the field blank** (don't type anything; if it
+   can't be saved blank, use `exit 0`). Build output directory: **`public`**.
+   Optional: environment variable `SKIP_DEPENDENCY_INSTALL` = `1` skips the unneeded `npm ci`.
 6. **Save and Deploy.** Every push to the production branch redeploys, including the weekly data commits.
 
 ### Moving from the old name (VGC MetaScope → MetaLens VGC)
