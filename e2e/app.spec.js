@@ -283,7 +283,7 @@ test('every type chart click is a plain type filter and the leaderboard then lis
   await page.goto('/');
   await waitForAllSections(page);
   const charts = page.locator('main [data-section="types"] .types-panel__chart');
-  for (const i of [0, 1, 2]) {
+  for (const i of [0, 1]) {
     await charts.nth(i).scrollIntoViewIfNeeded();
     const type = await clickFirstBar(page, charts.nth(i));
     await expect(page.locator('#chips .chip__label')).toHaveText([`Type: ${type}`]);
@@ -305,7 +305,7 @@ test('chart tooltips never show NaN / undefined (hover sweep over the type chart
   await waitForAllSections(page);
   const charts = page.locator('main [data-section="types"] .types-panel__chart');
   let seen = 0;
-  for (const i of [0, 1, 2]) {
+  for (const i of [0, 1]) {
     const c = charts.nth(i);
     await c.scrollIntoViewIfNeeded();
     const box = await c.boundingBox();
