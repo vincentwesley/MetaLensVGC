@@ -3,10 +3,16 @@ name: Refresh data
 on:
   schedule:
     - cron: '0 6 * * 1' # Monday 06:00 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: 'Fail right after npm ci (tests the failure-issue alert)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+  issues: write
 
 # Never run two refreshes at once (both would try to push data commits).
 concurrency:
@@ -18,43 +24,166 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # full history so the pre-push rebase below always finds a merge base
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node
+        id: setup-node
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
 
-      - run: npm ci
+      - name: Restore HTTP cache
+        id: cache
+        # data-raw/ is the gitignored HTTP cache. Entries carry their own TTL
+        # (scripts/lib/http.js), so only permanent (official events) entries stay valid.
+        uses: actions/cache@v4
+        with:
+          path: data-raw
+          key: data-raw-${{ github.run_id }}
+          restore-keys: data-raw-
 
-      - run: npm run data
+      - name: Install dependencies
+        id: npm-ci
+        run: |
+          set -o pipefail
+          { echo "== Install dependencies"; npm ci; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
 
-      - run: npm test
+      - name: Simulate failure
+        id: simulate-failure
+        if: ${{ inputs.simulate_failure }}
+        run: |
+          set -o pipefail
+          { echo "== Simulate failure"; echo "Simulated failure"; exit 1; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
+
+      - name: Build data
+        id: build-data
+        timeout-minutes: 300 # a hang fails the step (so the alert runs) instead of the job timeout cancelling everything
+        run: |
+          set -o pipefail
+          { echo "== Build data"; npm run data; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
+
+      - name: Run tests
+        id: test
+        run: |
+          set -o pipefail
+          { echo "== Run tests"; npm test; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
 
       - name: Commit data if changed
+        id: commit
         # The pipeline can run for a long time; other commits may land on the branch
         # meanwhile. Rebase the data commit onto the latest branch tip before pushing
         # (retrying if the branch moves again). The data commit only touches
         # public/data, so on a conflict there the freshly built data wins (-X theirs
-        # = the commit being replayed).
+        # = the commit being replayed). --autostash keeps a stray tracked-file change
+        # (e.g. from npm ci) from blocking the rebase.
         run: |
-          git config user.name 'metalensvgc-bot'
-          git config user.email 'metalensvgc-bot@users.noreply.github.com'
-          git add public/data
-          if git diff --cached --quiet; then
-            echo "No data changes."
-            exit 0
-          fi
-          git commit -m 'chore: refresh data'
-          branch="${GITHUB_REF_NAME}"
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase -X theirs origin "$branch" && git push origin "HEAD:$branch"; then
-              echo "Pushed data refresh (attempt $attempt)."
+          set -o pipefail
+          {
+            echo "== Commit data if changed"
+            git config user.name 'metalensvgc-bot'
+            git config user.email 'metalensvgc-bot@users.noreply.github.com'
+            git add public/data
+            if git diff --cached --quiet; then
+              echo "No data changes."
               exit 0
             fi
-            git rebase --abort 2>/dev/null || true
-            sleep $((attempt * 15))
-          done
-          echo "Could not push the data refresh after 5 attempts." >&2
-          exit 1
+            git commit -m 'chore: refresh data'
+            branch="${GITHUB_REF_NAME}"
+            for attempt in 1 2 3 4 5; do
+              if git pull --rebase --autostash -X theirs origin "$branch" && git push origin "HEAD:$branch"; then
+                echo "Pushed data refresh (attempt $attempt)."
+                exit 0
+              fi
+              git rebase --abort 2>/dev/null || true
+              sleep $((attempt * 15))
+            done
+            echo "Could not push the data refresh after 5 attempts." >&2
+            exit 1
+          } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
+
+      - name: Open or update failure issue
+        id: alert-failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const TITLE = 'Weekly data refresh failed';
+            const { owner, repo } = context.repo;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const trigger = context.eventName === 'schedule' ? 'schedule' : context.eventName === 'workflow_dispatch' ? 'manual dispatch' : context.eventName;
+            let stepName = 'unknown';
+            let logLines = '(log unavailable)';
+            try {
+              const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: context.runId, per_page: 100 });
+              const job = jobs.jobs.find((j) => j.name === process.env.GITHUB_JOB) || jobs.jobs.find((j) => (j.steps || []).some((s) => s.conclusion === 'failure')) || jobs.jobs[0];
+              const step = job.steps.find((s) => s.conclusion === 'failure');
+              if (step) stepName = step.name;
+              let fileTail = '';
+              try {
+                const raw = require('fs').readFileSync(`${process.env.RUNNER_TEMP}/refresh.log`, 'utf8');
+                fileTail = raw.replace(/\u001b\[[0-9;]*[A-Za-z]/g, '').split(/\r?\n/).filter((l) => l.trim()).slice(-40).join('\n');
+              } catch {}
+              if (fileTail) {
+                logLines = fileTail;
+              } else {
+                const res = await github.rest.actions.downloadJobLogsForWorkflowRun({ owner, repo, job_id: job.id });
+                let text = res.data;
+                if (typeof text !== 'string') text = Buffer.from(text).toString('utf8');
+                if (/^https?:\/\/\S+$/.test(text.trim())) text = await (await fetch(text.trim())).text();
+                const lines = text.split(/\r?\n/).map((l) => l.replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z ?/, '').replace(/\u001b\[[0-9;]*[A-Za-z]/g, ''));
+                const isRun = (l) => l.startsWith('##[group]Run ');
+                // Failing step's block: from the "##[group]Run" header above the first ##[error] to the next header.
+                let picked = null;
+                const errIdx = lines.findIndex((l) => l.startsWith('##[error]'));
+                if (errIdx > 0) {
+                  let s = errIdx;
+                  while (s > 0 && !isRun(lines[s])) s--;
+                  let e = lines.findIndex((l, i) => i > errIdx && isRun(l));
+                  if (e === -1) e = lines.length;
+                  picked = lines.slice(s, e);
+                }
+                if (!picked || !picked.length) picked = lines;
+                logLines = picked.filter((l) => l.trim()).slice(-40).join('\n');
+              }
+            } catch (err) {
+              logLines = `(could not fetch log: ${err.message})`;
+            }
+            const body = [
+              `Run: ${runUrl}`,
+              `Trigger: ${trigger}`,
+              `Failing step: ${stepName}`,
+              '',
+              'Last log lines:',
+              '```text',
+              logLines.replace(/```/g, "'''"),
+              '```',
+              '',
+              'Nothing is committed on failure, so the site keeps serving the last good data.',
+            ].join('\n');
+            const { data: open } = await github.rest.issues.listForRepo({ owner, repo, state: 'open', per_page: 100 });
+            const existing = open.find((i) => !i.pull_request && i.title === TITLE);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ owner, repo, title: TITLE, body });
+            }
+
+      - name: Close failure issue
+        id: alert-success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const TITLE = 'Weekly data refresh failed';
+            const { owner, repo } = context.repo;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const { data: open } = await github.rest.issues.listForRepo({ owner, repo, state: 'open', per_page: 100 });
+            const existing = open.find((i) => !i.pull_request && i.title === TITLE);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: `Refresh succeeded in ${runUrl}` });
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, state: 'closed' });
+            }
