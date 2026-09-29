@@ -53,7 +53,13 @@ main.grid .section[data-section="trends"] {
 .sb-names { flex: 1; min-width: 0; font-size: var(--fs-small); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Top cores: full core names ("Rillaboom + Incineroar + ...") wrap onto two
    lines on narrow screens instead of truncating to "Rilla...". */
-.sb-names--wrap { white-space: normal; overflow: visible; text-overflow: unset; word-break: break-word; }
+.sb-names--wrap { white-space: normal; overflow: visible; text-overflow: unset; overflow-wrap: normal; word-break: normal; }
+/* Narrow screens: sprites + names on one line, the stats drop to a second line. */
+@media (max-width: 600px) {
+  .sb-row:has(.sb-names--wrap) { flex-wrap: wrap; row-gap: 2px; }
+  .sb-names--wrap { flex-basis: calc(100% - 110px); }
+  .sb-names--wrap + .sb-stat { margin-left: auto; }
+}
 .sb-stat { font-variant-numeric: tabular-nums; font-size: var(--fs-small); color: var(--ink); min-width: 56px; text-align: right; flex: none; }
 .sb-stat--muted { color: var(--muted); }
 .sb-stat--up { color: var(--status-good); }
