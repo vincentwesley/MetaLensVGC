@@ -192,6 +192,38 @@ test('movers: risers/fallers arrays, respects minN', () => {
   for (const r of m.fallers) assert.ok(r.delta < 0);
 });
 
+// Minimal synthetic Team-shape rows: usage()/weekly()/movers() only touch
+// .date, .keys, .w, .l — no need for a full decode() here.
+function fakeTeam(date, keys, w = 1, l = 0) {
+  return { date, keys, w, l };
+}
+
+test('weekly: drops a partial/small week (< max(100, 25% of median week))', () => {
+  const mkWeek = (date, n) => Array.from({ length: n }, () => fakeTeam(date, ['Y']));
+  const wk1 = mkWeek('2026-01-05', 100);
+  const wk2 = mkWeek('2026-01-12', 100);
+  const wk3 = mkWeek('2026-01-19', 5); // partial: median of [100,100,5]=100, threshold=100, 5 fails
+  const rows = weekly([...wk1, ...wk2, ...wk3], ['Y']);
+  assert.deepEqual(rows.weeks, ['2026-01-05', '2026-01-12']);
+  assert.deepEqual(rows.totals, [100, 100]);
+});
+
+test('movers: requires n >= minN in BOTH compared weeks (not just the max)', () => {
+  const mkWeek = (date, nWithX) => Array.from({ length: 100 }, (_, i) => fakeTeam(date, i < nWithX ? ['X', 'Z'] : ['Z']));
+  const prevWeek = mkWeek('2026-02-02', 0); // X: n=0 in the earlier qualifying week
+  const lastWeek = mkWeek('2026-02-09', 25); // X: n=25 in the latest qualifying week
+  const m = movers([...prevWeek, ...lastWeek], 20);
+  assert.equal(m.weekPrev, '2026-02-02');
+  assert.equal(m.weekLast, '2026-02-09');
+  // 0 -> 25 looks like a huge riser by raw pct delta, but n=0 in the prior
+  // week fails minN there, so it must not be reported as a mover at all.
+  assert.ok(!m.risers.some((r) => r.key === 'X'));
+  assert.ok(!m.fallers.some((r) => r.key === 'X'));
+  // Z clears minN (n=100) in both weeks with zero delta: computable, not a mover.
+  assert.ok(!m.risers.some((r) => r.key === 'Z'));
+  assert.ok(!m.fallers.some((r) => r.key === 'Z'));
+});
+
 test('speedTiers: top species get a real speed stat or explicit nulls', () => {
   const rows = speedTiers(teams, dex, 20);
   assert.ok(rows.length <= 20);

@@ -457,9 +457,28 @@ function groupByWeek(teams) {
   return byWeek;
 }
 
+function median(nums) {
+  const s = [...nums].sort((a, b) => a - b);
+  const n = s.length;
+  if (!n) return 0;
+  const mid = Math.floor(n / 2);
+  return n % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+// Drop partial/small weeks (e.g. a currently-in-progress week, or a week with
+// only one minor online event) so they don't distort weekly trend lines or
+// week-over-week movers. A week qualifies when it has at least
+// max(100, 25% of the median week's team count).
+function qualifyingWeeks(byWeek) {
+  const weeks = [...byWeek.keys()].sort();
+  const counts = weeks.map((w) => byWeek.get(w).length);
+  const threshold = Math.max(100, median(counts) * 0.25);
+  return weeks.filter((w, i) => counts[i] >= threshold);
+}
+
 export function weekly(teams, keys) {
   const byWeek = groupByWeek(teams);
-  const weeks = [...byWeek.keys()].sort();
+  const weeks = qualifyingWeeks(byWeek);
   const totals = weeks.map((w) => byWeek.get(w).length);
   const series = {};
   for (const key of keys) {
@@ -471,27 +490,32 @@ export function weekly(teams, keys) {
   return { weeks, totals, series };
 }
 
-// Compares the last two ISO weeks present in the data (the most recent week
-// found is treated as "the last complete week" — this is a static,
-// periodically-rebuilt dashboard, so "now" isn't a meaningful pure-function
-// input; the newest week in already-published data is what's complete).
+// Compares the last two *qualifying* ISO weeks present in the data (see
+// qualifyingWeeks — a partial/small week, e.g. one still in progress, is
+// skipped so it can't masquerade as a huge riser or faller). A mover must
+// clear minN in BOTH compared weeks: a species with, say, n=0 in the prior
+// week and n=21 in the latest week isn't a real "riser", it's just a sample
+// too small to compare. weekLast/weekPrev (Monday-of-week dates) are
+// returned so the UI can state exactly which weeks were compared.
 export function movers(teams, minN) {
   const byWeek = groupByWeek(teams);
-  const weeks = [...byWeek.keys()].sort();
-  if (weeks.length < 2) return { risers: [], fallers: [] };
-  const lastUsage = new Map(usage(byWeek.get(weeks[weeks.length - 1])).map((r) => [r.key, r]));
-  const prevUsage = new Map(usage(byWeek.get(weeks[weeks.length - 2])).map((r) => [r.key, r]));
+  const weeks = qualifyingWeeks(byWeek);
+  if (weeks.length < 2) return { risers: [], fallers: [], weekLast: null, weekPrev: null };
+  const weekLast = weeks[weeks.length - 1];
+  const weekPrev = weeks[weeks.length - 2];
+  const lastUsage = new Map(usage(byWeek.get(weekLast)).map((r) => [r.key, r]));
+  const prevUsage = new Map(usage(byWeek.get(weekPrev)).map((r) => [r.key, r]));
   const keys = new Set([...lastUsage.keys(), ...prevUsage.keys()]);
   const rows = [];
   for (const key of keys) {
     const last = lastUsage.get(key) || { n: 0, pct: 0 };
     const prev = prevUsage.get(key) || { n: 0, pct: 0 };
-    if (Math.max(last.n, prev.n) < minN) continue;
+    if (last.n < minN || prev.n < minN) continue;
     rows.push({ key, nLast: last.n, nPrev: prev.n, pctLast: last.pct, pctPrev: prev.pct, delta: last.pct - prev.pct });
   }
   const risers = rows.filter((r) => r.delta > 0).sort((a, b) => b.delta - a.delta);
   const fallers = rows.filter((r) => r.delta < 0).sort((a, b) => a.delta - b.delta);
-  return { risers, fallers };
+  return { risers, fallers, weekLast, weekPrev };
 }
 
 // Most common speed nature+SP per species among open team sheets (mon.sp

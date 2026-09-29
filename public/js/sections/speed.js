@@ -37,6 +37,26 @@ function emptyState(msg, title = 'Insufficient data') {
 
 function richKey(k) { return `sp_${k.replace(/[^a-zA-Z0-9]/g, '_')}`; }
 
+// Luminance-aware label colour: blend the bar's fill (which may be
+// semi-transparent, e.g. theoretical-bounds bars) over the chart surface,
+// then pick dark or light text off the resulting background's real
+// luminance rather than guessing from the raw colour alone.
+function hexToRgb(hex) {
+  const m = hex.replace('#', '');
+  return [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
+}
+function relLuminance([r, g, b]) {
+  const lin = (v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function labelStyleFor(fillHex, opacity, surfaceHex) {
+  const fg = hexToRgb(fillHex);
+  const bg = hexToRgb(surfaceHex || '#ffffff');
+  const blended = fg.map((v, i) => Math.round(bg[i] + (v - bg[i]) * opacity));
+  const dark = relLuminance(blended) > 0.45;
+  return dark ? { fill: '#141008', halo: 'rgba(255,255,255,.85)' } : { fill: '#fbf8f0', halo: 'rgba(0,0,0,.55)' };
+}
+
 // Order documented in the toggle row's [data-tip]; each step floors before the next.
 const MOD_STEPS = [
   ['paralysis', 0.5, 'Paralysis'],
@@ -222,6 +242,7 @@ export default {
 
       const theme = ctx.chartTheme();
       const keys = modded.map((r) => r.key).reverse(); // ECharts category axis renders bottom-up
+      const rowsRev = modded.slice().reverse();
       const rich = {};
       for (const k of keys) rich[richKey(k)] = { height: 20, width: 20, backgroundColor: { image: ctx.spriteUrl(k) } };
       const colorOf = (src) => (src === 'sheet' ? theme.series[0] : src === 'ladder' ? theme.series[2] : theme.muted);
@@ -239,7 +260,7 @@ export default {
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           formatter: (p) => {
-            const r = modded.slice().reverse()[p.dataIndex];
+            const r = rowsRev[p.dataIndex];
             const rangeTxt = r.modMin === r.modMax ? `${r.modMin}` : `${r.modMin}–${r.modMax}`;
             return `<b>${r.key}</b><br/>Speed: ${rangeTxt}<br/>${SOURCE_LABEL[r.source]} — ${r.detail}<br/>n=${ctx.fmt.n(r.n)}`;
           },
@@ -247,14 +268,41 @@ export default {
         grid: { left: 30, right: 30, top: 10, bottom: 20, containLabel: false },
         xAxis: { type: 'value', name: 'Speed', nameLocation: 'middle', nameGap: 26, axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily }, splitLine: { lineStyle: { color: theme.grid } } },
         yAxis: { type: 'category', data: keys, axisLabel: { formatter: (v) => `{${richKey(v)}|}`, rich, margin: 10 }, axisLine: { lineStyle: { color: theme.axis } } },
-        series: [{
-          type: 'bar', barMaxWidth: 16,
-          data: modded.slice().reverse().map((r) => ({
-            value: r.source === 'bounds' ? r.modMax : r.modAvg,
-            itemStyle: { color: colorOf(r.source), opacity: r.source === 'bounds' ? 0.55 : 1, borderRadius: [0, 3, 3, 0] },
-          })),
-          markLine,
-        }],
+        series: [
+          {
+            // Invisible offset segment so the visible segment below floats
+            // from modMin instead of starting at 0 — a real min-max range
+            // bar for theoretical-bounds rows. Point rows (sheet/ladder) get
+            // offset 0, so their bar is just the usual full-length bar.
+            type: 'bar', stack: 'speed', barMaxWidth: 16, silent: true,
+            itemStyle: { color: 'transparent' },
+            data: rowsRev.map((r) => (r.source === 'bounds' ? r.modMin : 0)),
+          },
+          {
+            type: 'bar', stack: 'speed', barMaxWidth: 16,
+            data: rowsRev.map((r) => {
+              const opacity = r.source === 'bounds' ? 0.55 : 1;
+              const fill = colorOf(r.source);
+              return {
+                value: r.source === 'bounds' ? r.modMax - r.modMin : r.modAvg,
+                itemStyle: { color: fill, opacity, borderRadius: [0, 3, 3, 0] },
+                _labelStyle: labelStyleFor(fill, opacity, theme.surface),
+              };
+            }),
+            label: {
+              show: true, position: 'insideLeft', align: 'left', fontFamily: theme.fontFamily, fontSize: 11, fontWeight: 600,
+              formatter: (p) => {
+                const r = rowsRev[p.dataIndex];
+                const val = r.modMin === r.modMax ? `${r.modMin}` : `${r.modMin}–${r.modMax}`;
+                return `${r.key}  ${val}`;
+              },
+              color: (p) => p.data._labelStyle.fill,
+              textBorderColor: (p) => p.data._labelStyle.halo,
+              textBorderWidth: 1.2,
+            },
+            markLine,
+          },
+        ],
       }, true);
 
       if (bench0) {
