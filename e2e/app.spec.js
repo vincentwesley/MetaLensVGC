@@ -669,3 +669,70 @@ test('no horizontal overflow at 390px in both skins with the nav and how-to stri
     expect(await page.evaluate(() => document.documentElement.scrollWidth), hash).toBeLessThanOrEqual(390);
   }
 });
+
+// --- Spread explorer (deep dive) and the scanner's SP check ---
+async function openDeepDive(page, hash, key) {
+  await page.goto(hash);
+  await waitForUsageRendered(page);
+  await page.locator('[data-section="usage"] .sprite-btn').first().click();
+  const input = page.locator('#ddv-picker-input');
+  await input.fill(key);
+  await input.press('Enter');
+  await expect(page.locator('#deepdive-title')).toHaveText(key);
+  const card = page.locator('#deepdive .ddv-block').filter({ has: page.locator('h3', { hasText: 'Spread explorer' }) });
+  await expect(card).toBeVisible();
+  return card;
+}
+
+test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype strip, regulation shift, no Smogon option', async ({ page }) => {
+  const card = await openDeepDive(page, '/', 'Rillaboom');
+  const rows = card.locator('.spx-row');
+  expect(await rows.count()).toBeGreaterThanOrEqual(3);
+  for (const stats of await rows.locator('.spx-row__stats').allInnerTexts()) {
+    const nums = stats.replace('Lv50', '').split('/').map((x) => Number(x.trim()));
+    expect(nums).toHaveLength(6);
+    expect(nums.every((n) => Number.isInteger(n) && n > 0)).toBe(true);
+  }
+  await expect(card.locator('.spx-strip')).toContainText('top spreads cover');
+  await expect(card.locator('.spx-shift')).toContainText('Shift M-B -> M-C', { timeout: 15000 });
+  await expect(card.locator('.spx-shift')).not.toContainText('loading');
+  await expect(card).toContainText('sample size not published');
+  await expect(card).toContainText('Battle data provided by Pokémon Champions Battle Data');
+  await expect(card.locator('.spx-toggle')).toHaveCount(0); // no Smogon month for M-C: no toggle at all
+  const text = await card.innerText();
+  expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+  // the old duplicate cards are gone
+  await expect(page.locator('#deepdive').getByText('Top SP spreads & natures')).toHaveCount(0);
+});
+
+test('Spread explorer (M-B, Incineroar): Smogon option switches the meta line to battles', async ({ page }) => {
+  const card = await openDeepDive(page, '/#reg=M-B', 'Incineroar');
+  const ranked = card.locator('.spx-toggle__btn[data-source="ranked"]');
+  const smogon = card.locator('.spx-toggle__btn[data-source="smogon"]');
+  await expect(ranked).toHaveAttribute('aria-pressed', 'true');
+  await expect(card.locator('.meta-line')).toContainText('sample size not published');
+  await smogon.click();
+  await expect(smogon).toHaveAttribute('aria-pressed', 'true');
+  await expect(card.locator('.meta-line')).toContainText(/Smogon 1760 ladder · 2026-\d\d · [\d,]+ Incineroar entries · n=[\d,]+ battles/);
+  await expect(card.locator('.spx-shift')).toHaveCount(0);
+  expect(await card.locator('.spx-row').count()).toBeGreaterThanOrEqual(3);
+  const text = await card.innerText();
+  expect(text).toMatch(/Impish|Careful|Adamant/);
+  expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+});
+
+test('Scanner SP check: exact / nearest spread from an EVs-style SP line, no NaN', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sc = page.locator('main [data-section="scanner"]');
+  await sc.scrollIntoViewIfNeeded();
+  await sc.locator('textarea').fill(['Rillaboom @ Miracle Seed\nAbility: Grassy Surge\nEVs: 32 HP / 32 Atk / 2 Spe\nAdamant Nature\n- Fake Out',
+    'Incineroar @ Sitrus Berry\nEVs: 32 HP / 30 Atk / 4 Def\nImpish Nature\n- Fake Out', 'Sneasler @ Focus Sash\n- Fake Out', 'Garchomp\n- Earthquake'].join('\n\n'));
+  await sc.getByRole('button', { name: 'Scan', exact: true }).click();
+  const card = sc.locator('.scn-block').filter({ has: page.locator('h3', { hasText: 'SP check' }) });
+  await expect(card).toBeVisible();
+  const text = await card.innerText();
+  expect(text).toMatch(/Common spread \(#\d+, \d+% of ranked spreads\)|Nearest common spread/);
+  expect(text).toContain('no SP line — assumed most common spread');
+  expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+});

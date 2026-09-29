@@ -148,7 +148,8 @@ main.grid .section[data-section="methodology"] {
       "threats speed"
       "mpoke   items"
       "march   picks"
-      "link    closest";
+      "link    closest"
+      "spcheck spcheck";
   }
   /* Half-width cards: the best/worst matchup lists stack. */
   .scn-results .scn-cols { grid-template-columns: 1fr; }
@@ -249,3 +250,21 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 .mth-arch-list dt { font-family: var(--font-label); margin-top: var(--space-2); }
 .mth-arch-list dd { margin: 0; color: var(--ink-2); font-size: var(--fs-small); }
 .mth-disclaimer { color: var(--muted); font-size: var(--fs-small); }
+
+/* Spread explorer (deep dive) */
+.spx-toggle { display: inline-flex; flex-wrap: wrap; border: 2px solid var(--frame); border-radius: var(--radius); align-self: flex-start; overflow: hidden; }
+[data-skin="pro"] .spx-toggle { border: 1px solid var(--border); }
+.spx-toggle__btn { background: var(--surface-1); border: 0; cursor: pointer; padding: 6px 10px; font-family: var(--font-label); font-size: var(--fs-label); color: var(--ink-2); border-right: 1px solid var(--border); }
+.spx-toggle__btn:last-child { border-right: 0; }
+.spx-toggle__btn[aria-pressed="true"] { background: var(--accent); color: var(--surface-1); }
+.spx-toggle__btn:hover:not([aria-pressed="true"]) { background: var(--surface-2); }
+.spx-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.spx-strip { font-family: var(--font-body); font-size: var(--fs-small); font-weight: 600; }
+.spx-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.spx-row { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) 0; border-bottom: 1px solid var(--grid); min-width: 0; }
+.spx-row:last-child { border-bottom: 0; }
+.spx-row__top { display: flex; justify-content: space-between; gap: var(--space-2); font-variant-numeric: tabular-nums; }
+.spx-row__sp { font-weight: 600; }
+.spx-row__mid { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.spx-row__arch { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--border); }
+.scn-muted { font-style: italic; }

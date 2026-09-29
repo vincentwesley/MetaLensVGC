@@ -9,9 +9,9 @@
 // pinned to the top of the drawer body, always visible while the drawer is
 // open, so the intent (search species in the current view -> open drawer)
 // is still met without new markup outside owned files.
-import { speciesDetail, speedTiers, ladderMerge, rankedSeason, rankedMon, rankedEntries } from '../lib/aggregate.js';
+import { speciesDetail, ladderMerge, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
+import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION } from '../ui/meta.js';
-import { calcStats, calcStat } from '../lib/stats.js';
 import { TYPE_COLORS } from '../lib/types.js';
 import { inkOn } from '../lib/contrast.js';
 
@@ -71,38 +71,40 @@ function hasMegaForm(dex, baseName) {
   return Object.values(dex.species || {}).some((sp) => sp.megaOf === baseName);
 }
 
-function fmtSpread(sp) { return sp.join('/'); }
-function fmtStats(stats) { return stats.join(' / '); }
+const fmtSpread = (sp) => sp.join('/');
+const pctText = (x) => `${Math.round(x * 100)}%`;
 
-// `tiers` is a list of { key, nature, spe } for other top species, sourced from
-// whichever channel produced `top` itself (tournament sheets or ladder) so the
-// comparison never mixes a sheet spread against a ladder-only speed or vice versa.
-function builtForNote(key, top, tiers) {
-  if (!top?.stats) return null;
-  const mySpeed = top.stats[5];
-  const speedSp = top.sp[5];
-  if (speedSp >= 20) {
-    const faster = tiers.filter((r) => r.key !== key && r.spe != null && r.spe < mySpeed);
-    if (faster.length) return `Outspeeds ${faster[0].nature} ${faster[0].key} (${faster[0].spe})`;
-    return `Speed-invested (${speedSp} SP) — outpaces every top-used meta mon with known spreads`;
-  }
-  const bulk = ['HP', null, 'Def', null, 'SpD'].filter((label, i) => label && top.sp[i] > 0);
-  if (bulk.length) return `Bulk: ${bulk.join('/')} SP invested`;
-  return null;
+/** "Max Speed 34% · Bulk-heavy 21% · …" for an archetypeShares result (listed spreads only). */
+function shareStrip({ byArch }) {
+  return SPREAD_ARCHETYPES.filter((a) => byArch[a.id]).sort((a, b) => byArch[b.id] - byArch[a.id])
+    .map((a) => `${a.label} ${pctText(byArch[a.id])}`).join(' · ');
 }
 
-// Ladder-derived speed tiers, same shape as aggregate.js#speedTiers, built from
-// each species' single most-common spread (already sorted by pct in ladderMerge).
-function ladderSpeedTiers(merged, dex) {
-  if (!merged) return [];
-  return merged.mons.map((m) => {
-    const top = m.spreads[0];
-    if (!top) return { key: m.key, nature: null, spe: null };
-    const [nature, spStr] = top.name.split(':');
-    const spe5 = Number(spStr.split('/')[5]);
-    const bs = dex.species[m.key]?.bs;
-    return { key: m.key, nature, spe: bs ? calcStat(bs[5], spe5, 5, nature) : null };
-  });
+/** "outspeeds 18 of 29 · next faster: Garchomp 169" */
+function benchText(spe, field) {
+  const b = speedBenchmarks(spe, field);
+  const total = b.outspeeds + b.ties + b.underspeeds;
+  if (!total) return '—';
+  const parts = [`outspeeds ${b.outspeeds} of ${total}`];
+  if (b.ties) parts.push(`ties ${b.ties}`);
+  parts.push(b.nextFaster ? `next faster: ${b.nextFaster.key} ${b.nextFaster.spe}` : 'fastest in the field');
+  return parts.join(' · ');
+}
+
+/** Previous reg's last ranked season vs this one: archetype shares of the species' listed spreads. */
+function shiftText(key, dex, bs, cur, prevReg, prevRanked, curReg) {
+  if (!prevReg) return 'Shift vs previous regulation: none (first regulation).';
+  const head = `Shift ${prevReg} -> ${curReg}`;
+  const last = (prevRanked?.seasons || []).reduce((b, s) => (!b || s.snapshot > b.snapshot ? s : b), null);
+  if (!last) return `${head}: Insufficient data (no ranked data for ${prevReg}).`;
+  const rm = rankedMon(last, key, dex);
+  if (!rm) return `${head}: NEW in ${curReg} (not in ${prevReg}'s ${last.season} ranked data).`;
+  const prevRows = rankedSpreadRows(rm.mon, bs);
+  if (!prevRows.length) return `${head}: Insufficient data (no ${last.season} spreads).`;
+  const a = archetypeShares(prevRows), b = archetypeShares(cur);
+  const parts = SPREAD_ARCHETYPES.filter((x) => a.byArch[x.id] || b.byArch[x.id])
+    .map((x) => `${x.label} ${Math.round((a.byArch[x.id] || 0) * 100)}% -> ${Math.round((b.byArch[x.id] || 0) * 100)}%`);
+  return `${head} (${last.season} vs current): ${parts.join(' · ')}; top spreads cover ${pctText(a.covered)} -> ${pctText(b.covered)}.`;
 }
 
 export default {
@@ -146,6 +148,112 @@ export default {
       const keys = [...new Set((view?.teams || []).flatMap((t) => t.keys))].sort();
       datalist.innerHTML = '';
       for (const k of keys) datalist.appendChild(new Option(k));
+    }
+
+    let spSource = 'ranked'; // 'ranked' | 'smogon': the Spread explorer's source toggle
+    let shiftSeq = 0;
+
+    // One "Spread explorer" card: in-game ranked (default) or Smogon, rows with SP, share, nature, Lv50 stats,
+    // archetype and a speed benchmark against the view's top-30 meta speeds.
+    function buildSpreadExplorer(view, key, merged) {
+      const dex = view.dex;
+      const bs = dex.species[key]?.bs;
+      const { card, body } = sectionCard('Spread explorer');
+      const metaEl = elm('div');
+      const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+      const rm = rankedMon(season, key, dex);
+      const rankedRows = rm && bs ? rankedSpreadRows(rm.mon, bs) : [];
+      // Smogon: the latest month of the regulation (inside the date filter); the option exists only if it lists this Pokémon.
+      const { from, to } = view.state;
+      const lad = (view.ladder?.months || []).filter((m) => (!from || m.month >= from.slice(0, 7)) && (!to || m.month <= to.slice(0, 7)))
+        .reduce((b, m) => (!b || m.month > b.month ? m : b), null);
+      const ladMerged = lad ? ladderMerge({ ...view.ladder, months: [lad] }, '', '', dex) : null;
+      const ladMon = ladMerged?.mons.find((m) => m.key === key);
+      const smogonRows = ladMon && bs ? smogonSpreadRows(ladMon, bs) : [];
+      const avail = [];
+      if (rankedRows.length) avail.push('ranked');
+      if (smogonRows.length) avail.push('smogon');
+      if (!avail.includes(spSource)) spSource = avail[0] || 'ranked';
+
+      const field = metaSpeedField(speedSpecies(view.state.source, view.monTeams, season, dex, 30), { season, merged }, dex)
+        .filter((f) => f.key !== key);
+
+      const toggle = elm('div', 'spx-toggle');
+      toggle.setAttribute('role', 'group');
+      toggle.setAttribute('aria-label', 'Spread source');
+      const labels = { ranked: `In-game ranked · ${season?.season ?? ''}`, smogon: `Smogon · ${lad?.month ?? ''}` };
+      const panel = elm('div', 'spx-panel');
+      const btns = {};
+      for (const id of avail) {
+        const b = elm('button', 'spx-toggle__btn', labels[id]);
+        b.type = 'button';
+        b.dataset.source = id;
+        b.addEventListener('click', () => { spSource = id; paint(); });
+        btns[id] = b;
+        toggle.appendChild(b);
+      }
+      if (avail.length > 1) body.appendChild(toggle);
+      body.append(metaEl, panel);
+
+      function paint() {
+        for (const id of avail) btns[id].setAttribute('aria-pressed', String(id === spSource));
+        panel.innerHTML = '';
+        const seq = ++shiftSeq;
+        if (!avail.length) {
+          ctx.meta(metaEl, { source: 'In-game ranked and Smogon spreads' });
+          emptyState(panel, 'Insufficient data');
+          panel.appendChild(elm('div', 'ddv-note', 'No in-game ranked or Smogon spreads for this Pokémon in this regulation (tournament sheets carry none).'));
+          return;
+        }
+        const isRanked = spSource === 'ranked';
+        const rows = isRanked ? rankedRows : smogonRows;
+        if (isRanked) {
+          const of = rm.name === key ? '' : ` · ${rm.name} data (Megas are tracked as base + stone)`;
+          ctx.meta(metaEl, { source: `${rankedSource(season)} · sample size not published${of}` });
+        } else {
+          ctx.meta(metaEl, { source: `Smogon ${ladMerged.cutoff} ladder · ${lad.month} · ${ladMon.raw.toLocaleString('en-US')} ${key} entries`, n: ladMerged.battles, unit: 'battles' });
+        }
+        const shares = archetypeShares(rows);
+        panel.appendChild(elm('div', 'spx-strip', `${shareStrip(shares)} — top spreads cover ${pctText(shares.covered)}${isRanked ? " of this Pokémon's ranked players" : ' of its Smogon sets'}`));
+        if (isRanked) {
+          const shift = elm('div', 'ddv-note spx-shift');
+          panel.appendChild(shift);
+          const pReg = ctx.prevReg?.(view.reg);
+          if (!pReg) shift.textContent = shiftText(key, dex, bs, rows, null, null, view.reg);
+          else {
+            shift.textContent = `Shift ${pReg} -> ${view.reg}: loading…`;
+            ctx.loadRanked(pReg).then((pr) => { if (seq === shiftSeq) shift.textContent = shiftText(key, dex, bs, rows, pReg, pr, view.reg); })
+              .catch(() => { if (seq === shiftSeq) shift.textContent = `Shift ${pReg} -> ${view.reg}: Insufficient data.`; });
+          }
+        }
+
+        // One block per spread (the drawer is narrow): SP + share, then nature / Lv50 stats / type, then the speed benchmark.
+        const list = elm('ul', 'spx-rows');
+        list.setAttribute('aria-label', 'Spreads, most common first');
+        for (const r of rows) {
+          const li = elm('li', 'spx-row');
+          const nat = !r.nature ? 'no nature reported' : r.natureJoint ? r.nature : `${r.nature} ${pctText(r.natureShare)}*`;
+          const top = elm('div', 'spx-row__top');
+          top.append(elm('span', 'spx-row__sp', `${fmtSpread(r.sp)} SP`), elm('span', 'spx-row__share', `${pctText(r.share)}${isRanked ? ' of spreads' : ''}`));
+          const mid = elm('div', 'spx-row__mid');
+          mid.append(elm('span', 'spx-row__nat', nat), elm('span', 'spx-row__stats', `Lv50 ${r.stats.join(' / ')}`), elm('span', 'pill spx-row__arch', archetypeLabel(r.arch)));
+          li.append(top, mid, elm('div', 'ddv-note spx-row__bench', field.length ? `Speed ${r.stats[5]}: ${benchText(r.stats[5], field)}` : `Speed ${r.stats[5]}`));
+          list.appendChild(li);
+        }
+        panel.appendChild(list);
+        if (isRanked) panel.appendChild(elm('div', 'ddv-note', "* Ranked natures are reported separately from spreads; stats use this Pokémon's most common ranked nature (its share of ranked players' natures)."));
+        panel.appendChild(elm('div', 'ddv-note', `Type describes the SP only (${SPREAD_ARCHETYPES.slice(0, 4).map((a) => `${a.label}: ${a.desc}`).join('; ')}; first match wins). Speed benchmark: the ${field.length} most-used Pokémon of this view with a known speed (Speed Tiers sources).`));
+        if (isRanked) {
+          const attr = elm('div', 'ddv-note');
+          const a = document.createElement('a');
+          a.href = RANKED_ATTRIBUTION.url; a.target = '_blank'; a.rel = 'noopener';
+          a.textContent = RANKED_ATTRIBUTION.text;
+          attr.appendChild(a);
+          panel.appendChild(attr);
+        }
+      }
+      paint();
+      return card;
     }
 
     function render(key) {
@@ -262,57 +370,7 @@ export default {
         content.appendChild(megaCard);
       }
 
-      // spreads + natures: no tournament sheet ever carries SP (Limitless doesn't
-      // publish them; see CLAUDE.md data facts), so this falls back to the same
-      // reg's ladder almost always — not gated on the source toggle, since the
-      // toggle only switches item/ability/move/teammate display, and there is no
-      // sheet-based alternative to switch away from here.
-      const { card: spCard, body: spBody } = sectionCard('Top SP spreads & natures');
-      let spreadRows = det.spreads; // tournament sheets: [{ nature, sp, n, stats }]
-      let spreadSource = 'Tournament sheets';
-      if (!spreadRows.length && merged) {
-        const ladderSpreads = merged.mons.find((m) => m.key === key)?.spreads || [];
-        if (ladderSpreads.length) {
-          const bs = dex.species[key]?.bs;
-          spreadRows = ladderSpreads.slice(0, 8).map((r) => {
-            const [nature, spStr] = r.name.split(':');
-            const spArr = spStr.split('/').map(Number);
-            return { nature, sp: spArr, pct: r.pct, stats: bs ? calcStats(bs, spArr, nature) : null };
-          });
-          spreadSource = `Ladder (Smogon ${merged.cutoff})`;
-        }
-      }
-      if (!spreadRows.length) {
-        emptyState(spBody, 'No spread data for this regulation yet');
-      } else {
-        spBody.appendChild(elm('div', 'ddv-note', spreadSource));
-        const fromSheets = spreadSource === 'Tournament sheets';
-        const wrap = elm('div', 'table-wrap');
-        const table = elm('table', 'data-table');
-        const thead = elm('thead');
-        const trh = elm('tr');
-        const headers = fromSheets
-          ? ['Nature', 'Spread (HP/Atk/Def/SpA/SpD/Spe)', 'Final stats', 'n', '%']
-          : ['Nature', 'Spread (HP/Atk/Def/SpA/SpD/Spe)', 'Final stats', '%'];
-        for (const h of headers) trh.appendChild(elm('th', null, h));
-        thead.appendChild(trh);
-        table.appendChild(thead);
-        const tbody = elm('tbody');
-        for (const s of spreadRows.slice(0, 8)) {
-          const tr = elm('tr');
-          tr.append(elm('td', null, s.nature), elm('td', null, fmtSpread(s.sp)), elm('td', null, s.stats ? fmtStats(s.stats) : '—'));
-          if (fromSheets) tr.append(elm('td', 'num', ctx.fmt.n(s.n)), elm('td', 'num', ctx.fmt.pct(s.n / det.n)));
-          else tr.append(elm('td', 'num', ctx.fmt.pct(s.pct)));
-          tbody.appendChild(tr);
-        }
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        spBody.appendChild(wrap);
-        const tiers = fromSheets ? speedTiers(view.monTeams, dex, 20) : ladderSpeedTiers(merged, dex);
-        const note = builtForNote(key, spreadRows[0], tiers);
-        if (note) spBody.appendChild(elm('div', 'ddv-note', note));
-      }
-      content.appendChild(spCard);
+      content.appendChild(buildSpreadExplorer(view, key, merged));
 
       // teammates
       const { card: tmCard, body: tmBody } = sectionCard('Teammates');
@@ -350,22 +408,6 @@ export default {
         sub('Items', mon.items, (n, e) => ctx.chip('item', n, e));
         sub('Abilities', mon.abilities);
         sub('Natures', mon.natures);
-        rkBody.appendChild(elm('div', 'ddv-picker__label', 'SP spreads'));
-        const spreads = rankedEntries(mon.spreads);
-        if (!spreads.length) emptyState(rkBody, 'Insufficient data');
-        else {
-          const wrap = elm('div', 'table-wrap');
-          const table = elm('table', 'data-table');
-          const trh = table.createTHead().insertRow();
-          for (const h of ['HP/Atk/Def/SpA/SpD/Spe', '%']) trh.appendChild(elm('th', h === '%' ? 'num' : null, h));
-          const tbody = table.createTBody();
-          for (const r of spreads) {
-            const tr = tbody.insertRow();
-            tr.append(elm('td', null, r.name), elm('td', 'num', ctx.fmt.pct(r.pct)));
-          }
-          wrap.appendChild(table);
-          rkBody.appendChild(wrap);
-        }
         rkBody.appendChild(elm('div', 'ddv-picker__label', 'Teammates (rank order, no shares published)'));
         if (!mon.teammates.length) emptyState(rkBody, 'Insufficient data');
         else {

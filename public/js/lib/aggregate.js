@@ -800,6 +800,20 @@ export function speedTiers(teams, dex, top = 20) {
   return rows.sort((a, b) => b.n - a.n).slice(0, top);
 }
 
+/**
+ * The species list of the Speed Tiers section (and the Spread explorer's benchmark field): top `n` by in-game
+ * rank under source=ranked (when the season publishes a ranking), else the top `n` tournament species.
+ * Mega-stone holders are listed as their Mega form. Rows are speedTiers rows (`{key, spe, ...}`).
+ */
+export function speedSpecies(source, monTeams, season, dex, n) {
+  if (source !== 'ranked' || !season?.ranking) return speedTiers(monTeams, dex, n);
+  const byKey = new Map(speedTiers(monTeams, dex, 99999).map((t) => [t.key, t]));
+  return season.ranking.filter((name) => season.mons[name]).slice(0, n).map((name) => {
+    const key = rankedMegaKey(name, season.mons[name], dex) || name;
+    return { ...(byKey.get(key) || { key, spe: null }), key, n: null, rank: season.mons[name].rank };
+  });
+}
+
 export function closestTeams(keys, teams, k = 5) {
   const query = new Set(keys);
   const scored = teams.map((t) => {

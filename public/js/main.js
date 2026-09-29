@@ -180,6 +180,8 @@ async function boot() {
     sprite: (key, opts) => sprite(key, dex, opts),
     spriteUrl: (key, opts) => spriteUrl(key, dex, opts),
     openDrawer: (key) => drawerApi.open(key),
+    loadRanked: (reg) => getRanked(reg), // lazy: the deep dive's regulation shift loads the previous reg's ranked file
+    prevReg: prevRegId,
     chip: (kind, value, event) => store.addChip({ kind, value, neg: !!(event && (event.shiftKey || event.altKey)) }),
     hover: (key) => { for (const s of mounted) s.api?.highlight?.(key); },
     meta: (el, opts) => renderMetaLine(el, { ...opts, updated: manifest.generated?.slice(0, 10) }),
