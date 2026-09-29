@@ -136,11 +136,21 @@ export function previousPeriod(teamsInReg, filters = {}, prevRegTeams = []) {
 }
 
 // --- basic aggregates -----------------------------------------------------
+// Several sections ask for usage() of the same filtered array in one render;
+// memoize per array identity. Callers get a fresh array (rows are shared and
+// must be treated as read-only).
+const usageMemo = new WeakMap();
 export function usage(teams) {
+  let rows = usageMemo.get(teams);
+  if (!rows) { rows = usageUncached(teams); usageMemo.set(teams, rows); }
+  return rows.slice();
+}
+
+function usageUncached(teams) {
   const n = teams.length;
   const counts = new Map();
   for (const team of teams) {
-    for (const key of new Set(team.keys)) {
+    for (const key of team.species || new Set(team.keys)) {
       const c = counts.get(key) || { n: 0, w: 0, l: 0 };
       c.n++;
       c.w += team.w;
@@ -204,42 +214,49 @@ export function typeUsage(teams, dex) {
   }).sort((a, b) => b.n - a.n);
 }
 
-function fieldTypeSlots(teams, dex) {
-  const slots = [];
+// Distinct defensive typings in the field with their slot counts. The field has
+// tens of thousands of slots but only ~100 typings, so effectiveness is
+// evaluated once per typing instead of once per slot.
+function fieldTypings(teams, dex) {
+  const combos = new Map();
+  let n = 0;
   for (const team of teams) for (const mon of team.mons) {
     const sp = dex.species[mon.k] || dex.species[mon.s];
-    if (sp) slots.push(sp.types);
+    if (!sp) continue;
+    n++;
+    const id = sp.types.length === 1 ? sp.types[0] : `${sp.types[0]}/${sp.types[1]}`;
+    const c = combos.get(id);
+    if (c) c.count++;
+    else combos.set(id, { types: sp.types, count: 1 });
   }
-  return slots;
+  return { combos: [...combos.values()], n };
 }
 
 export function attackingTypes(teams, dex) {
-  const slots = fieldTypeSlots(teams, dex);
-  const n = slots.length;
+  const { combos, n } = fieldTypings(teams, dex);
   return TYPES.map((atk) => {
     let sum = 0;
     let se = 0;
-    for (const types of slots) {
+    for (const { types, count } of combos) {
       const mult = effectiveness(atk, types);
-      sum += mult;
-      if (mult > 1) se++;
+      sum += mult * count;
+      if (mult > 1) se += count;
     }
     return { type: atk, score: n ? sum / n : 0, se: n ? se / n : 0 };
   }).sort((a, b) => b.score - a.score);
 }
 
 export function weaknesses(teams, dex) {
-  const slots = fieldTypeSlots(teams, dex);
-  const n = slots.length;
+  const { combos, n } = fieldTypings(teams, dex);
   return TYPES.map((atk) => {
     let weak = 0;
     let resist = 0;
     let immune = 0;
-    for (const types of slots) {
+    for (const { types, count } of combos) {
       const mult = effectiveness(atk, types);
-      if (mult === 0) immune++;
-      else if (mult < 1) resist++;
-      else if (mult > 1) weak++;
+      if (mult === 0) immune += count;
+      else if (mult < 1) resist += count;
+      else if (mult > 1) weak += count;
     }
     return { type: atk, weak: n ? weak / n : 0, resist: n ? resist / n : 0, immune: n ? immune / n : 0 };
   });
@@ -297,7 +314,23 @@ export function archetypeMatrix(teams, matches) {
 export function coUsage(teams, keys) {
   const n = keys.length;
   const nTeams = teams.length;
-  const solo = keys.map((k) => teams.filter((t) => t.species.has(k)).length);
+  const index = new Map(keys.map((k, i) => [k, i]));
+  const solo = new Array(n).fill(0);
+  const both = Array.from({ length: n }, () => new Array(n).fill(0));
+  // One pass over teams: collect which of `keys` each team holds, then bump
+  // every pair among them (a team holds at most 6, so this is tiny per team).
+  const present = [];
+  for (const t of teams) {
+    present.length = 0;
+    for (const k of t.species || new Set(t.keys)) {
+      const i = index.get(k);
+      if (i !== undefined) present.push(i);
+    }
+    for (const i of present) {
+      solo[i]++;
+      for (const j of present) both[i][j]++;
+    }
+  }
   const nMat = [];
   const pctMat = [];
   const liftMat = [];
@@ -306,12 +339,11 @@ export function coUsage(teams, keys) {
     const pctRow = [];
     const liftRow = [];
     for (let j = 0; j < n; j++) {
-      let both = 0;
-      for (const t of teams) if (t.species.has(keys[i]) && t.species.has(keys[j])) both++;
-      const pct = nTeams ? both / nTeams : 0;
+      const c = both[i][j];
+      const pct = nTeams ? c / nTeams : 0;
       const pa = nTeams ? solo[i] / nTeams : 0;
       const pb = nTeams ? solo[j] / nTeams : 0;
-      nRow.push(both);
+      nRow.push(c);
       pctRow.push(pct);
       liftRow.push(pa > 0 && pb > 0 ? pct / (pa * pb) : 0);
     }
@@ -340,27 +372,44 @@ function combinations(arr, k) {
 }
 
 export function cores(teams, size = 3, top = 10, minN = 1) {
+  // Species keys get small int ids assigned in alphabetical order, so a numeric
+  // sort gives the same alphabetical combo order as before and each combo gets
+  // a numeric Map key instead of a joined string (6C3 = 20 combos per team adds
+  // up over 30k teams).
+  const names = [...new Set(teams.flatMap((t) => [...(t.species || t.keys)]))].sort();
+  const ids = new Map(names.map((k, i) => [k, i]));
+  const radix = Math.max(2, names.length);
   const counts = new Map();
   for (const team of teams) {
-    const uniqueKeys = [...new Set(team.keys)].sort();
-    for (const combo of combinations(uniqueKeys, size)) {
-      const id = combo.join('|');
-      const c = counts.get(id) || { keys: combo, n: 0, w: 0, l: 0 };
-      c.n++;
-      c.w += team.w;
-      c.l += team.l;
-      counts.set(id, c);
+    const uniq = [...(team.species || new Set(team.keys))].map((k) => ids.get(k)).sort((x, y) => x - y);
+    if (size === 3) {
+      // Hot path (the only size the UI asks for): no per-combo allocation.
+      const m = uniq.length;
+      for (let x = 0; x < m - 2; x++) for (let y = x + 1; y < m - 1; y++) for (let z = y + 1; z < m; z++) {
+        const id = (uniq[x] * radix + uniq[y]) * radix + uniq[z];
+        const c = counts.get(id);
+        if (c) { c.n++; c.w += team.w; c.l += team.l; }
+        else counts.set(id, { combo: [uniq[x], uniq[y], uniq[z]], n: 1, w: team.w, l: team.l });
+      }
+      continue;
+    }
+    for (const combo of combinations(uniq, size)) {
+      let id = 0;
+      for (const x of combo) id = id * radix + x;
+      const c = counts.get(id);
+      if (c) { c.n++; c.w += team.w; c.l += team.l; }
+      else counts.set(id, { combo, n: 1, w: team.w, l: team.l });
     }
   }
   const n = teams.length;
   return [...counts.values()]
     .filter((c) => c.n >= minN)
-    .map((c) => ({
-      keys: c.keys, n: c.n, pct: n ? c.n / n : 0,
-      winPct: c.w + c.l > 0 ? c.w / (c.w + c.l) : null,
-    }))
     .sort((a, b) => b.n - a.n)
-    .slice(0, top);
+    .slice(0, top)
+    .map((c) => ({
+      keys: c.combo.map((x) => names[x]), n: c.n, pct: n ? c.n / n : 0,
+      winPct: c.w + c.l > 0 ? c.w / (c.w + c.l) : null,
+    }));
 }
 
 function countValues(values) {
