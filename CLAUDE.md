@@ -97,6 +97,8 @@ type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback
 ## Name
 The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It was "VGC MetaScope"
 (`vgcmetascope.pages.dev`) until 2026-09-29; `public/js/moved.js` forwards the old address. Use the new name everywhere.
+Creator credits (owner's request): the "Credits" card at the end of `index.html` links vwesley.dev, Instagram @vinnql
+and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white keyed out); the footer links vwesley.dev.
 
 ## Project status (handover, 2026-09-29, updated after the performance/filter/UX rounds)
 - Live on Cloudflare Pages from branch `claude/pokemon-vgc-metagame-dashboard-9whe1a` (no `main` branch yet). Commit and push
