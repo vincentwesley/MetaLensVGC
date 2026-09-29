@@ -1,14 +1,14 @@
 // usage.js — Usage leaderboard: sortable table, rank/sprite/name/usage bar/
 // usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
-import { usage, ladderMerge, rankedSeason, rankedEntries } from '../lib/aggregate.js';
+import { usage, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies } from '../lib/aggregate.js';
 import { rankedSource } from '../ui/meta.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
 const COLS_TEAM = [
   { key: 'rank', label: '#' },
   { key: 'sprite', label: '' },
-  { key: 'name', label: 'Pokémon' },
+  { key: 'name', label: 'Pokémon · top item' },
   { key: 'usage', label: 'Usage %', sortable: true, sortKey: 'pct' },
   { key: 'win', label: 'Win % (95% CI)', sortable: true, sortKey: 'winPct' },
   { key: 'n', label: 'N', sortable: true },
@@ -16,7 +16,7 @@ const COLS_TEAM = [
 const COLS_LADDER = [
   { key: 'rank', label: '#' },
   { key: 'sprite', label: '' },
-  { key: 'name', label: 'Pokémon' },
+  { key: 'name', label: 'Pokémon · top item' },
   { key: 'usage', label: 'Usage %', sortable: true, sortKey: 'pct' },
   { key: 'n', label: 'N (battles)', sortable: true },
 ];
@@ -103,7 +103,7 @@ export default {
       body.querySelector('.ddv-note')?.remove();
 
       if (state.source === 'ladder') {
-        const merged = ladderMerge(view.ladder, state.from, state.to);
+        const merged = ladderMerge(view.ladder, state.from, state.to, view.dex);
         cols = COLS_LADDER; unit = 'battles'; source = 'Ladder (Smogon)';
         if (!merged) {
           n = 0;
@@ -112,11 +112,13 @@ export default {
           return;
         }
         n = merged.battles;
-        rows = merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null }))
+        rows = merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null, topItem: m.items[0] || null }))
           .filter((r) => r.n >= state.minN);
       } else {
         cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.teams.length;
-        rows = usage(view.teams).filter((r) => r.n >= state.minN);
+        const byItem = itemsBySpecies(view.teams);
+        rows = usage(view.teams).filter((r) => r.n >= state.minN)
+          .map((r) => ({ ...r, topItem: byItem.get(r.key)?.items[0] || null }));
       }
 
       ctx.meta(meta, { source, n, unit });
@@ -190,7 +192,10 @@ export default {
         tdSprite.appendChild(drawerButton(ctx, r.key, state.anim));
         const tdName = document.createElement('td');
         tdName.className = 'col-name';
-        tdName.textContent = r.key;
+        const nameEl = document.createElement('div');
+        nameEl.className = 'col-name__mon';
+        nameEl.textContent = r.key;
+        tdName.append(nameEl, itemCell(ctx, r.topItem));
         const tdUsage = document.createElement('td');
         tdUsage.className = 'col-usage';
         const barWrap = document.createElement('div');
@@ -321,6 +326,26 @@ function drawerButton(ctx, key, anim) {
   btn.setAttribute('aria-label', `Open details for ${key}`);
   btn.appendChild(ctx.sprite(key, { size: 36, animated: anim }));
   btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.openDrawer(key); });
+  btn.addEventListener('keydown', (e) => e.stopPropagation());
+  return btn;
+}
+
+// Most common held item for the row's Pokémon; clicking it adds an item chip
+// (without also triggering the row's species chip).
+function itemCell(ctx, top) {
+  if (!top) return document.createTextNode('');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'item-link item-link--sub';
+  btn.title = `Filter to teams with ${top.name} (shift-click to exclude)`;
+  const name = document.createElement('span');
+  name.className = 'item-link__name';
+  name.textContent = top.name;
+  const pct = document.createElement('span');
+  pct.className = 'item-link__pct';
+  pct.textContent = ctx.fmt.pct(top.pct, 0);
+  btn.append(name, pct);
+  btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.chip('item', top.name, e); });
   btn.addEventListener('keydown', (e) => e.stopPropagation());
   return btn;
 }

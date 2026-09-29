@@ -31,9 +31,12 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
 ### Pure libs (`public/js/lib/`, ESM, importable from Node)
 - `stats.js`: `NATURES` (name → `{plus, minus}` stat keys), `natureMult(nature, statIdx)`, `calcStat(base, sp, statIdx, nature)` (statIdx 0 = HP), `calcStats(bs, sp[6], nature) → number[6]`, `parseSP("0/32/0/0/2/32") → number[6]`, `wilson(k, n, z=1.96) → [lo, hi]`, `effectiveSpecies(counts[]) → exp(Shannon entropy)`.
 - `types.js`: `TYPES` (18 names), `TYPE_COLORS`, `effectiveness(atkType, defTypes[]) → multiplier`.
-- `names.js`: `toID(s)`, `normalizeSpecies(raw, dex?) → Showdown display name`, `megaKey(species, item, dex) → mega form | null`.
+- `names.js`: `toID(s)`, `normalizeSpecies(raw, dex?) → Showdown display name`, `megaKey(species, item, dex) → mega form | null`,
+  `displayName(id, dex)` (Smogon ids like `lifeorb` → `Life Orb`), `normalizeTerm(raw, dex, 'item'|'move'|'ability')` (hand-typed sheet
+  spellings → dex names; placeholder items → null). `decode()` and the pipeline both run items/moves/abilities through `normalizeTerm`.
 - `archetypes.js`: `ARCHETYPES` (ordered array of `{id, label, desc, test(team, dex)}`), `classify(team, dex) → string[]` (matching ids, priority order; `["other"]` if none).
-- `aggregate.js`: `decode(file, dex) → {teams, events, matches}` plus all aggregations (usage, win rate with Wilson CI, co-usage/lift, cores, items/moves/sets/spreads per species, type landscape, archetype split and matchup matrix, weekly series). Every function takes an array of `Team` and returns plain data.
+- `aggregate.js`: `decode(file, dex) → {teams, events, matches}` plus all aggregations (incl. `itemsBySpecies`, `itemUsage`,
+  `ladderItemUsage`; pass `dex` as the 4th arg of `ladderMerge` to get display names) (usage, win rate with Wilson CI, co-usage/lift, cores, items/moves/sets/spreads per species, type landscape, archetype split and matchup matrix, weekly series). Every function takes an array of `Team` and returns plain data.
   Filtering: `filterTeams(teams, filters, chips, dex)` where `filters` is the state below and `chips` is `Chip[]`.
 - `paste.js`: `toPaste(team, dex) → Showdown text` (Showdown's Champions formats store SP in the `EVs:` line, e.g. `EVs: 32 Atk / 2 SpD / 32 Spe`), `parsePaste(text, dex) → Mon[]` (accepts `EVs:` and `SPs:` lines; a value above 32 means a classic EV spread, which is dropped as `sp: null`).
 - `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`.
