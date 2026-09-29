@@ -113,7 +113,7 @@ export default {
     rankedLink.textContent = RANKED_ATTRIBUTION.text;
     rankedCredit.append(rankedLink, document.createTextNode(' (in-game ranked ladder data).'));
     credBody.appendChild(rankedCredit);
-    credBody.appendChild(elm('p', 'mth-disclaimer', 'VGC MetaScope is a fan project and is not affiliated with Nintendo, Game Freak, Creatures or The Pokémon Company.'));
+    credBody.appendChild(elm('p', 'mth-disclaimer', 'MetaLens VGC is a fan project and is not affiliated with Nintendo, Game Freak, Creatures or The Pokémon Company.'));
     body.appendChild(credCard);
 
     let lastView = null;
@@ -123,8 +123,8 @@ export default {
       if (!view) return;
 
       const today = new Date().toISOString().slice(0, 10);
-      jsonBtn.onclick = () => download(`vgc-metascope-${view.reg}-${today}.json`, JSON.stringify(toJSONRows(view.teams), null, 2), 'application/json');
-      csvBtn.onclick = () => download(`vgc-metascope-${view.reg}-${today}.csv`, toCSV(view.teams), 'text/csv');
+      jsonBtn.onclick = () => download(`metalens-vgc-${view.reg}-${today}.json`, JSON.stringify(toJSONRows(view.teams), null, 2), 'application/json');
+      csvBtn.onclick = () => download(`metalens-vgc-${view.reg}-${today}.csv`, toCSV(view.teams), 'text/csv');
       dlNote.textContent = `${ctx.fmt.n(view.teams.length)} teams in the current view (regulation ${view.reg}, current filters applied).`;
 
       srcBody.innerHTML = '';

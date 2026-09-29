@@ -1,4 +1,4 @@
-# Testing VGC MetaScope
+# Testing MetaLens VGC
 
 What exists, how to run it, what has already been verified, and what hasn't.
 Keep the "Coverage ledger" up to date whenever you test something, so later

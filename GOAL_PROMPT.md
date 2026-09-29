@@ -1,5 +1,7 @@
 # VGC MetaScope — Goal Prompt
 
+> Historical: the original build prompt. The site has since been renamed **MetaLens VGC** (`metalensvgc.pages.dev`).
+
 Paste everything below into a fresh Claude Code session (with open network access).
 
 ---

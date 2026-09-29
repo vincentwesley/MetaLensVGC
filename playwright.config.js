@@ -1,4 +1,4 @@
-// Playwright config for VGC MetaScope. See CLAUDE.md "Commands":
+// Playwright config for MetaLens VGC. See CLAUDE.md "Commands":
 // npm run e2e -> playwright test (this file's testDir)
 // npm run shot -> playwright test e2e/screenshots.spec.js
 import { defineConfig, devices } from '@playwright/test';

@@ -1,5 +1,5 @@
 {
-  "name": "vgcmetascope",
+  "name": "metalensvgc",
   "version": "1.0.0",
   "scripts": {
     "data": "node scripts/build-data.js",
@@ -10,7 +10,7 @@
     "e2e:cloud": "playwright test -c playwright.cloud.config.js e2e/app.spec.js"
   },
   "license": "MIT",
-  "description": "VGC MetaScope: cross-filtering metagame dashboard for Pokémon Champions (VGC 2026)",
+  "description": "MetaLens VGC: cross-filtering metagame dashboard for Pokémon Champions (VGC 2026)",
   "dependencies": {
     "echarts": "^5.6.0"
   },
