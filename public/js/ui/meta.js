@@ -3,12 +3,24 @@
 
 export function renderMetaLine(el, { source, n, unit = 'teams', updated } = {}) {
   if (!el) return;
+  el.classList.add('meta-line');
+  el.textContent = '';
   const parts = [];
   if (source) parts.push(source);
   if (n != null) parts.push(`n=${Number(n).toLocaleString('en-US')} ${unit}`);
-  if (updated) parts.push(`updated ${updated}`);
-  el.textContent = parts.join(' · ') || '—';
-  el.classList.add('meta-line');
+  if (!parts.length && !updated) { el.textContent = '—'; return; }
+  if (parts.length) el.appendChild(document.createTextNode(parts.join(' · ')));
+  // Only the "updated <date>" token is forced no-wrap (so the hyphenated
+  // date never splits mid-token, e.g. "updated 2026-\n09-29"); `source` can
+  // itself be a long, normally-wrappable sentence (see speed.js), so it
+  // stays plain text that wraps at spaces like before.
+  if (updated) {
+    if (parts.length) el.appendChild(document.createTextNode(' · '));
+    const span = document.createElement('span');
+    span.className = 'meta-line__part';
+    span.textContent = `updated ${updated}`;
+    el.appendChild(span);
+  }
 }
 
 // In-game ranked source (championsbattledata.com): attribution text required by its terms.

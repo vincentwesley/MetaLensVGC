@@ -132,7 +132,7 @@ test('Team Sheet Library copy produces a valid Showdown paste', async ({ page })
 
   const firstCard = page.locator('[data-section="library"] .lib-card').first();
   await expect(firstCard).toBeVisible();
-  await firstCard.locator('.lib-btn', { hasText: 'Copy paste' }).click();
+  await firstCard.locator('.lib-btn', { hasText: 'Copy' }).click();
   await expect(page.locator('.toast')).toContainText('Copied');
 
   const text = await page.evaluate(() => navigator.clipboard.readText());
@@ -171,7 +171,7 @@ test('My Team Scanner accepts a pasted Showdown team and renders results', async
   // Build the paste from a real team sheet (never fabricated data) via the
   // library's own "Copy paste" button, then feed it into the scanner.
   const firstCard = page.locator('[data-section="library"] .lib-card').first();
-  await firstCard.locator('.lib-btn', { hasText: 'Copy paste' }).click();
+  await firstCard.locator('.lib-btn', { hasText: 'Copy' }).click();
   const paste = await page.evaluate(() => navigator.clipboard.readText());
   expect(paste.trim().length).toBeGreaterThan(0);
 

@@ -136,7 +136,7 @@ export default {
       let wrap = body.querySelector('.table-wrap');
       if (!wrap) {
         wrap = document.createElement('div');
-        wrap.className = 'table-wrap';
+        wrap.className = 'table-wrap table-wrap--scroll';
         body.appendChild(wrap);
       }
       wrap.innerHTML = '';
@@ -264,7 +264,7 @@ export default {
         : `Ranking not published for finished season ${season.season} — listed alphabetically (no order implied). Shares are within that Pokémon's ranked sets.`;
       body.appendChild(note);
       const wrap = document.createElement('div');
-      wrap.className = 'table-wrap';
+      wrap.className = 'table-wrap table-wrap--scroll';
       const table = document.createElement('table');
       table.className = 'data-table';
       const trh = table.createTHead().insertRow();

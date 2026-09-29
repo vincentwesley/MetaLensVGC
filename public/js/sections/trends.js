@@ -113,7 +113,10 @@ export default {
           backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           valueFormatter: (v) => `${(v * 100).toFixed(1)}%`,
         },
-        legend: { data: topKeys, textStyle: { color: theme.inkSecondary, fontFamily: theme.fontFamily }, top: 0 },
+        // Scrollable (not wrapping) legend: up to 8 species names can take 2+
+        // rows if left to wrap, colliding with the y-axis's top tick label.
+        // A scroll legend always stays a single row and pages instead.
+        legend: { type: 'scroll', data: topKeys, textStyle: { color: theme.inkSecondary, fontFamily: theme.fontFamily }, top: 0, pageIconColor: theme.ink, pageTextStyle: { color: theme.muted } },
         grid: { left: 46, right: 20, top: 36, bottom: 70 },
         xAxis: { type: 'category', data: wk.weeks, axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily } },
         yAxis: { type: 'value', axisLabel: { color: theme.muted, fontFamily: theme.fontFamily, formatter: (v) => `${(v * 100).toFixed(0)}%` }, axisLine: { lineStyle: { color: theme.axis } }, splitLine: { lineStyle: { color: theme.grid } } },
@@ -227,15 +230,20 @@ export default {
       const currNMap = new Map(usage(view.teams).map((r) => [r.key, r.n]));
       const prevNMap = new Map(usage(prev).map((r) => [r.key, r.n]));
       const currTop = usage(view.teams).filter((r) => r.n >= minN).slice(0, 20);
-      const prevTop = usage(prev).filter((r) => r.n >= minN).slice(0, 20);
+      // Rank *every* previous-period species that cleared minN, not just its
+      // top 20 — a mon can have existed last regulation with a real sample
+      // (e.g. n=2,483) while sitting outside that period's top 20, which is
+      // a real previous rank, not "NEW".
+      const prevRanked = usage(prev).filter((r) => r.n >= minN);
+      const prevTop = prevRanked.slice(0, 20);
       const currRank = new Map(currTop.map((r, i) => [r.key, i + 1]));
-      const prevRank = new Map(prevTop.map((r, i) => [r.key, i + 1]));
+      const prevRank = new Map(prevRanked.map((r, i) => [r.key, i + 1]));
       const left = prevTop.filter((r) => !currRank.has(r.key));
       const rows = [...currTop.map((r) => ({ key: r.key, pct: r.pct, rank: currRank.get(r.key), status: 'in' })),
         ...left.map((r) => ({ key: r.key, pct: r.pct, rank: null, status: 'out' }))];
 
       const wrap = document.createElement('div');
-      wrap.className = 'table-wrap';
+      wrap.className = 'table-wrap table-wrap--scroll';
       const table = document.createElement('table');
       table.className = 'data-table';
       table.innerHTML = '<thead><tr><th>#</th><th></th><th>Pokémon</th><th>n now</th><th>n prev</th><th>Prev rank</th><th>Change</th></tr></thead><tbody></tbody>';
@@ -258,7 +266,10 @@ export default {
         const tdPrev = document.createElement('td'); tdPrev.className = 'num'; tdPrev.textContent = pRank ?? '—';
         const tdChange = document.createElement('td'); tdChange.className = 'num';
         if (r.status === 'out') { tdChange.textContent = 'OUT'; tdChange.classList.add('sb-stat--down'); }
-        else if (!pRank) { tdChange.textContent = 'NEW'; tdChange.classList.add('sb-stat--up'); }
+        // "NEW" only when the previous period's sample was too small to rank
+        // at all (nPrev < minN) — a mon that existed with a real sample but
+        // outside the previous top 20 gets its real (possibly >20) rank below.
+        else if (nPrev < minN) { tdChange.textContent = 'NEW'; tdChange.classList.add('sb-stat--up'); }
         else {
           const d = pRank - r.rank;
           tdChange.textContent = d === 0 ? '—' : (d > 0 ? `▲ ${d}` : `▼ ${Math.abs(d)}`);
