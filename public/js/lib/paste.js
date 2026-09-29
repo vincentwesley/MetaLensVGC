@@ -81,3 +81,8 @@ export function parsePaste(text, dex) {
     .filter(Boolean)
     .map((block) => parseMonBlock(block, dex));
 }
+
+/** True when at least one parsed mon is a species the dex knows (gibberish parses to one unknown mon). */
+export function anyKnownSpecies(mons, dex) {
+  return mons.some((m) => !!(dex.species[m.k] || dex.species[m.s]));
+}

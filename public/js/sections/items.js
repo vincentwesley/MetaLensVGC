@@ -19,6 +19,8 @@ function el(tag, cls, text) {
   return e;
 }
 
+const LADDER_NA = 'No ladder data for this regulation yet';
+
 function emptyState(parent, title) {
   parent.querySelector('.empty-state')?.remove();
   const box = el('div', 'empty-state');
@@ -95,6 +97,7 @@ export default {
     let chartRows = null; // for theme re-draws
     let tableRows = [];   // [{ key, n, items: [{name, pct, n?}] }]
     let tableUnit = 'slots';
+    let noLadderTable = false;
 
     function drawChart(rows, mode, theme) {
       const shown = rows.slice(0, TOP_ITEMS).reverse();
@@ -147,16 +150,17 @@ export default {
         emptyState(A.body, RANKED_NA);
         return;
       }
-      let rows;
+      let rows, noLadder = false;
       if (src === 'ladder') {
         const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
+        noLadder = !merged;
         ctx.meta(A.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
         rows = ladderItemUsage(merged, view.dex, { megaStones: showStones });
       } else {
         ctx.meta(A.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
         rows = view.monTeams.length ? itemUsage(view.monTeams, view.dex, { megaStones: showStones }) : [];
       }
-      if (!rows.length) { chartRows = null; chartEl.hidden = true; emptyState(A.body, 'Insufficient data'); return; }
+      if (!rows.length) { chartRows = null; chartEl.hidden = true; emptyState(A.body, noLadder ? LADDER_NA : 'Insufficient data'); return; }
       chartRows = { rows, mode: src };
       chartEl.style.height = `${Math.max(220, Math.min(rows.length, TOP_ITEMS) * 24 + 40)}px`;
       chart.resize();
@@ -167,6 +171,7 @@ export default {
       const src = view.state.source;
       const minN = view.state.minN;
       note.textContent = '';
+      noLadderTable = false;
       if (src === 'ranked') {
         const season = rankedSeason(view.ranked, view.state.from, view.state.to);
         ctx.meta(B.meta, { source: rankedSource(season), n: season ? Object.keys(season.mons).length : 0, unit: 'Pokémon' });
@@ -179,6 +184,7 @@ export default {
       if (src === 'ladder') {
         const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
         ctx.meta(B.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
+        noLadderTable = !merged;
         if (!merged) return [];
         tableUnit = 'battles';
         return merged.mons.filter((m) => m.raw >= minN).map((m) => ({ key: m.key, n: m.raw, items: m.items.filter((i) => i.name !== 'No item') }));
@@ -217,7 +223,7 @@ export default {
       const q = search.value.trim().toLowerCase();
       let rows = q ? tableRows.filter((r) => r.key.toLowerCase().includes(q)) : tableRows;
       if (!q && !showAll) rows = rows.slice(0, TOP_MONS);
-      if (!rows.length) { emptyState(B.body, q ? `No Pokémon matching “${search.value.trim()}”` : 'Insufficient data'); return; }
+      if (!rows.length) { emptyState(B.body, q ? `No Pokémon matching “${search.value.trim()}”` : noLadderTable ? LADDER_NA : 'Insufficient data'); return; }
 
       const table = el('table', 'data-table items-table');
       const trh = table.createTHead().insertRow();

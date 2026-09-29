@@ -3,11 +3,11 @@
 // "load random" helper fills the textarea from a real team via toPaste so the
 // demo path never fabricates a spread.
 import { usage, ladderMerge, closestTeams, speedTiers, metaSpeed, rankedSeason } from '../lib/aggregate.js';
-import { parsePaste, toPaste } from '../lib/paste.js';
+import { parsePaste, toPaste, anyKnownSpecies } from '../lib/paste.js';
 import { calcStat } from '../lib/stats.js';
 import { TYPES, TYPE_COLORS, effectiveness } from '../lib/types.js';
 import { toast } from '../ui/toast.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 import { scanTeam, LIMITS, archLabel } from '../lib/scan.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
 
@@ -249,7 +249,8 @@ export default {
       if (!view) { emptyState(results, 'Data still loading'); return; }
       const dex = view.dex;
       const mons = parsePaste(text, dex);
-      if (!mons.length) { emptyState(results, 'Could not parse that paste'); return; }
+      if (!anyKnownSpecies(mons, dex)) { emptyState(results, 'Could not parse that paste: no recognised Pokémon'); return; }
+      results.appendChild(clickHint('Click a Pokémon name: show only teams with it. Shift-click to exclude.', { auto: false }));
 
       // --- parsed team ---
       const { card: pCard, body: pBody } = sectionCard('Parsed team');
@@ -435,7 +436,7 @@ export default {
       const chipBtn = (kind, value, label, cls) => {
         const b = elm('button', `scn-link${cls ? ` ${cls}` : ''}`, label ?? value);
         b.type = 'button';
-        b.title = `Filter the dashboard to ${value} (shift/alt-click: exclude)`;
+        b.dataset.tip = `Filter the dashboard to ${value} (shift/alt-click: exclude)`;
         b.addEventListener('click', (e) => ctx.chip(kind, value, e));
         return b;
       };

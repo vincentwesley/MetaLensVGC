@@ -10,7 +10,11 @@ test('withChartDefaults: every tooltip is confined and wraps, section options wi
   assert.match(out.tooltip.extraCssText, /white-space:normal/);
   assert.match(out.tooltip.extraCssText, /max-width/);
   assert.match(out.tooltip.extraCssText, /color:red;$/);
-  assert.deepEqual(out.aria, { enabled: true });
+  assert.equal(out.aria.enabled, true);
+  assert.match(out.aria.label.description, /0 data points/);
+  const hm = withChartDefaults({ series: [{ type: 'heatmap', data: [[0, 0, 'x'], [0, 1, null]] }, { type: 'bar', name: 'Weak', data: [{ value: NaN }] }] });
+  assert.match(hm.aria.label.description, /^heatmap \/ bar chart of Weak with 3 data points/);
+  assert.doesNotMatch(hm.aria.label.description, /NaN|undefined/);
   const arr = withChartDefaults({ tooltip: [{ trigger: 'axis' }, { trigger: 'item' }] });
   assert.ok(arr.tooltip.every((t) => t.confine === true));
   assert.equal(withChartDefaults({ tooltip: { confine: false } }).tooltip.confine, false);
