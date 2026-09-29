@@ -61,8 +61,11 @@ export default {
     function positionLabels() {
       if (!lastBounds) return;
       const { xMedian, yMin, yMax, xMin, xMax } = lastBounds;
+      // x is a log axis: the midpoint between two bounds on a log scale is
+      // their geometric mean, not their arithmetic mean.
+      const geoMid = (a, b) => Math.sqrt(Math.max(a, 1e-6) * Math.max(b, 1e-6));
       const graphics = QUADRANTS.map((q) => {
-        const x = q.xHigh ? (xMedian + xMax) / 2 : (xMin + xMedian) / 2;
+        const x = q.xHigh ? geoMid(xMedian, xMax) : geoMid(xMin, xMedian);
         const y = q.yHigh ? (50 + yMax) / 2 : (yMin + 50) / 2;
         const px = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [x, y]);
         if (!px) return null;
@@ -80,12 +83,18 @@ export default {
       // exact configured min/max (in addition to its "nice" interior ticks),
       // so a raw float here renders as a long unrounded string that overflows
       // the chart edge.
-      const xMax = Math.ceil((Math.max(...rows.map((r) => r.pct * 100)) * 1.15 || 10));
+      const xVals = rows.map((r) => r.pct * 100);
+      const xMax = Math.ceil((Math.max(...xVals) * 1.15 || 10));
+      // Usage %% spans orders of magnitude (a handful of teams up to a majority
+      // of them), which crams everything into the left edge on a linear axis.
+      // Log scale needs a positive min: round the smallest data point down to
+      // its power of ten (e.g. 0.4% -> 0.1%) so every point stays on-chart.
+      const xMin = Math.pow(10, Math.floor(Math.log10(Math.max(Math.min(...xVals), 0.01))));
       const yVals = rows.map((r) => r.winPct * 100);
       const yMin = Math.floor(Math.max(0, Math.min(...yVals) - 5));
       const yMax = Math.ceil(Math.min(100, Math.max(...yVals) + 5));
-      const xMedian = median(rows.map((r) => r.pct * 100));
-      lastBounds = { xMedian, yMin, yMax: Math.max(yMax, 55), xMin: 0, xMax };
+      const xMedian = median(xVals);
+      lastBounds = { xMedian, yMin, yMax: Math.max(yMax, 55), xMin, xMax };
 
       chart.setOption({
         backgroundColor: 'transparent',
@@ -95,8 +104,10 @@ export default {
           formatter: (p) => `<b>${p.data.key}</b><br/>usage: ${(p.data.value[0]).toFixed(1)}%<br/>win: ${(p.data.value[1]).toFixed(1)}%<br/>n=${p.data.n}`,
         },
         xAxis: {
-          type: 'value', name: 'Usage %', nameLocation: 'middle', nameGap: 28, min: 0, max: lastBounds.xMax,
-          axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, formatter: (v) => `${Math.round(v)}%` },
+          type: 'log', logBase: 10, name: 'Usage % (log scale)', nameLocation: 'middle', nameGap: 28,
+          min: lastBounds.xMin, max: lastBounds.xMax,
+          axisLine: { lineStyle: { color: theme.axis } },
+          axisLabel: { color: theme.muted, formatter: (v) => (v < 1 ? `${v.toFixed(1)}%` : `${Math.round(v)}%`) },
           splitLine: { lineStyle: { color: theme.grid } },
         },
         yAxis: {

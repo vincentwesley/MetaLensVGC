@@ -8,8 +8,7 @@ const COLS_TEAM = [
   { key: 'rank', label: '#' },
   { key: 'sprite', label: '' },
   { key: 'name', label: 'Pokémon' },
-  { key: 'bar', label: 'Usage' },
-  { key: 'pct', label: 'Usage %', sortable: true },
+  { key: 'usage', label: 'Usage %', sortable: true, sortKey: 'pct' },
   { key: 'win', label: 'Win % (95% CI)', sortable: true, sortKey: 'winPct' },
   { key: 'n', label: 'N', sortable: true },
 ];
@@ -17,8 +16,7 @@ const COLS_LADDER = [
   { key: 'rank', label: '#' },
   { key: 'sprite', label: '' },
   { key: 'name', label: 'Pokémon' },
-  { key: 'bar', label: 'Usage' },
-  { key: 'pct', label: 'Usage %', sortable: true },
+  { key: 'usage', label: 'Usage %', sortable: true, sortKey: 'pct' },
   { key: 'n', label: 'N (battles)', sortable: true },
 ];
 
@@ -144,6 +142,7 @@ export default {
       const trh = document.createElement('tr');
       for (const c of cols) {
         const th = document.createElement('th');
+        th.className = `col-${c.key}${c.key === 'rank' || c.key === 'win' || c.key === 'n' ? ' num' : ''}`;
         th.textContent = c.label;
         if (c.sortable) {
           th.style.cursor = 'pointer';
@@ -180,30 +179,36 @@ export default {
         tr.addEventListener('blur', () => ctx.hover(null));
 
         const tdRank = document.createElement('td');
-        tdRank.className = 'num';
+        tdRank.className = 'num col-rank';
         tdRank.textContent = String(i + 1);
         const tdSprite = document.createElement('td');
-        tdSprite.appendChild(ctx.sprite(r.key, { size: 24, animated: state.anim }));
+        tdSprite.className = 'col-sprite';
+        tdSprite.appendChild(ctx.sprite(r.key, { size: 36, animated: state.anim }));
         const tdName = document.createElement('td');
+        tdName.className = 'col-name';
         tdName.textContent = r.key;
-        const tdBar = document.createElement('td');
+        const tdUsage = document.createElement('td');
+        tdUsage.className = 'col-usage';
         const barWrap = document.createElement('div');
         barWrap.className = 'usage-bar';
+        const track = document.createElement('div');
+        track.className = 'usage-bar__track';
         const barFill = document.createElement('div');
         barFill.className = 'usage-bar__fill';
         barFill.style.width = `${(r.pct / maxPct) * 100}%`;
         barFill.style.background = primaryTypeColor(dex, r.key);
-        barWrap.appendChild(barFill);
-        tdBar.appendChild(barWrap);
-        const tdPct = document.createElement('td');
-        tdPct.className = 'num';
-        tdPct.textContent = ctx.fmt.pct(r.pct);
+        track.appendChild(barFill);
+        const barLabel = document.createElement('span');
+        barLabel.className = 'usage-bar__label';
+        barLabel.textContent = ctx.fmt.pct(r.pct);
+        barWrap.append(track, barLabel);
+        tdUsage.appendChild(barWrap);
 
-        tr.append(tdRank, tdSprite, tdName, tdBar, tdPct);
+        tr.append(tdRank, tdSprite, tdName, tdUsage);
 
         if (cols === COLS_TEAM) {
           const tdWin = document.createElement('td');
-          tdWin.className = 'num';
+          tdWin.className = 'num col-win';
           if (r.winPct != null && r.ci) {
             const wrapCi = document.createElement('div');
             wrapCi.className = 'ci-cell';
@@ -225,12 +230,12 @@ export default {
             tdWin.textContent = '—';
           }
           const tdN = document.createElement('td');
-          tdN.className = 'num';
+          tdN.className = 'num col-n';
           tdN.textContent = ctx.fmt.n(r.n);
           tr.append(tdWin, tdN);
         } else {
           const tdN = document.createElement('td');
-          tdN.className = 'num';
+          tdN.className = 'num col-n';
           tdN.textContent = ctx.fmt.n(r.n);
           tr.append(tdN);
         }

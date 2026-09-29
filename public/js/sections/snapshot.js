@@ -35,7 +35,7 @@ function deltaLabel(view) {
   return `vs prior ${days} day${days === 1 ? '' : 's'}`;
 }
 
-function monCard(ctx, key, pct, winPct, deltaPts, label, anim) {
+function monCard(ctx, key, pct, winPct, deltaPts, label, anim, prevN, minN) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = 'snapshot__mon';
@@ -71,8 +71,13 @@ function monCard(ctx, key, pct, winPct, deltaPts, label, anim) {
   if (deltaPts != null) {
     const d = document.createElement('div');
     const sign = deltaPts > 0 ? '+' : '';
-    d.className = `kpi__delta ${deltaPts > 0 ? 'kpi__delta--up' : deltaPts < 0 ? 'kpi__delta--down' : ''}`;
-    d.textContent = `${deltaPts > 0 ? '▲' : deltaPts < 0 ? '▼' : '—'} ${sign}${deltaPts.toFixed(1)}pt ${label}`;
+    // Low-sample previous period: the delta is still the real number, but a
+    // handful of prior teams makes it noisy, so grey it out and say why
+    // rather than hide it (still real data, just a shakier comparison).
+    const lowSample = !prevN || prevN < Math.max(minN || 0, 50);
+    d.className = `kpi__delta ${deltaPts > 0 ? 'kpi__delta--up' : deltaPts < 0 ? 'kpi__delta--down' : ''}${lowSample ? ' kpi__delta--low' : ''}`;
+    const nText = prevN ? `, prev n=${ctx.fmt.n(prevN)}` : '';
+    d.textContent = `${deltaPts > 0 ? '▲' : deltaPts < 0 ? '▼' : '—'} ${sign}${deltaPts.toFixed(1)}pt ${label}${nText}${lowSample ? ' (low sample)' : ''}`;
     card.appendChild(d);
   }
   return card;
@@ -170,13 +175,14 @@ export default {
       } else {
         const prevRows = view.prev && view.prev.length ? new Map(usage(view.prev).map((r) => [r.key, r])) : null;
         const label = deltaLabel(view);
+        const prevN = view.prev ? view.prev.length : 0;
         top.forEach((r) => {
           let deltaPts = null;
           if (prevRows) {
             const p = prevRows.get(r.key);
             deltaPts = (r.pct - (p ? p.pct : 0)) * 100;
           }
-          hero.appendChild(monCard(ctx, r.key, r.pct, r.winPct, deltaPts, label || '', anim));
+          hero.appendChild(monCard(ctx, r.key, r.pct, r.winPct, deltaPts, label || '', anim, prevN, state.minN));
         });
       }
 

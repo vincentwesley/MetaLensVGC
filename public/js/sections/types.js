@@ -79,7 +79,7 @@ export default {
           formatter: (p) => `${p.data.type}<br/>usage: ${(p.data.pct * 100).toFixed(1)}% (${p.data.n} slots)`,
         },
         xAxis: { type: 'value', ...baseAxis(theme), axisLabel: { ...baseAxis(theme).axisLabel, formatter: (v) => `${(v * 100).toFixed(0)}%` } },
-        yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false } },
+        yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
         series: [{
           type: 'bar', barMaxWidth: 16, itemStyle: { borderRadius: [0, 4, 4, 0] },
           data: sorted.map((r) => ({ value: r.pct, type: r.type, n: r.n, itemStyle: { color: TYPE_COLORS[r.type] } })).reverse(),
@@ -98,7 +98,7 @@ export default {
           formatter: (p) => `${p.data.type}<br/>mean effectiveness: ${p.data.score.toFixed(2)}×<br/>hits ${(p.data.se * 100).toFixed(0)}% of field super-effectively`,
         },
         xAxis: { type: 'value', min: 0, ...baseAxis(theme) },
-        yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false } },
+        yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
         series: [{
           type: 'bar', barMaxWidth: 16, itemStyle: { borderRadius: [0, 4, 4, 0] },
           data: sorted.map((r) => ({ value: r.score, type: r.type, se: r.se, itemStyle: { color: TYPE_COLORS[r.type] } })).reverse(),
@@ -110,7 +110,7 @@ export default {
       const sorted = rows.slice().sort((a, b) => b.weak - a.weak);
       weakChart.setOption({
         backgroundColor: 'transparent',
-        grid: { left: 90, right: 24, top: 8, bottom: 24 },
+        grid: { left: 90, right: 24, top: 40, bottom: 24 },
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink },
@@ -120,12 +120,12 @@ export default {
             return `${type}<br/>weak: ${(w.weak * 100).toFixed(0)}%<br/>resist: ${(w.resist * 100).toFixed(0)}%<br/>immune: ${(w.immune * 100).toFixed(0)}%`;
           },
         },
-        legend: { data: ['Weak to', 'Resists/immune'], textStyle: { color: theme.inkSecondary }, bottom: 0 },
+        legend: { data: ['Weak to', 'Resists/immune'], textStyle: { color: theme.inkSecondary }, top: 4, left: 'center', itemGap: 20 },
         xAxis: {
           type: 'value', ...baseAxis(theme),
           axisLabel: { ...baseAxis(theme).axisLabel, formatter: (v) => `${Math.abs(v * 100).toFixed(0)}%` },
         },
-        yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false } },
+        yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
         series: [
           {
             name: 'Weak to', type: 'bar', stack: 'w', barMaxWidth: 16,

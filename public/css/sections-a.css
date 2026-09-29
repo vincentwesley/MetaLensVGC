@@ -57,6 +57,7 @@ main.grid .section[data-section="quadrant"] {
   font-size: 11px; font-family: var(--font-label); white-space: normal; line-height: 1.3;
 }
 [data-skin="retro"] .snapshot__mon .kpi__delta { font-family: var(--font-body); font-size: 13px; }
+.snapshot__mon .kpi__delta--low { color: var(--muted) !important; opacity: .7; }
 
 .snapshot__kpis {
   display: grid;
@@ -74,12 +75,27 @@ main.grid .section[data-section="quadrant"] {
 [data-section="usage"] .card__head { flex-wrap: wrap; row-gap: var(--space-2); }
 [data-section="usage"] .card__head > span.meta-line { margin-left: auto; }
 
-.usage-bar {
-  width: 96px; height: 8px; border-radius: 4px;
+/* Tight, explicit column widths so the table doesn't stretch to fill a wide
+   card with dead whitespace: rank/sprite/n stay small, name gets whatever's
+   left, usage/win get a fixed comfortable width for their bar+label. */
+[data-section="usage"] table.data-table { table-layout: auto; }
+[data-section="usage"] .col-rank { width: 28px; }
+[data-section="usage"] .col-sprite { width: 44px; }
+[data-section="usage"] .col-name { width: auto; }
+[data-section="usage"] .col-usage { width: 190px; }
+[data-section="usage"] .col-win { width: 190px; }
+[data-section="usage"] .col-n { width: 60px; }
+
+/* Merged bar+% cell: a track with a coloured fill, and the % label sits
+   right after it (not two separate columns). */
+.usage-bar { display: flex; align-items: center; gap: 8px; }
+.usage-bar__track {
+  flex: 1 1 auto; min-width: 48px; height: 10px; border-radius: 5px;
   background: var(--surface-2); border: 1px solid var(--border);
   overflow: hidden;
 }
-.usage-bar__fill { height: 100%; border-radius: 4px; }
+.usage-bar__fill { height: 100%; border-radius: 5px; }
+.usage-bar__label { flex: none; font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: var(--fs-small); }
 
 .ci-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 130px; }
 .ci-cell span { font-variant-numeric: tabular-nums; }
@@ -99,8 +115,10 @@ main.grid .section[data-section="quadrant"] {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--space-4);
 }
-.types-panel__chart { height: 300px; width: 100%; }
-@media (max-width: 700px) { .types-panel__chart { height: 260px; } }
+/* Tall enough that all 18 category labels get their own row without
+   ECharts thinning them out to every other one. */
+.types-panel__chart { height: 460px; width: 100%; }
+@media (max-width: 700px) { .types-panel__chart { height: 400px; } }
 
 /* ---------- usage x win quadrant ---------- */
 .quadrant__chart { height: 440px; width: 100%; }

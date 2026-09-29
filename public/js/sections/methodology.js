@@ -144,7 +144,8 @@ export default {
       const table = elm('table', 'data-table');
       const thead = elm('thead');
       const trh = elm('tr');
-      for (const h of ['Reg', 'Teams', 'Events', 'Open sheets', 'Matches', 'Ladder months']) trh.appendChild(elm('th', null, h));
+      const regCols = ['Reg', 'Teams', 'Events', 'Open sheets', 'Matches', 'Ladder months'];
+      regCols.forEach((h, i) => trh.appendChild(elm('th', i > 0 ? 'num' : null, h)));
       thead.appendChild(trh);
       table.appendChild(thead);
       const tbody = elm('tbody');
