@@ -35,6 +35,7 @@
   </div>
 </header>
 
+<div class="stickybar" id="stickybar">
 <div class="filterbar" id="filterbar" role="region" aria-label="Filters">
   <button type="button" class="filterbar__summary" id="filterbar-summary" title="Show filters and settings (F)"></button>
   <div class="filterbar__body" id="filterbar-body">
@@ -43,7 +44,8 @@
   <button type="button" class="filterbar__toggle-btn" id="filterbar-toggle" aria-expanded="true" aria-controls="filterbar-body header-controls">Hide</button>
 </div>
 
-<div class="chips" id="chips" aria-label="Active filters"></div>
+<div class="chips" id="chips" role="region" aria-label="Active filters" aria-live="polite"></div>
+</div>
 
 <main id="main" class="grid">
   <section class="section span-12" data-section="snapshot" data-title="Meta Snapshot" aria-labelledby="h-snapshot">

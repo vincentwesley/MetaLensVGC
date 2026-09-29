@@ -30,7 +30,7 @@ function labelFor(chip) {
     : chip.kind === 'archetype' ? (ARCH_LABELS[chip.value] || chip.value)
     : String(chip.value);
   const kind = KIND_LABEL[chip.kind];
-  return `${chip.neg ? 'Not ' : ''}${kind ? `${kind}: ` : ''}${v}`;
+  return `${kind ? `${kind}: ` : ''}${v}`; // negation is shown by the chip style ("NOT")
 }
 
 // One line under the chips saying what they do to the page.
@@ -42,13 +42,20 @@ function scopeNote(state, dex) {
   }
   const mon = state.chips.filter((c) => MON_KINDS.has(c.kind) && !c.neg);
   if (!mon.length) return 'Showing teams that match every chip.';
-  return 'Pokémon views (leaderboard, types, items, speed, trends) count only the Pokémon matching the Pokémon chips together; teammates, archetypes and the team library show those whole teams.';
+  return 'Pokémon charts count only the matching Pokémon · team views (teammates, archetypes, library) show their whole teams.';
 }
 
 export function mountChips(el, ctx) {
   function render(state) {
     el.textContent = '';
     if (!state.chips.length) return;
+    const title = document.createElement('span');
+    title.className = 'chips__title';
+    const count = document.createElement('span');
+    count.className = 'chips__count';
+    count.textContent = String(state.chips.length);
+    title.append('Active filters', count);
+    el.appendChild(title);
     for (let i = 0; i < state.chips.length; i++) {
       const chip = state.chips[i];
       const pill = document.createElement('span');
@@ -71,7 +78,8 @@ export function mountChips(el, ctx) {
       const x = document.createElement('button');
       x.type = 'button';
       x.className = 'chip__x';
-      x.setAttribute('aria-label', `Remove ${labelFor(chip)} filter`);
+      x.setAttribute('aria-label', `Remove ${chip.neg ? 'NOT ' : ''}${labelFor(chip)} filter`);
+      x.title = 'Remove this filter';
       x.textContent = '×';
       x.addEventListener('click', () => ctx.store.removeChip(i));
       pill.appendChild(x);
@@ -81,12 +89,14 @@ export function mountChips(el, ctx) {
     const clear = document.createElement('button');
     clear.type = 'button';
     clear.className = 'chips__clear';
-    clear.textContent = 'Clear all';
+    clear.textContent = '✕ Clear all';
+    clear.title = 'Remove every filter chip';
     clear.addEventListener('click', () => ctx.store.clearChips());
     el.appendChild(clear);
     const note = document.createElement('span');
     note.className = 'chips__note';
     note.textContent = scopeNote(state, ctx.dex);
+    title.title = note.textContent; // the note is hidden on phones
     el.appendChild(note);
   }
 
