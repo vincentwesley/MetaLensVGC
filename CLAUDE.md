@@ -46,7 +46,7 @@ state = {
   place: "all" | "topcut" | "top8" | "winner",
   from: "" | "YYYY-MM-DD", to: "" | "YYYY-MM-DD", minN: 20,
   chips: [ { kind: "species"|"type"|"archetype"|"item"|"move"|"mega"|"core"|"team", value: string | string[], neg: false } ],
-  skin: "retro" | "pro", theme: "auto" | "light" | "dark", anim: false,
+  skin: "pro" | "retro", theme: "dark" | "light" | "auto", anim: false,   // defaults: pro, dark
 }
 store.get(), store.set(patch), store.addChip(chip), store.removeChip(i), store.clearChips(), store.subscribe(fn)
 ```

@@ -12,6 +12,12 @@ async function waitForUsageRendered(page) {
     .waitFor({ state: 'visible' });
 }
 
+/** Wait until every section (including off-screen ones, which catch up in
+ *  idle time) has rendered the current state. */
+async function waitForAllSections(page) {
+  await page.waitForFunction(() => !document.documentElement.hasAttribute('data-rendering') && document.querySelector('.filterbar__sample')?.textContent !== 'Loading…');
+}
+
 function teamsSampledValue(page) {
   return page.locator('[data-section="snapshot"] .kpi').filter({ hasText: 'Teams sampled' }).locator('.kpi__value');
 }
@@ -184,9 +190,10 @@ test('My Team Scanner accepts a pasted Showdown team and renders results', async
 
 test('no horizontal scroll at 390px width in both skins', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const [skin, hash] of [['retro', '/'], ['pro', '/#skin=pro']]) {
+  for (const [skin, hash] of [['retro', '/#skin=retro'], ['pro', '/']]) {
     await page.goto(hash);
     await waitForUsageRendered(page);
+    await waitForAllSections(page);
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth, `${skin} skin overflows horizontally at 390px (scrollWidth=${scrollWidth})`).toBeLessThanOrEqual(390);
   }
@@ -201,4 +208,26 @@ test('leaderboard sprite opens the drawer without adding a chip', async ({ page 
   await expect(page.locator('#deepdive')).toHaveClass(/is-open/);
   await expect(page.locator('#deepdive-title')).toContainText(key);
   await expect(page.locator('#chips .chip')).toHaveCount(0);
+});
+
+test('filter bar collapses to a summary line, remembers it, and F toggles it', async ({ page }) => {
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const html = page.locator('html');
+  const toggle = page.locator('#filterbar-toggle');
+  await expect(html).toHaveAttribute('data-skin', 'pro');
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('[aria-label="Regulation"]')).toBeVisible();
+  await toggle.click();
+  await expect(html).toHaveAttribute('data-filters-collapsed', '');
+  await expect(page.locator('[aria-label="Regulation"]')).toBeHidden();
+  await expect(page.locator('#header-controls')).toBeHidden();
+  await expect(page.locator('#filterbar-summary')).toContainText('M-C');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await page.reload();
+  await waitForUsageRendered(page);
+  await expect(page.locator('[aria-label="Regulation"]')).toBeHidden();
+  await page.locator('body').press('f');
+  await expect(page.locator('[aria-label="Regulation"]')).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 });
