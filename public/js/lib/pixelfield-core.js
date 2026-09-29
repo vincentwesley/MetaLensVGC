@@ -6,7 +6,7 @@
 // No DOM: js/ui/pixelfield.js paints it.
 
 export const CELL = 4; // CSS pixels per canvas pixel (tiny canvas, scaled up unsmoothed)
-export const FPS = 15;
+export const FPS = 10; // motion is slow (a few px/s); each canvas update costs the main thread a full frame
 export const SPRITE_ALPHA = 0.09; // strongest sprite, dark theme
 export const BLOB_ALPHA = 0.055; // dithered blob, dark theme
 export const TRAIL_ALPHA = 0.09;
@@ -118,6 +118,9 @@ const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 export const bayer = (i, j) => (BAYER[(j & 3) * 4 + (i & 3)] + 0.5) / 16;
 /** Blob density 0..1 at distance d from the centre (soft edge). */
 export const blobDensity = (d, r) => Math.pow(Math.max(0, 1 - d / r), 1.4);
+
+/** Inverse of blobDensity: a cell with dither threshold `th` is lit when d < r * blobEdge(th) (no pow per cell). */
+export const blobEdge = (th) => 1 - Math.pow(th, 1 / 1.4);
 
 export const TRAIL_STEP = 22; // CSS px the pointer moves per new trail dot
 export const TRAIL_LIFE = 1.5; // seconds

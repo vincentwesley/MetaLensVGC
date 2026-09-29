@@ -111,7 +111,7 @@ function buildRows(view, dex) {
 }
 
 const SOURCE_LABEL = { sheet: 'Team sheets', ranked: 'Ranked ladder spread', ladder: 'Smogon ladder', bounds: 'Theoretical bounds' };
-const SOURCE_VAR = { sheet: 'var(--series-1)', ranked: 'var(--series-2)', ladder: 'var(--series-3)', bounds: 'var(--muted)' };
+const SOURCE_PILL = { sheet: 1, ranked: 2, ladder: 3, bounds: 4 }; // --pill-N / --pill-ink-N (app.css)
 const BENCH_NATURES = { plus: 'Timid', neutral: 'Serious', minus: 'Sassy' };
 
 export default {
@@ -151,7 +151,8 @@ export default {
     for (const [src, label] of Object.entries(SOURCE_LABEL)) {
       const item = document.createElement('span');
       item.className = 'pill';
-      item.style.background = SOURCE_VAR[src];
+      item.style.background = `var(--pill-${SOURCE_PILL[src]})`;
+      item.style.color = `var(--pill-ink-${SOURCE_PILL[src]})`;
       item.textContent = label;
       legend.appendChild(item);
     }
