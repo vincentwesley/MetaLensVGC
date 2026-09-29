@@ -71,3 +71,14 @@ Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 ## Style
 Plain modern JS, no TypeScript, no frameworks, no new runtime deps. Small modules. CSS custom properties for all colours;
 type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback exact form → base species → type-coloured placeholder.
+
+## Project status (handover, 2026-09-29)
+- Every GOAL_PROMPT.md "Definition of done" item is met on branch `claude/pokemon-vgc-metagame-dashboard-9whe1a`: data for M-A/M-B/M-C committed, `npm test` (84) and `npm run e2e` (9 checks + screenshots) green, screenshots reviewed in both skins, README complete (decisions, coverage, Cloudflare steps). No PR has been opened; don't open one unless asked.
+- Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
+- Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Commit and push to this branch in logical steps. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
+- Where things stand: the in-game ranked data does not exist per team, so team-level sections show an explicit "not available" state under that source. Smogon M-C (September) stats are expected in early October and the weekly Action picks them up automatically.
+
+### Working in a cloud session
+- The SessionStart hook runs `npm ci && npm test`. Playwright needs a browser first: `npx playwright install --with-deps chromium`.
+- `npm run data` needs outbound access to play.limitlesstcg.com, limitlessvgc.com, standings.limitlessvgc.com, smogon.com, championsbattledata.com and play.pokemonshowdown.com. The raw cache (`data-raw/`) is gitignored, so it starts empty. It still runs incrementally from the committed `public/data` (completed tournaments and finished ranked seasons are reused), so a refresh is minutes, not hours. The weekly GitHub Action does this anyway, so only run it if you need fresh data now.
+- Visual review: `npm run serve`, then `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` writes viewport-sized slices into `screenshots/tmp/` (gitignored). The committed full-page shots come from `npm run shot`.
