@@ -12,7 +12,7 @@ import { chartTheme, onTheme, notifyThemeSubs } from './ui/echarts-theme.js';
 import { toast } from './ui/toast.js';
 
 const SECTION_IDS = [
-  'snapshot', 'usage', 'types', 'archetypes', 'quadrant',
+  'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
   'teammates', 'speed', 'trends', 'library', 'scanner', 'methodology',
 ];
 

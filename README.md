@@ -23,6 +23,10 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
   - Meta Snapshot
   - Usage leaderboard with 95% Wilson intervals
   - Type landscape: usage, best attacking types against the current field, and common weaknesses
+  - Item usage: which held items the field runs (share of teams, win rate, who holds them; Mega Stones
+    optional) and the most common items for every Pokémon, searchable. The leaderboard also shows each
+    Pokémon's top item under its name. Hand-typed sheet spellings ("focus sash", "U-Turn", "None") are
+    normalized to dex names when the data loads.
   - Archetypes: classification, split, and a matchup heatmap built from real pairings
   - Usage vs. win-rate quadrant
   - Teammate co-usage (raw % / lift) and top cores

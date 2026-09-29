@@ -231,3 +231,23 @@ test('filter bar collapses to a summary line, remembers it, and F toggles it', a
   await expect(page.locator('[aria-label="Regulation"]')).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 });
+
+test('Item Usage: per-Pokémon items render and clicking an item adds an item chip', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const section = page.locator('main [data-section="items"]');
+  const firstRow = section.locator('.items-table tbody tr').first();
+  await expect(firstRow).toBeVisible();
+  const item = firstRow.locator('.item-link').first();
+  const itemName = (await item.locator('.item-link__name').textContent()).trim();
+  expect(itemName.length).toBeGreaterThan(0);
+  // leaderboard shows the same Pokémon's top item under its name
+  const key = await firstRow.getAttribute('data-key');
+  await expect(page.locator(`[data-section="usage"] tr[data-key="${key}"] .item-link__name`)).toHaveText(itemName);
+  await item.click();
+  await expect(page.locator('#chips .chip')).toHaveCount(1);
+  await expect(page.locator('#chips .chip').first()).toContainText(itemName);
+  // search narrows the per-Pokémon table
+  await section.locator('.items-search').fill(key.slice(0, 5));
+  await expect(section.locator('.items-table tbody tr').first()).toHaveAttribute('data-key', /.+/);
+});

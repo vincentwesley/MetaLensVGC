@@ -204,7 +204,7 @@ export function mountFilterbar(root, ctx, manifest) {
   ctx.store.subscribe(sync);
 
   function update(view) {
-    if (summary) summary.dataset.sample = view?.state?.source === 'ranked' ? '' : `${(view?.teams?.length ?? 0).toLocaleString('en-US')} teams`;
+    if (summary) summary.dataset.sample = view?.state?.source === 'tournaments' ? `${(view?.teams?.length ?? 0).toLocaleString('en-US')} teams` : '';
     const n = view?.teams?.length ?? 0;
     const events = view?.teams ? new Set(view.teams.map((t) => t.ev?.id)).size : 0;
     const updated = manifest?.generated ? manifest.generated.slice(0, 10) : '—';
