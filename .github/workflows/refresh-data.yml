@@ -8,12 +8,19 @@ on:
 permissions:
   contents: write
 
+# Never run two refreshes at once (both would try to push data commits).
+concurrency:
+  group: refresh-data-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the pre-push rebase below always finds a merge base
 
       - uses: actions/setup-node@v4
         with:
@@ -26,13 +33,28 @@ jobs:
       - run: npm test
 
       - name: Commit data if changed
+        # The pipeline can run for a long time; other commits may land on the branch
+        # meanwhile. Rebase the data commit onto the latest branch tip before pushing
+        # (retrying if the branch moves again). The data commit only touches
+        # public/data, so on a conflict there the freshly built data wins (-X theirs
+        # = the commit being replayed).
         run: |
           git config user.name 'vgcmetascope-bot'
           git config user.email 'vgcmetascope-bot@users.noreply.github.com'
           git add public/data
           if git diff --cached --quiet; then
             echo "No data changes."
-          else
-            git commit -m 'chore: refresh data'
-            git push
+            exit 0
           fi
+          git commit -m 'chore: refresh data'
+          branch="${GITHUB_REF_NAME}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase -X theirs origin "$branch" && git push origin "HEAD:$branch"; then
+              echo "Pushed data refresh (attempt $attempt)."
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 15))
+          done
+          echo "Could not push the data refresh after 5 attempts." >&2
+          exit 1
