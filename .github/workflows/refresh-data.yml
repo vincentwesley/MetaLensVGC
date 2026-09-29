@@ -3,12 +3,7 @@ name: Refresh data
 on:
   schedule:
     - cron: '0 6 * * 1' # Monday 06:00 UTC
-  workflow_dispatch:
-    inputs:
-      simulate_failure:
-        description: 'Fail right after npm ci (tests the failure-issue alert)'
-        type: boolean
-        default: false
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -40,7 +35,7 @@ jobs:
         id: cache
         # data-raw/ is the gitignored HTTP cache. Entries carry their own TTL
         # (scripts/lib/http.js), so only permanent (official events) entries stay valid.
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: data-raw
           key: data-raw-${{ github.run_id }}
@@ -51,13 +46,6 @@ jobs:
         run: |
           set -o pipefail
           { echo "== Install dependencies"; npm ci; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
-
-      - name: Simulate failure
-        id: simulate-failure
-        if: ${{ inputs.simulate_failure }}
-        run: |
-          set -o pipefail
-          { echo "== Simulate failure"; echo "Simulated failure"; exit 1; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
 
       - name: Build data
         id: build-data
@@ -108,7 +96,7 @@ jobs:
       - name: Open or update failure issue
         id: alert-failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const TITLE = 'Weekly data refresh failed';
@@ -125,7 +113,18 @@ jobs:
               let fileTail = '';
               try {
                 const raw = require('fs').readFileSync(`${process.env.RUNNER_TEMP}/refresh.log`, 'utf8');
-                fileTail = raw.replace(/\u001b\[[0-9;]*[A-Za-z]/g, '').split(/\r?\n/).filter((l) => l.trim()).slice(-40).join('\n');
+                let lines = raw.replace(/\u001b\[[0-9;]*[A-Za-z]/g, '').split(/\r?\n/);
+                let lastHeaderIdx = -1;
+                for (let i = lines.length - 1; i >= 0; i--) {
+                  if (lines[i].startsWith('== ')) {
+                    lastHeaderIdx = i;
+                    break;
+                  }
+                }
+                if (lastHeaderIdx >= 0) {
+                  lines = lines.slice(lastHeaderIdx);
+                }
+                fileTail = lines.filter((l) => l.trim()).slice(-40).join('\n');
               } catch {}
               if (fileTail) {
                 logLines = fileTail;
@@ -175,7 +174,7 @@ jobs:
       - name: Close failure issue
         id: alert-success
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const TITLE = 'Weekly data refresh failed';
