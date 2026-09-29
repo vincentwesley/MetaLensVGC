@@ -2,6 +2,7 @@
 // win-rate heatmap (real match results only), and a classification disclosure.
 import { archetypeSplit, archetypeMatrix } from '../lib/aggregate.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -318,15 +319,16 @@ export default {
     return {
       update(view) {
         lastView = view;
-        if (view.state.source === 'ladder') {
+        if (view.state.source !== 'tournaments') {
+          const ranked = view.state.source === 'ranked';
           lastSplit = [];
           donutChartEl.style.display = 'none';
           listWrap.style.display = 'none';
           heatChartEl.style.display = 'none';
           heatEmptyEl.textContent = '';
-          heatEmptyEl.appendChild(emptyState('Switch Source to Tournaments to see archetype splits and matchups.', 'Tournament-only view'));
-          ctx.meta(donut.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
-          ctx.meta(heat.meta, { source: 'Tournaments', n: 0, unit: 'matches' });
+          heatEmptyEl.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see archetype splits and matchups.', 'Tournament-only view'));
+          ctx.meta(donut.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
+          ctx.meta(heat.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'matches' });
           return;
         }
         listWrap.style.display = '';

@@ -49,3 +49,8 @@ test('toHash: tiers array compared order-independently', () => {
   const state = { ...DEFAULT_STATE, tiers: [...DEFAULT_STATE.tiers].reverse() };
   assert.equal(toHash(state), '');
 });
+
+test('toHash/fromHash round-trip: source=ranked', () => {
+  const back = fromHash(toHash({ ...DEFAULT_STATE, source: 'ranked', chips: [] }));
+  assert.equal(back.source, 'ranked');
+});

@@ -1,7 +1,8 @@
 // usage.js — Usage leaderboard: sortable table, rank/sprite/name/usage bar/
 // usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
-import { usage, ladderMerge } from '../lib/aggregate.js';
+import { usage, ladderMerge, rankedSeason, rankedEntries } from '../lib/aggregate.js';
+import { rankedSource } from '../ui/meta.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
 const COLS_TEAM = [
@@ -97,6 +98,9 @@ export default {
       const state = view.state;
       const dex = view.dex;
       let rows, cols, unit, source, n;
+
+      if (state.source === 'ranked') { renderRanked(view); return; }
+      body.querySelector('.ddv-note')?.remove();
 
       if (state.source === 'ladder') {
         const merged = ladderMerge(view.ladder, state.from, state.to);
@@ -243,6 +247,60 @@ export default {
       });
       table.appendChild(tbody);
       wrap.appendChild(table);
+    }
+
+    // In-game ranked: rank order only (the game publishes ranks, never usage shares).
+    function renderRanked(view) {
+      const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+      body.innerHTML = '';
+      ctx.meta(meta, { source: rankedSource(season), n: season ? Object.keys(season.mons).length : 0, unit: 'Pokémon' });
+      if (!season) { emptyState(body, 'No in-game ranked season in the selected range'); return; }
+      const ranked = !!season.ranking;
+      const names = ranked ? season.ranking.filter((k) => season.mons[k]) : Object.keys(season.mons).sort();
+      const note = document.createElement('div');
+      note.className = 'ddv-note';
+      note.textContent = ranked
+        ? `The game publishes ranks only, not usage shares. Top item / ability / move shares are within that Pokémon's ranked sets.`
+        : `Ranking not published for finished season ${season.season} — listed alphabetically (no order implied). Shares are within that Pokémon's ranked sets.`;
+      body.appendChild(note);
+      const wrap = document.createElement('div');
+      wrap.className = 'table-wrap';
+      const table = document.createElement('table');
+      table.className = 'data-table';
+      const trh = table.createTHead().insertRow();
+      const headers = [['', 'col-sprite'], [ranked ? 'Pokémon' : 'Pokémon (A–Z)', 'col-name'], ['Top item', ''], ['Top ability', ''], ['Top move', '']];
+      if (ranked) headers.unshift(['Rank', 'num col-rank']); // finished seasons: no rank column (no order published)
+      for (const [label, cls] of headers) {
+        const th = document.createElement('th');
+        th.className = cls;
+        th.textContent = label;
+        trh.appendChild(th);
+      }
+      const tbody = table.createTBody();
+      const top = (tbl) => { const e = rankedEntries(tbl)[0]; return e ? `${e.name} ${ctx.fmt.pct(e.pct)}` : '—'; };
+      for (const key of showAll ? names : names.slice(0, 30)) {
+        const mon = season.mons[key];
+        const tr = tbody.insertRow();
+        tr.tabIndex = 0;
+        tr.setAttribute('role', 'button');
+        tr.dataset.key = key;
+        tr.setAttribute('aria-label', `Filter by ${key}`);
+        const act = (e) => ctx.chip('species', key, e);
+        tr.addEventListener('click', act);
+        tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(e); } });
+        tr.addEventListener('mouseenter', () => ctx.hover(key));
+        tr.addEventListener('mouseleave', () => ctx.hover(null));
+        const cells = [[null, 'col-sprite'], [key, 'col-name'], [top(mon.items), ''], [top(mon.abilities), ''], [top(mon.moves), '']];
+        if (ranked) cells.unshift([`#${mon.rank ?? '—'}`, 'num col-rank']);
+        for (const [text, cls] of cells) {
+          const td = tr.insertCell();
+          td.className = cls;
+          if (text == null) td.appendChild(ctx.sprite(key, { size: 36, animated: view.state.anim }));
+          else td.textContent = text;
+        }
+      }
+      wrap.appendChild(table);
+      body.appendChild(wrap);
     }
 
     return {

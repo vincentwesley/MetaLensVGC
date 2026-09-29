@@ -10,3 +10,13 @@ export function renderMetaLine(el, { source, n, unit = 'teams', updated } = {}) 
   el.textContent = parts.join(' · ') || '—';
   el.classList.add('meta-line');
 }
+
+// In-game ranked source (championsbattledata.com): attribution text required by its terms.
+export const RANKED_ATTRIBUTION = { text: 'Battle data provided by Pokémon Champions Battle Data', url: 'https://championsbattledata.com/' };
+export const RANKED_NA = 'Not available for the in-game ranked source (it publishes per-Pokémon sets, not teams)';
+
+/** Meta-line source text for a ranked season (or null season). */
+export function rankedSource(season) {
+  const base = 'In-game ranked (Pokémon Champions Battle Data)';
+  return season ? `${base} · ${season.season} · snapshot ${season.snapshot}` : base;
+}

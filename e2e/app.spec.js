@@ -16,7 +16,8 @@ function teamsSampledValue(page) {
   return page.locator('[data-section="snapshot"] .kpi').filter({ hasText: 'Teams sampled' }).locator('.kpi__value');
 }
 
-test('no console errors while loading each regulation and switching source to Ladder where available', async ({ page }) => {
+test('no console errors while loading each regulation and cycling source through Ladder (where available) and Ranked', async ({ page }) => {
+  test.setTimeout(90_000); // 3 regs x up to 3 sources, each a full re-render
   const errors = [];
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(`console error on ${page.url()}: ${msg.text()}`); });
   page.on('pageerror', (err) => errors.push(`uncaught exception on ${page.url()}: ${err.message}`));
@@ -33,6 +34,18 @@ test('no console errors while loading each regulation and switching source to La
       await sourceGroup.getByRole('button', { name: 'Tournaments', exact: true }).click();
       await expect(page.locator('[data-section="usage"] thead')).toContainText('Win %');
     }
+
+    const rankedBtn = sourceGroup.getByRole('button', { name: 'Ranked (in-game)', exact: true });
+    await expect(rankedBtn).toBeEnabled(); // every reg has at least one in-game season
+    await rankedBtn.click();
+    await expect(page.locator('[data-section="usage"] thead')).toContainText('Top item');
+    await expect(page.locator('[data-section="usage"] .meta-line')).toContainText('In-game ranked');
+    await expect(page.locator('[data-section="quadrant"]')).toContainText('Not available for the in-game ranked source');
+    await expect(page.locator('.section-placeholder')).toHaveCount(0); // every section module loaded and mounted
+    await expect(page.locator('[data-section="speed"] canvas').first()).toBeVisible();
+    expect(await page.evaluate(() => location.hash)).toContain('source=ranked');
+    await sourceGroup.getByRole('button', { name: 'Tournaments', exact: true }).click();
+    await expect(page.locator('[data-section="usage"] thead')).toContainText('Win %');
   }
 
   expect(errors, errors.join('\n')).toEqual([]);
@@ -83,16 +96,18 @@ test('switching regulation changes the data shown', async ({ page }) => {
   await waitForUsageRendered(page);
   await expect(regGroup.getByRole('button', { name: 'M-A', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
-  const after = await teamsValue.textContent();
-  expect(after).not.toBe(before);
+  await expect(teamsValue).not.toHaveText(before); // retries until the M-A render lands
 });
 
 test('URL hash round-trips filters and chips on reload', async ({ page }) => {
   await page.goto('/');
   await waitForUsageRendered(page);
 
+  // Wait for the M-A render to land (the M-C table is still "rendered" until it does).
+  const sample = page.locator('.filterbar__sample');
+  const before = await sample.textContent();
   await page.locator('[aria-label="Regulation"]').getByRole('button', { name: 'M-A', exact: true }).click();
-  await waitForUsageRendered(page);
+  await expect(sample).not.toHaveText(before);
 
   const rows = page.locator('[data-section="usage"] tbody tr');
   const key = await rows.first().getAttribute('data-key');

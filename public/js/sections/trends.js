@@ -3,6 +3,7 @@
 // dates, which the ladder payload doesn't carry, so the whole section is
 // tournament-only (same "switch Source" rule as archetypes.js).
 import { usage, weekly, movers } from '../lib/aggregate.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -82,11 +83,12 @@ export default {
     });
 
     function renderLines(view, theme) {
-      if (view.state.source === 'ladder') {
+      if (view.state.source !== 'tournaments') {
+        const ranked = view.state.source === 'ranked';
         lineChartEl.style.display = 'none';
         lineEmptyEl.textContent = '';
-        lineEmptyEl.appendChild(emptyState('Switch Source to Tournaments to see weekly trends.', 'Tournament-only view'));
-        ctx.meta(linesCard.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
+        lineEmptyEl.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see weekly trends.', 'Tournament-only view'));
+        ctx.meta(linesCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         lastWeeks = [];
         return;
       }
@@ -169,9 +171,10 @@ export default {
 
     function renderMovers(view) {
       risersList.textContent = ''; fallersList.textContent = ''; compareLabel.textContent = '';
-      if (view.state.source === 'ladder') {
-        risersList.appendChild(emptyState('Switch Source to Tournaments to see risers & fallers.', 'Tournament-only view'));
-        ctx.meta(moversCard.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
+      if (view.state.source !== 'tournaments') {
+        const ranked = view.state.source === 'ranked';
+        risersList.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see risers & fallers.', 'Tournament-only view'));
+        ctx.meta(moversCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
       const { risers, fallers, weekPrev, weekLast } = movers(view.teams, view.state.minN);
@@ -197,9 +200,10 @@ export default {
 
     function renderShift(view) {
       shiftWrap.textContent = '';
-      if (view.state.source === 'ladder') {
-        shiftWrap.appendChild(emptyState('Switch Source to Tournaments to see the regulation shift.', 'Tournament-only view'));
-        ctx.meta(shiftCard.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
+      if (view.state.source !== 'tournaments') {
+        const ranked = view.state.source === 'ranked';
+        shiftWrap.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see the regulation shift.', 'Tournament-only view'));
+        ctx.meta(shiftCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
       ctx.meta(shiftCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });

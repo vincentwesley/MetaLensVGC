@@ -1,10 +1,11 @@
 // speed.js — Speed tier matrix for the top ~20 species. Per species, the real
-// most-common speed comes from (1) open team sheets, (2) this reg's ladder
-// spreads, or (3) a labelled theoretical [min,max] range from base stats when
-// neither exists. Toggles apply stage/field speed modifiers (combinable,
+// most-common speed comes from (1) open team sheets, (2) the in-game ranked
+// ladder's top spread + top nature, (3) this reg's Smogon ladder spreads, or
+// (4) a labelled theoretical [min,max] range from base stats when none exists. Toggles apply stage/field speed modifiers (combinable,
 // floored after each step); a benchmark form compares a hypothetical mon
 // against the field.
-import { usage, speedTiers, ladderMerge } from '../lib/aggregate.js';
+import { usage, speedTiers, ladderMerge, rankedSeason, rankedMon, rankedSpeed, rankedMegaKey } from '../lib/aggregate.js';
+import { rankedSource } from '../ui/meta.js';
 import { calcStat, parseSP } from '../lib/stats.js';
 
 function card(title) {
@@ -73,16 +74,37 @@ function applyMods(v, mods) {
   return x;
 }
 
-// Real most-common speed per species: team sheets -> this reg's ladder -> bounds.
+// Species list: top 20 by in-game rank under source=ranked (when the season publishes a ranking),
+// else top 20 tournament species. Mega-stone holders are shown as their Mega form.
+function speciesList(view, dex, season) {
+  if (view.state.source !== 'ranked' || !season?.ranking) return speedTiers(view.teams, dex, 20);
+  const byKey = new Map(speedTiers(view.teams, dex, 99999).map((t) => [t.key, t]));
+  return season.ranking.filter((name) => season.mons[name]).slice(0, 20).map((name) => {
+    const key = rankedMegaKey(name, season.mons[name], dex) || name;
+    return { ...(byKey.get(key) || { key, spe: null }), key, n: null, rank: season.mons[name].rank };
+  });
+}
+
+// Real most-common speed per species: team sheets -> in-game ranked spread -> Smogon ladder -> bounds.
 function buildRows(view, dex) {
-  const tiers = speedTiers(view.teams, dex, 20);
+  const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+  const tiers = speciesList(view, dex, season);
   const merged = ladderMerge(view.ladder, view.state.from, view.state.to);
   const rows = [];
   for (const t of tiers) {
     const bs = dex.species[t.key]?.bs;
     if (!bs) continue;
     if (t.spe != null) {
-      rows.push({ key: t.key, n: t.n, source: 'sheet', detail: `${t.nature}, ${t.sp} SP (${Math.round(t.share * 100)}% of open sheets)`, min: t.spe, max: t.spe });
+      rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'sheet', detail: `${t.nature}, ${t.sp} SP (${Math.round(t.share * 100)}% of open sheets)`, min: t.spe, max: t.spe });
+      continue;
+    }
+    const rm = rankedMon(season, t.key, dex);
+    const rs = rm && rankedSpeed(rm.mon, bs);
+    if (rs) {
+      const of = rm.name === t.key ? '' : ` (${rm.name} data, all sets)`;
+      rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'ranked',
+        detail: `${season.season}: top nature ${rs.nature} (${Math.round(rs.naturePct * 100)}%), top spread ${rs.sp} Spe SP (${Math.round(rs.spreadPct * 100)}%)${of}`,
+        min: rs.spe, max: rs.spe });
       continue;
     }
     const mon = merged?.mons.find((m) => m.key === t.key);
@@ -92,17 +114,18 @@ function buildRows(view, dex) {
     if (spread && sp) {
       const nature = spread.name.slice(0, ci);
       const spe = calcStat(bs[5], sp[5], 5, nature);
-      rows.push({ key: t.key, n: t.n, source: 'ladder', detail: `${nature}, ${sp[5]} SP (${Math.round(spread.pct * 100)}% of ladder sets)`, min: spe, max: spe });
+      rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'ladder', detail: `${nature}, ${sp[5]} SP (${Math.round(spread.pct * 100)}% of ladder sets)`, min: spe, max: spe });
       continue;
     }
     const max = calcStat(bs[5], 32, 5, 'Timid');
     const min = calcStat(bs[5], 0, 5, 'Sassy');
-    rows.push({ key: t.key, n: t.n, source: 'bounds', detail: 'no open-sheet or ladder spread — theoretical range', min, max });
+    rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'bounds', detail: 'no open-sheet, ranked or ladder spread — theoretical range', min, max });
   }
   return rows;
 }
 
-const SOURCE_LABEL = { sheet: 'Team sheets', ladder: 'Ladder', bounds: 'Theoretical bounds' };
+const SOURCE_LABEL = { sheet: 'Team sheets', ranked: 'Ranked ladder spread', ladder: 'Smogon ladder', bounds: 'Theoretical bounds' };
+const SOURCE_VAR = { sheet: 'var(--series-1)', ranked: 'var(--series-2)', ladder: 'var(--series-3)', bounds: 'var(--muted)' };
 const BENCH_NATURES = { plus: 'Timid', neutral: 'Serious', minus: 'Sassy' };
 
 export default {
@@ -142,7 +165,7 @@ export default {
     for (const [src, label] of Object.entries(SOURCE_LABEL)) {
       const item = document.createElement('span');
       item.className = 'pill';
-      item.style.background = src === 'sheet' ? 'var(--series-1)' : src === 'ladder' ? 'var(--series-3)' : 'var(--muted)';
+      item.style.background = SOURCE_VAR[src];
       item.textContent = label;
       legend.appendChild(item);
     }
@@ -206,7 +229,13 @@ export default {
       if (!view) return;
       lastDex = view.dex;
       const rows = buildRows(view, view.dex);
-      ctx.meta(main.meta, { source: 'Team sheets + Ladder + bounds (per species)', n: view.teams.length, unit: 'teams' });
+      const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+      if (view.state.source === 'ranked' && season?.ranking) {
+        ctx.meta(main.meta, { source: `${rankedSource(season)} · top 20 by in-game rank · speeds: sheets > ranked > Smogon > bounds` });
+      } else {
+        const rankedTxt = season ? ` + ranked ladder ${season.season} (Pokémon Champions Battle Data)` : '';
+        ctx.meta(main.meta, { source: `Team sheets${rankedTxt} + Smogon ladder + bounds (per species)`, n: view.teams.length, unit: 'teams' });
+      }
       main.body.querySelector('.empty-state')?.remove();
 
       if (!datalist.childElementCount && view.dex?.species) {
@@ -245,7 +274,7 @@ export default {
       const rowsRev = modded.slice().reverse();
       const rich = {};
       for (const k of keys) rich[richKey(k)] = { height: 20, width: 20, backgroundColor: { image: ctx.spriteUrl(k) } };
-      const colorOf = (src) => (src === 'sheet' ? theme.series[0] : src === 'ladder' ? theme.series[2] : theme.muted);
+      const colorOf = (src) => ({ sheet: theme.series[0], ranked: theme.series[1], ladder: theme.series[2] }[src] || theme.muted);
 
       const bench0 = benchmarkValue();
       const markLine = bench0 ? {
@@ -262,7 +291,7 @@ export default {
           formatter: (p) => {
             const r = rowsRev[p.dataIndex];
             const rangeTxt = r.modMin === r.modMax ? `${r.modMin}` : `${r.modMin}–${r.modMax}`;
-            return `<b>${r.key}</b><br/>Speed: ${rangeTxt}<br/>${SOURCE_LABEL[r.source]} — ${r.detail}<br/>n=${ctx.fmt.n(r.n)}`;
+            return `<b>${r.key}</b><br/>Speed: ${rangeTxt}<br/>${SOURCE_LABEL[r.source]} — ${r.detail}<br/>${r.rank ? `in-game rank #${r.rank}` : `n=${ctx.fmt.n(r.n)}`}`;
           },
         },
         grid: { left: 30, right: 30, top: 10, bottom: 20, containLabel: false },

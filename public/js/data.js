@@ -22,6 +22,10 @@ export function loadLadderFile(reg) {
   return fetchJSON(`data/ladder-${reg}.json`).catch(() => ({ reg, source: 'smogon', cutoff: null, months: [] }));
 }
 
+export function loadRankedFile(reg) {
+  return fetchJSON(`data/ranked-${reg}.json`).catch(() => ({ reg, source: 'championsbattledata', seasons: [] }));
+}
+
 /** Decode (and cache) a regulation's teams file. Kept for the lifetime of the
  *  page so a previously-viewed reg's teams stay available for previousPeriod. */
 export async function getDecoded(reg, dex, decode) {

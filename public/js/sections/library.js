@@ -5,6 +5,7 @@
 import { ARCHETYPES } from '../lib/archetypes.js';
 import { toPaste } from '../lib/paste.js';
 import { toast } from '../ui/toast.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 const PAGE = 60;
 const MAJOR_TIERS = new Set(['worlds', 'international', 'regional']);
@@ -175,6 +176,13 @@ export default {
     function render() {
       const view = lastView;
       if (!view) return;
+      if (view.state.source === 'ranked') {
+        ctx.meta(meta, { source: rankedSource(null) });
+        grid.innerHTML = '';
+        emptyState(grid, RANKED_NA);
+        moreWrap.style.display = 'none';
+        return;
+      }
       const q = search.value.trim().toLowerCase();
       currentTeams = sortTeams(view.teams.filter((t) => matchesSearch(t, q)), sortSel.value);
       ctx.meta(meta, { source: 'Tournaments', n: currentTeams.length, unit: 'teams' });
