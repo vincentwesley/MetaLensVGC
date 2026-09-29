@@ -891,3 +891,32 @@ export function rankedSpeed(mon, bs) {
   if (!sp) return null;
   return { spe: calcStat(bs[5], sp[5], 5, nat.name), nature: nat.name, naturePct: nat.pct, sp: sp[5], spreadPct: spread.pct };
 }
+
+/**
+ * Most-common real Speed of one species, from the best source that has it:
+ * open team sheets (`sheetByKey`: speedTiers rows by key) -> in-game ranked spread
+ * (`season`) -> Smogon ladder (`merged`, from ladderMerge) -> theoretical bounds
+ * (0 SP -Spe .. 32 SP +Spe). Shared by the Speed Tiers section and the Team Scanner.
+ * Returns { source: 'sheet'|'ranked'|'ladder'|'bounds', spe (null for bounds), min, max, nature, sp, pct, of } or null (no base stats).
+ */
+export function metaSpeed(key, { sheetByKey, season, merged } = {}, dex) {
+  const bs = dex?.species?.[key]?.bs;
+  if (!bs) return null;
+  const t = sheetByKey?.get(key);
+  if (t && t.spe != null) return { source: 'sheet', spe: t.spe, min: t.spe, max: t.spe, nature: t.nature, sp: t.sp, pct: t.share };
+  const rm = rankedMon(season, key, dex);
+  const rs = rm && rankedSpeed(rm.mon, bs);
+  if (rs) {
+    return { source: 'ranked', spe: rs.spe, min: rs.spe, max: rs.spe, nature: rs.nature, sp: rs.sp,
+      pct: rs.spreadPct, naturePct: rs.naturePct, of: rm.name === key ? null : rm.name };
+  }
+  const spread = merged?.mons?.find((m) => m.key === key)?.spreads?.[0];
+  const ci = spread ? spread.name.indexOf(':') : -1;
+  const sp = ci > 0 ? parseSP(spread.name.slice(ci + 1)) : null;
+  if (sp) {
+    const nature = spread.name.slice(0, ci);
+    const spe = calcStat(bs[5], sp[5], 5, nature);
+    return { source: 'ladder', spe, min: spe, max: spe, nature, sp: sp[5], pct: spread.pct };
+  }
+  return { source: 'bounds', spe: null, min: calcStat(bs[5], 0, 5, 'Sassy'), max: calcStat(bs[5], 32, 5, 'Timid') };
+}

@@ -471,3 +471,26 @@ test('speciesChipFilter: per-species chips apply, sheet-only chips are reported'
   assert.equal(speciesChipFilter([{ kind: 'species', value: key, neg: true }], dex).test(key), false);
   assert.equal(speciesChipFilter([], dex).test, null);
 });
+
+import { metaSpeed } from '../public/js/lib/aggregate.js';
+
+test('metaSpeed: sheets -> in-game ranked -> ladder -> bounds (shared by Speed Tiers and the Scanner)', () => {
+  const dex = { species: { Garchomp: { bs: [108, 130, 95, 80, 85, 102] } } };
+  const sheetByKey = new Map([['Garchomp', { key: 'Garchomp', spe: 169, nature: 'Jolly', sp: 32, share: 0.5 }]]);
+  const season = { season: 'M6', mons: { Garchomp: { spreads: { '0/32/0/0/2/32': 0.4 }, natures: { Jolly: 0.7 } } } };
+  const merged = { mons: [{ key: 'Garchomp', spreads: [{ name: 'Adamant:0/32/0/0/2/32', pct: 0.3 }] }] };
+  assert.equal(metaSpeed('Garchomp', { sheetByKey, season, merged }, dex).source, 'sheet');
+  const ranked = metaSpeed('Garchomp', { season, merged }, dex);
+  assert.equal(ranked.source, 'ranked');
+  assert.equal(ranked.spe, 169); // floor((102 + 20 + 32) * 1.1)
+  // No sheets and no Smogon months (M-C before October): the ranked spread is still used.
+  assert.equal(metaSpeed('Garchomp', { season, merged: null }, dex).spe, 169);
+  const ladder = metaSpeed('Garchomp', { merged }, dex);
+  assert.equal(ladder.source, 'ladder');
+  assert.equal(ladder.spe, 154); // Adamant: neutral Speed
+  const bounds = metaSpeed('Garchomp', {}, dex);
+  assert.equal(bounds.source, 'bounds');
+  assert.equal(bounds.spe, null);
+  assert.ok(bounds.min < bounds.max);
+  assert.equal(metaSpeed('Nope', {}, dex), null);
+});
