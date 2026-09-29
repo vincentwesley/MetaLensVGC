@@ -191,3 +191,14 @@ test('no horizontal scroll at 390px width in both skins', async ({ page }) => {
     expect(scrollWidth, `${skin} skin overflows horizontally at 390px (scrollWidth=${scrollWidth})`).toBeLessThanOrEqual(390);
   }
 });
+
+test('leaderboard sprite opens the drawer without adding a chip', async ({ page }) => {
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const btn = page.locator('[data-section="usage"] .sprite-btn').first();
+  const key = await btn.evaluate((b) => b.closest('tr').dataset.key);
+  await btn.click();
+  await expect(page.locator('#deepdive')).toHaveClass(/is-open/);
+  await expect(page.locator('#deepdive-title')).toContainText(key);
+  await expect(page.locator('#chips .chip')).toHaveCount(0);
+});
