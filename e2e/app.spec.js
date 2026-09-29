@@ -279,22 +279,46 @@ async function clickFirstBar(page, chartLocator) {
   return pt.type;
 }
 
-test('type charts add the matching chip kind and the leaderboard only lists matching Pokémon', async ({ page }) => {
+test('every type chart click is a plain type filter and the leaderboard then lists only that type', async ({ page }) => {
   await page.goto('/');
   await waitForAllSections(page);
   const charts = page.locator('main [data-section="types"] .types-panel__chart');
-  await charts.nth(2).scrollIntoViewIfNeeded();
-  const weakType = await clickFirstBar(page, charts.nth(2));
-  await expect(page.locator('#chips .chip__label')).toHaveText([`Weak to: ${weakType}`]);
+  for (const i of [0, 1, 2]) {
+    await charts.nth(i).scrollIntoViewIfNeeded();
+    const type = await clickFirstBar(page, charts.nth(i));
+    await expect(page.locator('#chips .chip__label')).toHaveText([`Type: ${type}`]);
+    await waitForAllSections(page);
+    const keys = await page.$$eval('[data-section="usage"] tbody tr', (trs) => trs.map((t) => t.dataset.key));
+    expect(keys.length).toBeGreaterThan(0);
+    const allOfType = await page.evaluate(async ({ keys, type }) => {
+      const dex = await (await fetch('/data/dex.json')).json();
+      return keys.every((k) => dex.species[k].types.includes(type));
+    }, { keys, type });
+    expect(allOfType).toBe(true);
+    await page.locator('#chips .chips__clear').click();
+    await waitForAllSections(page);
+  }
+});
+
+test('chart tooltips never show NaN / undefined (hover sweep over the type charts)', async ({ page }) => {
+  await page.goto('/');
   await waitForAllSections(page);
-  const keys = await page.$$eval('[data-section="usage"] tbody tr', (trs) => trs.map((t) => t.dataset.key));
-  expect(keys.length).toBeGreaterThan(0);
-  const allWeak = await page.evaluate(async ({ keys, weakType }) => {
-    const { effectiveness } = await import('/js/lib/types.js');
-    const dex = await (await fetch('/data/dex.json')).json();
-    return keys.every((k) => effectiveness(weakType, dex.species[k].types) > 1);
-  }, { keys, weakType });
-  expect(allWeak).toBe(true);
+  const charts = page.locator('main [data-section="types"] .types-panel__chart');
+  let seen = 0;
+  for (const i of [0, 1, 2]) {
+    const c = charts.nth(i);
+    await c.scrollIntoViewIfNeeded();
+    const box = await c.boundingBox();
+    for (let fy = 0.1; fy < 0.95; fy += 0.1) {
+      await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * fy);
+      await page.waitForTimeout(60);
+      const t = await page.evaluate(() => [...document.querySelectorAll('[_echarts_instance_] > div:last-child')]
+        .filter((d) => d.style.display !== 'none').map((d) => d.innerText).join(' '));
+      if (t.trim()) seen++;
+      expect(t).not.toMatch(/NaN|undefined|Infinity/);
+    }
+  }
+  expect(seen).toBeGreaterThan(0);
 });
 
 test('archetype chip from the donut leaves a single slice; species chip leaves only that Pokémon', async ({ page }) => {

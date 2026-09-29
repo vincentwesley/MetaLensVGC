@@ -1,9 +1,9 @@
-// types.js — Type landscape: (a) type usage, (b) best attacking types right
-// now, (c) most common weaknesses in the field. Tournament-only (the ladder
+// types.js — Type landscape: (a) type usage, (b) move types the field is weak
+// to (mean damage multiplier), (c) weak vs resist share per move type. Tournament-only (the ladder
 // payload has no per-team mon lists to derive type slots from).
 import { typeUsage, attackingTypes, weaknesses } from '../lib/aggregate.js';
 import { TYPE_COLORS } from '../lib/types.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function emptyState(el, title) {
   el.innerHTML = '';
@@ -16,7 +16,7 @@ function emptyState(el, title) {
   el.appendChild(box);
 }
 
-function makePanel(titleText) {
+function makePanel(titleText, hint) {
   const card = document.createElement('div');
   card.className = 'card types-panel';
   const head = document.createElement('div');
@@ -29,9 +29,10 @@ function makePanel(titleText) {
   body.className = 'card__body';
   const chartEl = document.createElement('div');
   chartEl.className = 'types-panel__chart';
-  body.appendChild(chartEl);
+  const hintEl = clickHint(hint);
+  body.append(hintEl, chartEl);
   card.append(head, body);
-  return { card, meta, body, chartEl };
+  return { card, meta, body, chartEl, hintEl };
 }
 
 function initChart(ctx, chartEl) {
@@ -46,9 +47,10 @@ export default {
   mount(el, ctx) {
     el.innerHTML = '';
     el.className = 'types-grid';
-    const usagePanel = makePanel('Type Usage');
-    const atkPanel = makePanel('Best Attacking Types Right Now');
-    const weakPanel = makePanel('Most Common Weaknesses in the Field');
+    // Each chart's click filters to exactly the Pokémon its bar counts.
+    const usagePanel = makePanel('Type Usage', 'Share of the Pokémon in view that have each type. Click a type: only Pokémon of that type.');
+    const atkPanel = makePanel('Move Types the Field Is Weak To', 'Average damage multiplier a move of each type deals to the Pokémon in view (1× = neutral). Click a type: only Pokémon of that type.');
+    const weakPanel = makePanel('Weak vs. Resist by Move Type', 'Share of the Pokémon in view that are weak to (right) or resist / are immune to (left) each move type. Click a type: only Pokémon of that type.');
     el.append(usagePanel.card, atkPanel.card, weakPanel.card);
 
     const usageChart = initChart(ctx, usagePanel.chartEl);
@@ -58,8 +60,9 @@ export default {
     usageChart.on('click', (p) => p.data && ctx.chip('type', p.data.type, p.event?.event));
     // Each chart adds the chip that matches what it plots: the Pokémon's own type,
     // Pokémon carrying a move of that type, Pokémon weak to that type.
-    atkChart.on('click', (p) => p.data && ctx.chip('movetype', p.data.type, p.event?.event));
-    weakChart.on('click', (p) => p.data && ctx.chip('weak', p.data.type, p.event?.event));
+    // Owner's call: a type click is always a plain type filter, whichever chart.
+    atkChart.on('click', (p) => p.data && ctx.chip('type', p.data.type, p.event?.event));
+    weakChart.on('click', (p) => p.data && ctx.chip('type', p.data.type, p.event?.event));
 
     let lastView = null;
 
@@ -79,7 +82,7 @@ export default {
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink },
-          formatter: (p) => `${p.data.type}<br/>usage: ${(p.data.pct * 100).toFixed(1)}% (${p.data.n} slots)`,
+          formatter: (p) => `${p.data.type}<br/>${(Number(p.value) * 100).toFixed(1)}% of Pokémon in view (${p.data.n})<br/><i>click: only ${p.data.type}-type Pokémon</i>`,
         },
         xAxis: { type: 'value', ...baseAxis(theme), axisLabel: { ...baseAxis(theme).axisLabel, formatter: (v) => `${(v * 100).toFixed(0)}%` } },
         yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
@@ -98,7 +101,7 @@ export default {
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink },
-          formatter: (p) => `${p.data.type}<br/>mean effectiveness: ${Number(p.value).toFixed(2)}×<br/>hits ${(p.data.se * 100).toFixed(0)}% of field super-effectively<br/><i>click: Pokémon with ${p.data.type} moves</i>`,
+          formatter: (p) => `${p.data.type}<br/>mean effectiveness: ${Number(p.value).toFixed(2)}×<br/>hits ${(p.data.se * 100).toFixed(0)}% of field super-effectively<br/><i>click: only ${p.data.type}-type Pokémon</i>`,
         },
         xAxis: { type: 'value', min: 0, ...baseAxis(theme) },
         yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
@@ -119,9 +122,11 @@ export default {
           textStyle: { color: theme.ink },
           formatter: (params) => {
             // item tooltips pass one object; axis tooltips pass an array
-            const type = (Array.isArray(params) ? params[0] : params).data.type;
+            const p0 = Array.isArray(params) ? params[0] : params;
+            const type = p0?.data?.type;
             const w = rows.find((r) => r.type === type);
-            return `${type}<br/>weak: ${(w.weak * 100).toFixed(0)}%<br/>resist: ${(w.resist * 100).toFixed(0)}%<br/>immune: ${(w.immune * 100).toFixed(0)}%<br/><i>click: Pokémon weak to ${type}</i>`;
+            if (!w) return '';
+            return `${type} moves<br/>weak: ${(w.weak * 100).toFixed(0)}%<br/>resist: ${(w.resist * 100).toFixed(0)}%<br/>immune: ${(w.immune * 100).toFixed(0)}%<br/><i>click: only ${type}-type Pokémon</i>`;
           },
         },
         legend: { data: ['Weak to', 'Resists/immune'], textStyle: { color: theme.inkSecondary }, top: 4, left: 'center', itemGap: 20 },
@@ -168,7 +173,7 @@ export default {
       for (const p of [usagePanel, atkPanel, weakPanel]) {
         ctx.meta(p.meta, { source: 'Tournaments', n, unit: 'teams' });
         p.body.querySelector('.empty-state')?.remove();
-        if (!p.body.contains(p.chartEl)) p.body.appendChild(p.chartEl);
+        if (!p.body.contains(p.chartEl)) p.body.append(p.hintEl, p.chartEl);
       }
       if (!n) {
         for (const p of [usagePanel, atkPanel, weakPanel]) emptyState(p.body, 'Insufficient data');
