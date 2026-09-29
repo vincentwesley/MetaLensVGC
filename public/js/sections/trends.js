@@ -269,7 +269,7 @@ export default {
         // "NEW" only when the previous period's sample was too small to rank
         // at all (nPrev < minN) — a mon that existed with a real sample but
         // outside the previous top 20 gets its real (possibly >20) rank below.
-        else if (nPrev < minN) { tdChange.textContent = 'NEW'; tdChange.classList.add('sb-stat--up'); }
+        else if (pRank == null || nPrev < minN || nPrev === 0) { tdChange.textContent = 'NEW'; tdChange.classList.add('sb-stat--up'); }
         else {
           const d = pRank - r.rank;
           tdChange.textContent = d === 0 ? '—' : (d > 0 ? `▲ ${d}` : `▼ ${Math.abs(d)}`);

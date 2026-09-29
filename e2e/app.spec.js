@@ -329,3 +329,82 @@ test('active filters stay visible while scrolling and Clear all empties them', a
   await expect(bar).toBeEmpty();
   expect(await page.evaluate(() => location.hash)).not.toContain('chips=');
 });
+
+test('chart tooltips and [data-tip] tips stay inside the viewport on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForAllSections(page);
+  const charts = page.locator('main [_echarts_instance_]');
+  const n = await charts.count();
+  expect(n).toBeGreaterThan(3);
+  let shown = 0;
+  for (let i = 0; i < n; i++) {
+    const c = charts.nth(i);
+    await c.scrollIntoViewIfNeeded();
+    const box = await c.boundingBox();
+    if (!box || box.width < 20) continue;
+    for (const fx of [0.05, 0.5, 0.95]) {
+      for (const fy of [0.3, 0.7]) {
+        await page.mouse.move(box.x + box.width * fx, box.y + box.height * fy);
+        await page.waitForTimeout(120);
+        const out = await page.evaluate(() => [...document.querySelectorAll('[_echarts_instance_] > div:last-child')]
+          .filter((d) => d.style.display !== 'none' && getComputedStyle(d).opacity !== '0' && d.textContent.trim())
+          .map((d) => d.getBoundingClientRect())
+          .filter((r) => r.width > 0)
+          .map((r) => ({ l: r.left, r: r.right })));
+        shown += out.length;
+        for (const r of out) {
+          expect(r.l).toBeGreaterThanOrEqual(-1);
+          expect(r.r).toBeLessThanOrEqual(391);
+        }
+      }
+    }
+  }
+  expect(shown).toBeGreaterThan(0);
+  // A long help tip (co-usage "Lift" button) near the right edge.
+  const tipped = page.locator('main [data-tip]').filter({ hasText: /lift/i }).first();
+  await tipped.scrollIntoViewIfNeeded();
+  await tipped.hover();
+  const tip = page.locator('#tip');
+  await expect(tip).toBeVisible();
+  const tb = await tip.boundingBox();
+  expect(tb.x).toBeGreaterThanOrEqual(0);
+  expect(tb.x + tb.width).toBeLessThanOrEqual(390);
+});
+
+test('hand-edited hash is sanitized: bad values fall back, duplicates collapse, no errors', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/#reg=M-Z&source=nope&minN=-5&from=2026-13-45&chips=species:Garchomp,species:Garchomp,bogus:x');
+  await waitForAllSections(page);
+  await expect(page.locator('#chips .chips__count')).toHaveText('1');
+  const hash = await page.evaluate(() => location.hash);
+  expect(hash).toBe('#minN=0&chips=species:Garchomp');
+  expect(await page.locator('body').innerText()).not.toMatch(/\bNaN\b|\bundefined\b/);
+  expect(errors).toEqual([]);
+});
+
+test('keyboard: Enter on an archetype row adds a chip; Shift+Enter on a leaderboard row adds a NOT chip', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const row = page.locator('main [data-section="archetypes"] tbody tr').first();
+  await row.scrollIntoViewIfNeeded();
+  await row.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#chips .chip')).toHaveCount(1);
+  await page.locator('#chips .chips__clear').click();
+  await waitForAllSections(page);
+  const lead = page.locator('[data-section="usage"] tbody tr').first();
+  await lead.focus();
+  await page.keyboard.press('Shift+Enter');
+  await expect(page.locator('#chips .chip--neg')).toHaveCount(1);
+});
+
+test('regulation shift table has no NaN at min-n 0', async ({ page }) => {
+  await page.goto('/#minN=0');
+  await waitForAllSections(page);
+  const shift = page.locator('main [data-section="trends"]');
+  await shift.scrollIntoViewIfNeeded();
+  await waitForAllSections(page);
+  expect(await shift.innerText()).not.toMatch(/NaN/);
+});
