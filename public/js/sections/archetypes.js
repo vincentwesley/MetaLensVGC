@@ -326,6 +326,7 @@ export default {
         if (view.state.source !== 'tournaments') {
           const ranked = view.state.source === 'ranked';
           lastSplit = [];
+          donut.el.style.display = 'none'; // the matchup card below carries the explanation
           donutChartEl.style.display = 'none';
           listWrap.style.display = 'none';
           heatChartEl.style.display = 'none';
@@ -335,6 +336,7 @@ export default {
           ctx.meta(heat.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'matches' });
           return;
         }
+        donut.el.style.display = '';
         listWrap.style.display = '';
         lastSplit = archetypeSplit(view.teams).filter((r) => r.n >= view.state.minN);
         if (!lastSplit.length) {
