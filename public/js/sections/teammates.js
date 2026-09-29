@@ -35,6 +35,30 @@ function emptyState(msg, title = 'Insufficient data') {
 
 function richKey(k) { return `sp_${k.replace(/[^a-zA-Z0-9]/g, '_')}`; }
 
+// Luminance-aware cell text: interpolate the *actual* rendered ramp colour
+// at this cell (diverging for lift, sequential for raw %) and pick ink/white
+// off its real luminance, with a thin halo of the opposite for legibility
+// through a ramp's pale middle band.
+function hexToRgb(hex) {
+  const m = hex.replace('#', '');
+  return [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
+}
+function mixRgb(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+function relLuminance([r, g, b]) {
+  const lin = (v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function rampColorAt(stops, norm) {
+  const rgbs = stops.map(hexToRgb);
+  const t = Math.min(1, Math.max(0, norm)) * (rgbs.length - 1);
+  const i = Math.min(rgbs.length - 2, Math.floor(t));
+  return mixRgb(rgbs[i], rgbs[i + 1], t - i);
+}
+function cellLabelStyle(stops, norm) {
+  const dark = relLuminance(rampColorAt(stops, norm)) > 0.45;
+  return dark ? { fill: '#141008', halo: 'rgba(255,255,255,.85)' } : { fill: '#fbf8f0', halo: 'rgba(0,0,0,.55)' };
+}
+
 export default {
   id: 'teammates',
   title: 'Teammates & Cores',
@@ -85,7 +109,7 @@ export default {
     let lastKeys = [];
     heatChart.on('click', (p) => {
       if (p.seriesIndex == null || !p.data) return;
-      const [c, r] = p.data;
+      const [c, r] = p.data.value;
       if (r === c || !lastKeys[r] || !lastKeys[c]) return;
       ctx.chip('core', [lastKeys[r], lastKeys[c]], p.event?.event);
     });
@@ -113,34 +137,55 @@ export default {
       const keys = rows.slice(0, 15).map((r) => r.key);
       lastKeys = keys;
       const co = coUsage(view.teams, keys);
-      const good = [];
-      const bad = [];
+      const div = theme.diverging;
+      // First pass: raw values, so raw mode's colour scale (rawMax) is known
+      // before we can compute each cell's luminance-aware label style.
+      const cellVals = [];
       for (let r = 0; r < keys.length; r++) {
         for (let c = 0; c < keys.length; c++) {
-          const n = co.n[r][c];
-          if (r === c || n < view.state.minN) { bad.push([c, r, null, n]); continue; }
-          const val = mode === 'lift' ? co.lift[r][c] : co.pct[r][c] * 100;
-          good.push([c, r, val, n]);
+          if (r === c) continue;
+          cellVals.push({ r, c, n: co.n[r][c], val: mode === 'lift' ? co.lift[r][c] : co.pct[r][c] * 100 });
         }
       }
+      const rawMax = Math.max(1, ...cellVals.map((d) => d.val));
+      const stops = mode === 'lift' ? [div.neg2, div.neg1, div.mid, div.pos1, div.pos2] : theme.sequential;
+      const good = [];
+      const bad = [];
+      // Render every off-diagonal cell (real co-usage data, even 0% —
+      // that's still a real "never seen together" fact). Only the diagonal
+      // (a species paired with itself) is excluded from the colour scale.
+      for (const { r, c, n, val } of cellVals) {
+        // Per-item static label colour, NOT a series-level label.color
+        // callback: this vendored ECharts silently drops the label for most
+        // points when label.color is a function on a heatmap series
+        // (confirmed by direct canvas pixel sampling in dev). A plain
+        // per-item override renders reliably.
+        const style = cellLabelStyle(stops, mode === 'lift' ? val / 2 : val / rawMax);
+        good.push({ value: [c, r, val, n], label: { color: style.fill, textBorderColor: style.halo } });
+      }
+      for (let i = 0; i < keys.length; i++) bad.push({ value: [i, i, null, co.n[i][i]] });
+      // At 15 columns, a narrow (mobile) container can't fit full-size
+      // sprites + in-cell percentage text without everything colliding —
+      // shrink the icons and drop the in-cell numbers (still on the
+      // tooltip/tap) rather than force full size into too little room.
+      const narrow = heatChartEl.clientWidth > 0 && heatChartEl.clientWidth < 640;
+      const spriteSize = narrow ? 16 : 28;
       const rich = {};
-      for (const k of keys) rich[richKey(k)] = { height: 20, width: 20, backgroundColor: { image: ctx.spriteUrl(k) } };
-      const axisLabel = { formatter: (v) => `{${richKey(v)}|}`, rich, margin: 8 };
-      const div = theme.diverging;
-      const rawMax = Math.max(1, ...good.map((d) => d[2]));
+      for (const k of keys) rich[richKey(k)] = { height: spriteSize, width: spriteSize, backgroundColor: { image: ctx.spriteUrl(k) } };
+      const axisLabel = { formatter: (v) => `{${richKey(v)}|}`, rich, margin: narrow ? 4 : 10, interval: 0 };
       heatChart.setOption({
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           formatter: (p) => {
-            const [c, r, val, n] = p.data;
+            const [c, r, val, n] = p.data.value;
             if (r === c) return `<b>${keys[r]}</b><br/>solo usage n=${n}`;
             if (val == null) return `<b>${keys[r]}</b> + <b>${keys[c]}</b><br/>insufficient data (n=${n})`;
             const label = mode === 'lift' ? `lift ${val.toFixed(2)}×` : `${val.toFixed(1)}% of teams together`;
             return `<b>${keys[r]}</b> + <b>${keys[c]}</b><br/>${label} (n=${n})`;
           },
         },
-        grid: { left: 30, right: 20, top: 10, bottom: 60, containLabel: false },
+        grid: { left: narrow ? 24 : 40, right: 20, top: 10, bottom: narrow ? 40 : 70, containLabel: false },
         xAxis: { type: 'category', data: keys, axisLabel, axisLine: { lineStyle: { color: theme.axis } }, splitArea: { show: false } },
         yAxis: { type: 'category', data: keys, axisLabel, axisLine: { lineStyle: { color: theme.axis } }, splitArea: { show: false } },
         // dimension must be explicit: this ECharts build doesn't auto-pick the
@@ -157,6 +202,7 @@ export default {
           : {
             min: 0, max: rawMax, dimension: 2, seriesIndex: 0, show: true, calculable: false,
             orient: 'horizontal', left: 'center', bottom: 0, itemWidth: 12, itemHeight: 80,
+            text: [`${rawMax.toFixed(0)}% together`, '0% together'],
             textStyle: { color: theme.muted, fontFamily: theme.fontFamily, fontSize: 10 },
             inRange: { color: theme.sequential },
           },
@@ -164,18 +210,13 @@ export default {
           {
             type: 'heatmap', data: good,
             label: {
-              show: true,
-              formatter: (p) => (mode === 'lift' ? p.data[2].toFixed(1) : `${p.data[2].toFixed(0)}%`),
-              // Both ramps get dark near an end (sequential: high end; diverging:
-              // both saturated ends) — dark ink text there is unreadable, so pick
-              // light text near those ends and keep ink over the light middle.
-              color: (p) => {
-                const v = p.data[2];
-                const norm = mode === 'lift' ? v / 2 : v / rawMax;
-                const nearDarkEnd = mode === 'lift' ? (norm < 0.25 || norm > 0.75) : norm > 0.6;
-                return nearDarkEnd ? '#fff' : theme.ink;
-              },
-              fontFamily: theme.fontFamily, fontSize: 9,
+              show: !narrow,
+              formatter: (p) => (mode === 'lift' ? p.data.value[2].toFixed(1) : `${p.data.value[2].toFixed(0)}%`),
+              textBorderWidth: 1.2,
+              // The body font (VT323 in retro) is a thin display face meant
+              // for large text; at small sizes the label font (Silkscreen/
+              // JetBrains Mono) is built for dense UI text and reads better.
+              fontFamily: theme.labelFontFamily, fontSize: 10, fontWeight: 700,
             },
             itemStyle: { borderColor: theme.surface, borderWidth: 2 },
             emphasis: { itemStyle: { borderColor: theme.ink, borderWidth: 2 } },

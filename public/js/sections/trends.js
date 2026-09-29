@@ -127,6 +127,9 @@ export default {
     }
 
     // --- risers & fallers ------------------------------------------------
+    const compareLabel = document.createElement('div');
+    compareLabel.className = 'sb-subhead';
+    moversCard.body.appendChild(compareLabel);
     const moversWrap = document.createElement('div');
     moversWrap.className = 'sb-two-col';
     const risersCol = document.createElement('div');
@@ -154,7 +157,9 @@ export default {
       delta.textContent = ctx.fmt.signedPct(r.delta);
       const n = document.createElement('div');
       n.className = 'sb-stat sb-stat--muted';
-      n.textContent = `n=${ctx.fmt.n(r.nLast)}`;
+      // Both periods qualified minN (movers() requires it on both sides), so
+      // showing the pair makes that guarantee visible instead of just n=nLast.
+      n.textContent = `n=${ctx.fmt.n(r.nPrev)}→${ctx.fmt.n(r.nLast)}`;
       row.append(name, delta, n);
       const act = (e) => ctx.chip('species', r.key, e);
       row.addEventListener('click', act);
@@ -163,16 +168,21 @@ export default {
     }
 
     function renderMovers(view) {
-      risersList.textContent = ''; fallersList.textContent = '';
+      risersList.textContent = ''; fallersList.textContent = ''; compareLabel.textContent = '';
       if (view.state.source === 'ladder') {
         risersList.appendChild(emptyState('Switch Source to Tournaments to see risers & fallers.', 'Tournament-only view'));
         ctx.meta(moversCard.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
-      const { risers, fallers } = movers(view.teams, view.state.minN);
+      const { risers, fallers, weekPrev, weekLast } = movers(view.teams, view.state.minN);
       ctx.meta(moversCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      if (weekPrev && weekLast) {
+        compareLabel.textContent = `Comparing week of ${weekPrev} vs week of ${weekLast} (partial/small weeks excluded; both weeks need n ≥ ${view.state.minN} per species)`;
+      }
       if (!risers.length && !fallers.length) {
-        risersList.appendChild(emptyState('Needs at least two weeks of data in the current filters.'));
+        risersList.appendChild(emptyState(weekPrev
+          ? 'No species cleared the minimum sample in both compared weeks.'
+          : 'Needs at least two full weeks of data in the current filters.'));
         return;
       }
       if (!risers.length) risersList.appendChild(emptyState('No risers at this sample size.'));
@@ -206,8 +216,14 @@ export default {
         : `Top 20 shift within ${view.reg} (previous regulation not available — comparing to the prior window in this reg)`;
       shiftWrap.appendChild(label);
 
-      const currTop = usage(view.teams).filter((r) => r.n >= view.state.minN).slice(0, 20);
-      const prevTop = usage(prev).filter((r) => r.n >= view.state.minN).slice(0, 20);
+      const minN = view.state.minN;
+      // Unfiltered lookups so a row can show its *other* period's n even
+      // when that n fell short of minN there (that's exactly the "low
+      // sample" case worth flagging, not something to hide).
+      const currNMap = new Map(usage(view.teams).map((r) => [r.key, r.n]));
+      const prevNMap = new Map(usage(prev).map((r) => [r.key, r.n]));
+      const currTop = usage(view.teams).filter((r) => r.n >= minN).slice(0, 20);
+      const prevTop = usage(prev).filter((r) => r.n >= minN).slice(0, 20);
       const currRank = new Map(currTop.map((r, i) => [r.key, i + 1]));
       const prevRank = new Map(prevTop.map((r, i) => [r.key, i + 1]));
       const left = prevTop.filter((r) => !currRank.has(r.key));
@@ -218,7 +234,7 @@ export default {
       wrap.className = 'table-wrap';
       const table = document.createElement('table');
       table.className = 'data-table';
-      table.innerHTML = '<thead><tr><th>#</th><th></th><th>Pokémon</th><th>Prev rank</th><th>Change</th></tr></thead><tbody></tbody>';
+      table.innerHTML = '<thead><tr><th>#</th><th></th><th>Pokémon</th><th>n now</th><th>n prev</th><th>Prev rank</th><th>Change</th></tr></thead><tbody></tbody>';
       const tbody = table.querySelector('tbody');
       for (const r of rows) {
         const tr = document.createElement('tr');
@@ -226,6 +242,14 @@ export default {
         const tdRank = document.createElement('td'); tdRank.className = 'num'; tdRank.textContent = r.rank ?? '—';
         const tdSprite = document.createElement('td'); tdSprite.appendChild(ctx.sprite(r.key, { size: 22 }));
         const tdName = document.createElement('td'); tdName.textContent = r.key;
+        const nNow = currNMap.get(r.key) || 0;
+        const nPrev = prevNMap.get(r.key) || 0;
+        const tdNNow = document.createElement('td'); tdNNow.className = 'num';
+        tdNNow.textContent = ctx.fmt.n(nNow) + (nNow < minN ? ' ⚠' : '');
+        if (nNow < minN) tdNNow.title = `Below the minimum sample (n ≥ ${minN})`;
+        const tdNPrev = document.createElement('td'); tdNPrev.className = 'num';
+        tdNPrev.textContent = ctx.fmt.n(nPrev) + (nPrev < minN ? ' ⚠' : '');
+        if (nPrev < minN) tdNPrev.title = `Below the minimum sample (n ≥ ${minN})`;
         const pRank = prevRank.get(r.key);
         const tdPrev = document.createElement('td'); tdPrev.className = 'num'; tdPrev.textContent = pRank ?? '—';
         const tdChange = document.createElement('td'); tdChange.className = 'num';
@@ -237,7 +261,7 @@ export default {
           if (d > 0) tdChange.classList.add('sb-stat--up');
           else if (d < 0) tdChange.classList.add('sb-stat--down');
         }
-        tr.append(tdRank, tdSprite, tdName, tdPrev, tdChange);
+        tr.append(tdRank, tdSprite, tdName, tdNNow, tdNPrev, tdPrev, tdChange);
         tr.addEventListener('click', (e) => ctx.chip('species', r.key, e));
         tbody.appendChild(tr);
       }
