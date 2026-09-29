@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { deriveSeasonMeta, transformRows, parseRankingTable } from '../scripts/sources/ranked.js';
+import { deriveSeasonMeta, currentSeasonOf, transformRows, parseRankingTable } from '../scripts/sources/ranked.js';
 import { REG_IDS } from '../scripts/lib/regs.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,8 +25,20 @@ test('deriveSeasonMeta: maps every in-game season to exactly one regulation, mat
   assert.equal(m4.snapshot, '2026-08-05'); // finished season: its one listed (final) day
 });
 
-test('deriveSeasonMeta: throws if a snapshot date falls outside every regulation window', () => {
-  assert.throws(() => deriveSeasonMeta(['M0/01_01_2020']));
+test('deriveSeasonMeta: an out-of-window season is kept with reg null (warns, no throw) and is the current season', () => {
+  const warn = console.warn;
+  const warned = [];
+  console.warn = (m) => warned.push(m);
+  try {
+    assert.deepEqual(deriveSeasonMeta(['M0/01_01_2020']).map((s) => s.reg), [null]);
+    const seasons = deriveSeasonMeta([...fixture.dailyDataFolders, 'M6/02_12_2026', 'M7/20_12_2026']); // M7 starts after M-C's end
+    assert.deepEqual(seasons.map((s) => [s.season, s.reg]), [['M1', 'M-A'], ['M2', 'M-A'], ['M3', 'M-B'], ['M4', 'M-B'], ['M5', 'M-B'], ['M6', 'M-C'], ['M7', null]]);
+    assert.ok(warned.some((m) => m.includes('M7')));
+    assert.equal(currentSeasonOf(seasons), 'M7'); // so no reg gets the live ranking and M6 is reused, not refetched as current
+    assert.equal(currentSeasonOf([]), null);
+  } finally {
+    console.warn = warn;
+  }
 });
 
 function close(a, b) {
