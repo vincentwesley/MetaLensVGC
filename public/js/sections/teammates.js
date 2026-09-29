@@ -388,7 +388,8 @@ export default {
         const row = document.createElement('div');
         row.className = 'sb-row sb-row--clickable';
         row.tabIndex = 0;
-        row.title = `Show only teams with ${key} and ${t.name}`;
+        row.setAttribute('role', 'button');
+        row.dataset.tip = `Show only teams with ${key} and ${t.name}`;
         row.appendChild(ctx.sprite(t.name, { size: 24 }));
         const name = document.createElement('div');
         name.className = 'sb-names';

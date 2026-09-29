@@ -524,3 +524,50 @@ test('snapshot cards show NEW (not a +pt jump) for a Pokémon absent from the pr
     expect(t).not.toMatch(/NaN|undefined/);
   }
 });
+
+test('click hints hide whenever their card shows an empty state (ranked, ladder without data)', async ({ page }) => {
+  for (const hash of ['#source=ranked', '#reg=M-B&source=ladder', '#source=ladder']) {
+    await page.goto(`/${hash}`);
+    await waitForAllSections(page);
+    const bad = await page.evaluate(() => [...document.querySelectorAll('main .click-hint')]
+      .filter((h) => h.getClientRects().length && h.parentElement.querySelector('.empty-state'))
+      .map((h) => h.textContent.slice(0, 40)));
+    expect(bad, hash).toEqual([]);
+  }
+});
+
+test('Scanner: click hint shows with results; gibberish paste is rejected, not scanned', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sc = page.locator('[data-section="scanner"]');
+  await page.locator('#scn-textarea').fill('lorem ipsum dolor sit amet');
+  await sc.getByRole('button', { name: 'Scan', exact: true }).click();
+  await expect(sc.locator('.empty-state')).toContainText('no recognised Pokémon');
+  await expect(sc.locator('.scn-parsed')).toHaveCount(0);
+  await expect(sc.locator('.click-hint')).toHaveCount(0);
+  await sc.locator('.scn-results').waitFor({ state: 'attached' });
+  await sc.getByRole('button', { name: /random/i }).click();
+  await sc.getByRole('button', { name: 'Scan', exact: true }).click();
+  await expect(sc.locator('.scn-parsed .scn-mon').first()).toBeVisible();
+  await expect(sc.locator('.click-hint')).toBeVisible();
+});
+
+test('Items under Source=Ladder without data says "No ladder data"; teammate rate rows are buttons', async ({ page }) => {
+  await page.goto('/#source=ladder');
+  await waitForAllSections(page);
+  await expect(page.locator('[data-section="items"] .empty-state__title')).toHaveText(['No ladder data for this regulation yet', 'No ladder data for this regulation yet']);
+  const row = page.locator('main [data-section="teammates"] .card').filter({ hasText: 'Teammate rate' }).locator('.sb-row').first();
+  await row.scrollIntoViewIfNeeded();
+  await expect(row).toHaveAttribute('role', 'button');
+  await expect(row).toHaveAttribute('data-tip', /Show only teams with/);
+});
+
+test('no chart aria-label contains NaN or undefined (default view and M-B)', async ({ page }) => {
+  for (const hash of ['', '#reg=M-B']) {
+    await page.goto(`/${hash}`);
+    await waitForAllSections(page);
+    const bad = await page.evaluate(() => [...document.querySelectorAll('[aria-label]')]
+      .map((e) => e.getAttribute('aria-label')).filter((t) => /NaN|undefined/.test(t)));
+    expect(bad, hash).toEqual([]);
+  }
+});

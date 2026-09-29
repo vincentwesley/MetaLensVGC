@@ -57,6 +57,14 @@ export function echartsBase(theme) {
 // e.g. near the edge on a phone) and wraps long lines instead of growing wider
 // than the viewport. ECharts' default tooltip CSS is `white-space: nowrap`.
 const TOOLTIP_CSS = 'white-space:normal;width:max-content;max-width:min(320px,calc(100vw - 32px));overflow-wrap:anywhere;';
+export function describeChart(opt) {
+  const list = [].concat(opt.series || []);
+  const points = list.reduce((n, s) => n + (Array.isArray(s.data) ? s.data.length : 0), 0);
+  const kinds = [...new Set(list.map((s) => s.type).filter(Boolean))].join(' / ') || 'chart';
+  const names = list.map((s) => s.name).filter(Boolean).join(', ');
+  return `${kinds} chart${names ? ` of ${names}` : ''} with ${points} data point${points === 1 ? '' : 's'}.`;
+}
+
 export function withChartDefaults(opt) {
   if (!opt || typeof opt !== 'object') return opt;
   const fix = (t) => (t && typeof t === 'object'
@@ -64,8 +72,9 @@ export function withChartDefaults(opt) {
     : t);
   const out = { ...opt };
   if (opt.tooltip) out.tooltip = Array.isArray(opt.tooltip) ? opt.tooltip.map(fix) : fix(opt.tooltip);
-  // Screen readers: ECharts generates a text description of the data.
-  if (opt.series && !('aria' in opt)) out.aria = { enabled: true };
+  // Screen readers: ECharts' own data dump prints NaN for heatmap / object-valued data, so
+  // describe the chart (type, series names, point count) ourselves.
+  if (opt.series && !('aria' in opt)) out.aria = { enabled: true, label: { description: describeChart(opt) } };
   return out;
 }
 

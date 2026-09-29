@@ -34,9 +34,23 @@ export function rankedSource(season) {
 }
 
 /** One muted line under a chart: what it shows and what clicking it filters to. */
-export function clickHint(text) {
+export function clickHint(text, { auto = true } = {}) {
   const p = document.createElement('p');
   p.className = 'click-hint';
   p.textContent = text;
+  if (auto) { autoHints.add(p); watchEmpty(); }
   return p;
+}
+
+// One mechanism for every card: a hint is hidden while its container holds an
+// .empty-state (nothing to click), and comes back when the state is gone.
+// auto:false for hints whose container also holds unrelated empty sub-cards.
+const autoHints = new Set();
+let watching = false;
+function watchEmpty() {
+  if (watching || typeof MutationObserver === 'undefined') return;
+  watching = true;
+  new MutationObserver(() => {
+    for (const h of autoHints) if (h.parentElement) h.hidden = !!h.parentElement.querySelector('.empty-state');
+  }).observe(document.body, { childList: true, subtree: true });
 }

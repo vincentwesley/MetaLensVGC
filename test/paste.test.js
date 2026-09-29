@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toPaste, parsePaste } from '../public/js/lib/paste.js';
+import { toPaste, parsePaste, anyKnownSpecies } from '../public/js/lib/paste.js';
 
 const dex = {
   items: {
@@ -113,4 +113,11 @@ test('parsePaste: SPs: line, IVs/Tera Type/Shiny ignored', () => {
   const [mon] = parsePaste(text, dex);
   assert.deepEqual(mon.sp, [0, 32, 0, 0, 0, 32]);
   assert.deepEqual(mon.moves, ['Earthquake', 'Protect']);
+});
+
+test('anyKnownSpecies: gibberish parses to one unknown mon and is rejected; one known mon is enough', () => {
+  const d = { ...dex, species: { Garchomp: {} } };
+  assert.equal(anyKnownSpecies(parsePaste('lorem ipsum dolor sit amet', d), d), false);
+  assert.equal(anyKnownSpecies(parsePaste('Garchomp @ Choice Scarf\n\nlorem ipsum', d), d), true);
+  assert.equal(anyKnownSpecies([], d), false);
 });
