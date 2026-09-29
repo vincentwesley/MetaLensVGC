@@ -6,7 +6,8 @@
     "test": "node --test",
     "serve": "node scripts/serve.js",
     "e2e": "playwright test",
-    "shot": "playwright test e2e/screenshots.spec.js"
+    "shot": "playwright test e2e/screenshots.spec.js",
+    "e2e:cloud": "playwright test -c playwright.cloud.config.js e2e/app.spec.js"
   },
   "license": "MIT",
   "description": "VGC MetaScope: cross-filtering metagame dashboard for Pokémon Champions (VGC 2026)",
