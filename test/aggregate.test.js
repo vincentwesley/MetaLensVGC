@@ -370,3 +370,104 @@ test('ladderMerge with dex maps Smogon ids to display names; ladderItemUsage wei
   assert.equal(displayName('nothing', d), 'No item');
   assert.equal(displayName('unknownthing', d), 'unknownthing');
 });
+
+// --- cross-filter semantics ---
+import { projectTeams } from '../public/js/lib/aggregate.js';
+
+test('archetype chip matches the primary archetype only (same as the donut)', () => {
+  const multi = teams.find((t) => t.arch.length > 1);
+  assert.ok(multi, 'fixture has a team with more than one archetype');
+  const secondary = multi.arch[1];
+  const got = filterTeams(teams, {}, [{ kind: 'archetype', value: secondary, neg: false }], dex);
+  assert.ok(got.every((t) => t.arch[0] === secondary));
+  assert.ok(!got.includes(multi));
+  const split = archetypeSplit(got);
+  assert.equal(split.length, got.length ? 1 : 0, 'donut of the filtered view is a single slice');
+});
+
+test('type chip: team kept if it has a Pokémon of that type; Pokémon views only count that type', () => {
+  const type = dex.species[teams[0].keys[0]].types[0];
+  const chips = [{ kind: 'type', value: type, neg: false }];
+  const got = filterTeams(teams, {}, chips, dex);
+  assert.ok(got.length > 0 && got.length <= teams.length);
+  const proj = projectTeams(got, chips, dex);
+  assert.equal(proj.length, got.length);
+  for (const t of proj) for (const m of t.mons) assert.ok(dex.species[m.k].types.includes(type));
+  for (const r of usage(proj)) assert.ok(dex.species[r.key].types.includes(type), `${r.key} is ${type}`);
+  assert.equal(proj[0].full.keys.length, 6, 'full team kept for teammates');
+  assert.equal(projectTeams(got, [], dex), got, 'no slot chips -> same array');
+});
+
+test('item + move chips apply to the same Pokémon, not to different teammates', () => {
+  const mon = teams.flatMap((t) => t.mons).find((m) => m.item && m.moves.length);
+  const chips = [{ kind: 'item', value: mon.item, neg: false }, { kind: 'move', value: mon.moves[0], neg: false }];
+  const got = filterTeams(teams, {}, chips, dex);
+  assert.ok(got.length > 0);
+  for (const t of got) assert.ok(t.mons.some((m) => m.item === mon.item && m.moves.includes(mon.moves[0])));
+  for (const t of projectTeams(got, chips, dex)) for (const m of t.mons) assert.ok(m.item === mon.item && m.moves.includes(mon.moves[0]));
+  const neg = filterTeams(teams, {}, [{ kind: 'item', value: mon.item, neg: true }], dex);
+  assert.ok(neg.every((t) => !t.mons.some((m) => m.item === mon.item)));
+});
+
+test('archetypeMatrix with opponents counts filtered teams against the whole field', () => {
+  const id = teams[0].arch[0];
+  const sel = filterTeams(teams, {}, [{ kind: 'archetype', value: id, neg: false }], dex);
+  const inner = archetypeMatrix(sel, matches);
+  const vsField = archetypeMatrix(sel, matches, teams);
+  const n = (m) => (m ? m.cells.reduce((a, c) => a + c.n, 0) : 0);
+  assert.ok(n(vsField) >= n(inner));
+  assert.ok(vsField.cells.every((c) => c.a === id || c.b === id), 'every counted match involves the selected archetype');
+  assert.deepEqual(archetypeMatrix(teams, matches, teams), archetypeMatrix(teams, matches));
+});
+
+import { speciesChipFilter } from '../public/js/lib/aggregate.js';
+import { effectiveness } from '../public/js/lib/types.js';
+
+test('species chip: teams with it; Pokémon views show only that Pokémon; + item = that Pokémon holding it', () => {
+  const key = usage(teams)[0].key;
+  const chips = [{ kind: 'species', value: key, neg: false }];
+  const got = filterTeams(teams, {}, chips, dex);
+  assert.ok(got.every((t) => t.keys.includes(key)));
+  assert.deepEqual(usage(projectTeams(got, chips, dex)).map((r) => r.key), [key]);
+  const item = teams.flatMap((t) => t.mons).find((m) => m.k === key && m.item).item;
+  const both = [...chips, { kind: 'item', value: item, neg: false }];
+  const got2 = filterTeams(teams, {}, both, dex);
+  assert.ok(got2.length > 0);
+  for (const t of got2) assert.ok(t.mons.some((m) => m.k === key && m.item === item), 'the Pokémon itself holds the item');
+  for (const t of projectTeams(got2, both, dex)) assert.ok(t.mons.every((m) => m.k === key && m.item === item));
+  // deep dive projection ignores species chips so teammates can still be inspected
+  assert.equal(projectTeams(got, chips, dex, { keys: false }), got);
+});
+
+test('core chip: teams with all; Pokémon views show only those Pokémon', () => {
+  const [a, b] = usage(teams).slice(0, 2).map((r) => r.key);
+  const chips = [{ kind: 'core', value: [a, b], neg: false }];
+  const got = filterTeams(teams, {}, chips, dex);
+  assert.ok(got.every((t) => t.keys.includes(a) && t.keys.includes(b)));
+  assert.deepEqual(new Set(usage(projectTeams(got, chips, dex)).map((r) => r.key)), new Set(got.length ? [a, b] : []));
+});
+
+test('weak and movetype chips test the Pokémon, not the team', () => {
+  const weakTo = 'Ice';
+  const w = [{ kind: 'weak', value: weakTo, neg: false }];
+  for (const t of projectTeams(filterTeams(teams, {}, w, dex), w, dex)) {
+    for (const m of t.mons) assert.ok(effectiveness(weakTo, dex.species[m.k].types) > 1, `${m.k} is weak to Ice`);
+  }
+  const mvType = dex.moves[teams[0].mons[0].moves[0]].type;
+  const mt = [{ kind: 'movetype', value: mvType, neg: false }];
+  const proj = projectTeams(filterTeams(teams, {}, mt, dex), mt, dex);
+  assert.ok(proj.length > 0);
+  for (const t of proj) for (const m of t.mons) assert.ok(m.moves.some((x) => dex.moves[x]?.type === mvType));
+});
+
+test('speciesChipFilter: per-species chips apply, sheet-only chips are reported', () => {
+  const key = usage(teams)[0].key;
+  const type = dex.species[key].types[0];
+  const f = speciesChipFilter([{ kind: 'type', value: type, neg: false }, { kind: 'item', value: 'Life Orb', neg: false }], dex);
+  assert.equal(f.unsupported.length, 1);
+  assert.equal(f.test(key), true);
+  const other = Object.keys(dex.species).find((k) => !dex.species[k].types.includes(type));
+  assert.equal(f.test(other), false);
+  assert.equal(speciesChipFilter([{ kind: 'species', value: key, neg: true }], dex).test(key), false);
+  assert.equal(speciesChipFilter([], dex).test, null);
+});

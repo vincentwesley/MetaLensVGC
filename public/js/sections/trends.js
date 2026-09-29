@@ -92,9 +92,9 @@ export default {
         lastWeeks = [];
         return;
       }
-      const topKeys = usage(view.teams).filter((r) => r.n >= view.state.minN).slice(0, 8).map((r) => r.key);
-      const wk = weekly(view.teams, topKeys);
-      ctx.meta(linesCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      const topKeys = usage(view.monTeams).filter((r) => r.n >= view.state.minN).slice(0, 8).map((r) => r.key);
+      const wk = weekly(view.monTeams, topKeys);
+      ctx.meta(linesCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       lastWeeks = wk.weeks;
       if (wk.weeks.length < 2) {
         lineChartEl.style.display = 'none';
@@ -180,8 +180,8 @@ export default {
         ctx.meta(moversCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
-      const { risers, fallers, weekPrev, weekLast } = movers(view.teams, view.state.minN);
-      ctx.meta(moversCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      const { risers, fallers, weekPrev, weekLast } = movers(view.monTeams, view.state.minN);
+      ctx.meta(moversCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       if (weekPrev && weekLast) {
         compareLabel.textContent = `Comparing week of ${weekPrev} vs week of ${weekLast} (partial/small weeks excluded; both weeks need n ≥ ${view.state.minN} per species)`;
       }
@@ -209,7 +209,7 @@ export default {
         ctx.meta(shiftCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
-      ctx.meta(shiftCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      ctx.meta(shiftCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       const prev = view.prev || [];
       if (!prev.length) {
         shiftWrap.appendChild(emptyState('No previous-period data available for comparison.'));
@@ -227,9 +227,9 @@ export default {
       // Unfiltered lookups so a row can show its *other* period's n even
       // when that n fell short of minN there (that's exactly the "low
       // sample" case worth flagging, not something to hide).
-      const currNMap = new Map(usage(view.teams).map((r) => [r.key, r.n]));
+      const currNMap = new Map(usage(view.monTeams).map((r) => [r.key, r.n]));
       const prevNMap = new Map(usage(prev).map((r) => [r.key, r.n]));
-      const currTop = usage(view.teams).filter((r) => r.n >= minN).slice(0, 20);
+      const currTop = usage(view.monTeams).filter((r) => r.n >= minN).slice(0, 20);
       // Rank *every* previous-period species that cleared minN, not just its
       // top 20 — a mon can have existed last regulation with a real sample
       // (e.g. n=2,483) while sitting outside that period's top 20, which is

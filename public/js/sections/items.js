@@ -1,6 +1,6 @@
 // items.js — Item usage: (a) which held items the field runs (share of teams,
 // win rate, who holds them) and (b) the most common items for each Pokémon.
-// Tournaments: aggregate.itemUsage()/itemsBySpecies() over view.teams.
+// Tournaments: aggregate.itemUsage()/itemsBySpecies() over view.monTeams.
 // Ladder: ladderItemUsage()/ladderMerge() (share of Pokémon slots, no win %).
 // Ranked (in-game): only (b), from each Pokémon's published set shares, in rank order.
 import {
@@ -153,8 +153,8 @@ export default {
         ctx.meta(A.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
         rows = ladderItemUsage(merged, view.dex, { megaStones: showStones });
       } else {
-        ctx.meta(A.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
-        rows = view.teams.length ? itemUsage(view.teams, view.dex, { megaStones: showStones }) : [];
+        ctx.meta(A.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
+        rows = view.monTeams.length ? itemUsage(view.monTeams, view.dex, { megaStones: showStones }) : [];
       }
       if (!rows.length) { chartRows = null; chartEl.hidden = true; emptyState(A.body, 'Insufficient data'); return; }
       chartRows = { rows, mode: src };
@@ -183,10 +183,10 @@ export default {
         tableUnit = 'battles';
         return merged.mons.filter((m) => m.raw >= minN).map((m) => ({ key: m.key, n: m.raw, items: m.items.filter((i) => i.name !== 'No item') }));
       }
-      ctx.meta(B.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      ctx.meta(B.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       tableUnit = 'slots';
-      const by = itemsBySpecies(view.teams);
-      return usage(view.teams).filter((r) => r.n >= minN).map((r) => {
+      const by = itemsBySpecies(view.monTeams);
+      return usage(view.monTeams).filter((r) => r.n >= minN).map((r) => {
         const d = by.get(r.key);
         return { key: r.key, n: d?.n ?? 0, items: d?.items ?? [] };
       });

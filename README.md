@@ -14,7 +14,11 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
   (Tournaments / Smogon Ladder / Ranked in-game), event tier (Worlds / Internationals / Regionals / Online), placement
   (All / Top Cut / Top 8 / Winners), date range and a minimum-sample slider.
 - **Cross-filtering everywhere.** Click a Pokémon, type, archetype, item, move, Mega, core or team
-  to add a filter chip, and every chart recomputes on "teams matching all chips".
+  to add a filter chip, and every chart recomputes. Type, item and move chips describe a Pokémon:
+  with **Electric** selected, the leaderboard, types, items, speed tiers and trends count only Electric
+  Pokémon (and "Electric + Life Orb" means an Electric Pokémon holding Life Orb), while teammates,
+  archetypes and the team library show those whole teams. Pokémon, core, Mega, archetype and team
+  chips pick teams; an archetype chip means teams whose main archetype it is (the donut slice you clicked).
   **Shift-click or Alt-click** excludes instead ("teams without X"). You can remove chips one by one
   or clear them all.
 - **Shareable state.** All filters, chips, the skin and the theme live in the URL hash.
@@ -38,7 +42,7 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
   - Pokémon deep-dive drawer
   - Data & methodology, with JSON/CSV download
 - **Two skins:** Pro (default: JetBrains Mono and Inter) and Retro (Press Start 2P, Silkscreen,
-  VT323, CRT scanlines, pixel borders). Each comes in light and dark; dark is the default.
+  VT323, CRT scanlines, pixel borders; warm charcoal with antique gold in dark, soft parchment in light). Each comes in light and dark; dark is the default.
   The layout is responsive down to 390px.
 - **Collapsible filter bar.** "▲ Hide" (or the **F** key) folds the filters and the header settings
   into a one-line summary; the choice is remembered per browser. Small screens start collapsed.

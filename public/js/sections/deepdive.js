@@ -159,7 +159,7 @@ export default {
       const titleEl = document.getElementById('deepdive-title');
       if (titleEl) titleEl.textContent = key;
 
-      const det = speciesDetail(view.teams, key, dex);
+      const det = speciesDetail(view.ddTeams || view.monTeams, key, dex);
       const metaLine = elm('div');
       ctx.meta(metaLine, { source: view.state.source === 'ladder' ? 'Tournaments (base stats/usage) + Ladder (sets)' : 'Tournaments', n: det.n, unit: 'teams' });
       content.appendChild(metaLine);
@@ -303,7 +303,7 @@ export default {
         table.appendChild(tbody);
         wrap.appendChild(table);
         spBody.appendChild(wrap);
-        const tiers = fromSheets ? speedTiers(view.teams, dex, 20) : ladderSpeedTiers(merged, dex);
+        const tiers = fromSheets ? speedTiers(view.monTeams, dex, 20) : ladderSpeedTiers(merged, dex);
         const note = builtForNote(key, spreadRows[0], tiers);
         if (note) spBody.appendChild(elm('div', 'ddv-note', note));
       }

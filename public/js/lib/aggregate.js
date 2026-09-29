@@ -63,48 +63,64 @@ export function decode(file, dex) {
 }
 
 // --- filtering ----------------------------------------------------------
-function matchesChip(team, chip, dex) {
+// Every chip is one of two things:
+// - Pokémon chips describe a single Pokémon:
+//     species / mega / core (the Pokémon is one of these keys),
+//     type (it has this type), weak (it is weak to this attacking type),
+//     item (holds it), move (knows it), movetype (knows a move of this type).
+//   Positive Pokémon chips are ANDed into ONE slot test, so "Rillaboom + Life Orb"
+//   means a Rillaboom holding Life Orb and "Electric + Tailwind" an Electric
+//   Pokémon with Tailwind. A team is in view when it has a Pokémon passing the
+//   slot test (and every species/core chip's Pokémon), and Pokémon-level views
+//   (projectTeams) only count the Pokémon that pass it. Negative Pokémon chips
+//   remove teams that have any matching Pokémon.
+// - Team chips (archetype = primary archetype, team) select whole teams.
+const KEY_KINDS = new Set(['species', 'mega', 'core']);
+const ATTR_KINDS = new Set(['type', 'weak', 'item', 'move', 'movetype']);
+
+function typesOf(mon, dex) {
+  const sp = dex.species[mon.k] || dex.species[mon.s];
+  return sp ? sp.types : [];
+}
+
+function monMatchesAttr(mon, chip, dex) {
   const v = chip.value;
-  let m;
+  switch (chip.kind) {
+    case 'type': return typesOf(mon, dex).includes(v);
+    case 'weak': { const t = typesOf(mon, dex); return t.length > 0 && effectiveness(v, t) > 1; }
+    case 'item': return mon.item === v;
+    case 'move': return mon.moves.includes(v);
+    case 'movetype': return mon.moves.some((mv) => dex.moves?.[mv]?.type === v);
+    default: return false;
+  }
+}
+
+const chipKeys = (chip) => (Array.isArray(chip.value) ? chip.value : [chip.value]);
+
+function teamHasChip(team, chip, dex) {
   switch (chip.kind) {
     case 'species':
-      m = team.keys.includes(v);
-      break;
-    case 'type': {
-      m = team.mons.some((mon) => {
-        const sp = dex.species[mon.k] || dex.species[mon.s];
-        return sp && sp.types.includes(v);
-      });
-      break;
-    }
-    case 'archetype':
-      m = team.arch.includes(v);
-      break;
-    case 'item':
-      m = team.mons.some((mon) => mon.item === v);
-      break;
-    case 'move':
-      m = team.mons.some((mon) => mon.moves.includes(v));
-      break;
     case 'mega':
-      m = team.megas.includes(v);
-      break;
-    case 'core': {
-      const need = Array.isArray(v) ? v : [v];
-      m = need.every((key) => team.keys.includes(key));
-      break;
-    }
-    case 'team':
-      m = team.id === v;
-      break;
-    default:
-      m = false;
+    case 'core': return chipKeys(chip).every((k) => team.keys.includes(k));
+    case 'archetype': return team.arch[0] === chip.value; // same as the donut / library pill
+    case 'team': return team.id === chip.value;
+    default: return ATTR_KINDS.has(chip.kind) ? team.mons.some((mon) => monMatchesAttr(mon, chip, dex)) : false;
   }
-  return chip.neg ? !m : m;
+}
+
+/** The slot test built from the positive Pokémon chips, or null if there are none. */
+function slotTest(chips, dex, { keys = true } = {}) {
+  const pos = chips.filter((c) => !c.neg);
+  const keySet = keys ? new Set(pos.filter((c) => KEY_KINDS.has(c.kind)).flatMap(chipKeys)) : new Set();
+  const attrs = pos.filter((c) => ATTR_KINDS.has(c.kind));
+  if (!keySet.size && !attrs.length) return null;
+  return (mon) => (!keySet.size || keySet.has(mon.k)) && attrs.every((c) => monMatchesAttr(mon, c, dex));
 }
 
 export function filterTeams(teams, filters = {}, chips = [], dex) {
   const { tiers, place, from, to } = filters;
+  const slot = slotTest(chips, dex);
+  const hasAttr = chips.some((c) => !c.neg && ATTR_KINDS.has(c.kind));
   return teams.filter((team) => {
     if (tiers && tiers.length && !tiers.includes(team.tier)) return false;
     if (place === 'topcut' && !team.topCut) return false;
@@ -112,8 +128,61 @@ export function filterTeams(teams, filters = {}, chips = [], dex) {
     if (place === 'winner' && team.placing !== 1) return false;
     if (from && team.date < from) return false;
     if (to && team.date > to) return false;
-    return chips.every((c) => matchesChip(team, c, dex));
+    for (const c of chips) {
+      const has = ATTR_KINDS.has(c.kind) && !c.neg ? true : teamHasChip(team, c, dex);
+      if (c.neg ? has : !has) return false;
+    }
+    return !hasAttr || team.mons.some(slot);
   });
+}
+
+/**
+ * For Pokémon-level views: keep only the Pokémon on each team that pass the slot
+ * test of the positive Pokémon chips (see above). Returns `teams` itself when
+ * there are none. Projected teams keep the team's record and metadata; `full`
+ * points at the original team (teammates are team-level).
+ * opts.keys=false ignores species/mega/core chips (the deep dive uses this so
+ * any Pokémon can be inspected under the current type/item/move chips).
+ */
+export function projectTeams(teams, chips = [], dex, opts = {}) {
+  const slot = slotTest(chips, dex, opts);
+  if (!slot) return teams;
+  const out = [];
+  for (const t of teams) {
+    const mons = t.mons.filter(slot);
+    if (!mons.length) continue;
+    const keys = mons.map((m) => m.k);
+    const megas = mons.filter((m) => m.mega).map((m) => m.k);
+    out.push({ ...t, mons, keys, species: new Set(keys), megas, mega: megas[0] || null, full: t.full || t });
+  }
+  return out;
+}
+
+/**
+ * Species-level version of the chips for views that only have per-Pokémon rows
+ * (Smogon ladder, in-game ranked): { test(key) -> bool | null, unsupported: Chip[] }.
+ * species/mega/core, type and weak chips can be checked per species; item, move,
+ * movetype, archetype and team chips need team sheets and are reported unsupported.
+ */
+export function speciesChipFilter(chips = [], dex) {
+  const unsupported = chips.filter((c) => !['species', 'mega', 'core', 'type', 'weak'].includes(c.kind));
+  const usable = chips.filter((c) => !unsupported.includes(c));
+  if (!usable.length) return { test: null, unsupported };
+  const types = (key) => dex.species[key]?.types || [];
+  const one = (key, c) => {
+    switch (c.kind) {
+      case 'type': return types(key).includes(c.value);
+      case 'weak': return types(key).length > 0 && effectiveness(c.value, types(key)) > 1;
+      default: return chipKeys(c).includes(key);
+    }
+  };
+  const pos = usable.filter((c) => !c.neg);
+  const keyChips = pos.filter((c) => KEY_KINDS.has(c.kind));
+  const attrChips = pos.filter((c) => !KEY_KINDS.has(c.kind));
+  const neg = usable.filter((c) => c.neg);
+  const test = (key) => (!keyChips.length || keyChips.some((c) => one(key, c)))
+    && attrChips.every((c) => one(key, c)) && !neg.some((c) => one(key, c));
+  return { test, unsupported };
 }
 
 function barFilter(t, filters) {
@@ -291,19 +360,25 @@ export function archetypeSplit(teams) {
     .sort((a, b) => b.n - a.n);
 }
 
-// Only matches where BOTH sides resolve within `teams` (indexed by Team.i)
-// can be classified by archetype; matches touching a team outside the given
-// set are skipped since its archetype is unknown. Returns null with no
-// matches at all, or none resolvable.
-export function archetypeMatrix(teams, matches) {
+// Matches are classified by each side's primary archetype. By default only
+// matches where BOTH sides are in `teams` count. Pass `opponents` (e.g. the
+// same bar filters without chips) to also count matches of a team in `teams`
+// against any team in `opponents`, so filtering to one archetype still shows
+// how it does against the rest of the field. Returns null with no resolvable
+// matches.
+export function archetypeMatrix(teams, matches, opponents = null) {
   if (!matches || !matches.length) return null;
   const byIdx = new Map(teams.map((t) => [t.i, t]));
+  const oppIdx = opponents && opponents !== teams ? new Map(opponents.map((t) => [t.i, t])) : byIdx;
   const cellMap = new Map();
   const idSet = new Set();
   let any = false;
   for (const m of matches) {
-    const ta = byIdx.get(m.a);
-    const tb = byIdx.get(m.b);
+    const inA = byIdx.get(m.a);
+    const inB = byIdx.get(m.b);
+    if (!inA && !inB) continue;
+    const ta = inA || oppIdx.get(m.a);
+    const tb = inB || oppIdx.get(m.b);
     if (!ta || !tb) continue;
     any = true;
     const ia = ta.arch[0];
@@ -560,7 +635,7 @@ export function speciesDetail(teams, key, dex) {
     })
     .sort((a, b) => b.n - a.n);
 
-  const teammateCounts = countValues(withKey.flatMap((t) => [...new Set(t.keys)].filter((k) => k !== key)));
+  const teammateCounts = countValues(withKey.flatMap((t) => [...new Set((t.full || t).keys)].filter((k) => k !== key)));
   const teammates = topFromCounts(teammateCounts, n);
 
   const baseName = dex.species[key]?.base ?? key;

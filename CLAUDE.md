@@ -38,6 +38,17 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
 - `aggregate.js`: `decode(file, dex) → {teams, events, matches}` plus all aggregations (incl. `itemsBySpecies`, `itemUsage`,
   `ladderItemUsage`; pass `dex` as the 4th arg of `ladderMerge` to get display names) (usage, win rate with Wilson CI, co-usage/lift, cores, items/moves/sets/spreads per species, type landscape, archetype split and matchup matrix, weekly series). Every function takes an array of `Team` and returns plain data.
   Filtering: `filterTeams(teams, filters, chips, dex)` where `filters` is the state below and `chips` is `Chip[]`.
+  **Chip semantics** (one rule for every chip; see the comment block in aggregate.js):
+  Pokémon chips describe ONE Pokémon: species / mega / core (it is one of these keys), type, weak (weak to that attacking
+  type), item, move, movetype (knows a move of that type). Positive ones are ANDed into a single slot test ("Rillaboom + Life
+  Orb" = a Rillaboom holding Life Orb). Teams are kept when they have every species/core chip's Pokémon and a Pokémon passing
+  the slot test; `projectTeams(teams, chips, dex)` keeps only the passing Pokémon for Pokémon-level views
+  (`{keys:false}` = attribute chips only, for the deep dive). Negative Pokémon chips drop teams with any matching Pokémon.
+  Team chips: archetype (PRIMARY archetype `arch[0]`, same as the donut), team. Ladder / ranked rows are per species:
+  `speciesChipFilter(chips, dex)` applies species/mega/core/type/weak there (main filters `view.ladder` / `view.ranked`) and
+  reports the rest as unsupported (shown under the chips). `archetypeMatrix(teams, matches, opponents)` counts the view's
+  teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots
+  (types.js: type usage -> `type`, best attacking types -> `movetype`, weaknesses -> `weak`).
 - `paste.js`: `toPaste(team, dex) → Showdown text` (Showdown's Champions formats store SP in the `EVs:` line, e.g. `EVs: 32 Atk / 2 SpD / 32 Spe`), `parsePaste(text, dex) → Mon[]` (accepts `EVs:` and `SPs:` lines; a value above 32 means a classic EV spread, which is dropped as `sp: null`).
 - `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`.
 
@@ -63,7 +74,9 @@ export default {
 }
 ```
 `view` is computed once per state change in `main.js`:
-`{ state, reg, manifest, dex, teams /*bar filters + chips*/, base /*bar filters, no chips*/, prev /*previous period*/, matches, ladder /*ladder-<reg>.json*/, ranked /*ranked-<reg>.json*/ }`.
+`{ state, reg, manifest, dex, teams /*bar filters + chips, whole teams*/, monTeams /*projected to Pokémon passing the Pokémon chips*/, ddTeams /*projected by attribute chips only*/, speciesFilter, base /*bar filters, no chips*/, prev /*previous period, same chips + projection*/, matches, ladder /*ladder-<reg>.json*/, ranked /*ranked-<reg>.json*/ }`.
+Pokémon-level sections (snapshot, usage, quadrant, types, items, speed, trends, deepdive) read `monTeams`; team-level ones
+(archetypes, teammates, library, scanner, methodology) read `teams`.
 `ctx` gives `{ store, dex, echarts, sprite(key, opts) → HTMLImageElement, spriteUrl(key), openDrawer(key), chip(kind, value, event) /* shift/alt = neg */, hover(key|null), meta(el, {source, n, unit}) /* source/sample/updated line */, cssVar(name), fmt }`.
 Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 
