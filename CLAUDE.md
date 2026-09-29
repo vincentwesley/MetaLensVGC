@@ -55,6 +55,7 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
 - `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`,
   `sanitizeState(state, {regs})` (every state the store accepts goes through it; unknown values fall back).
 - `pixelfield-core.js`: background pixel field logic (sprites, placement, dither), painted by `ui/pixelfield.js`.
+- `stale.js`: `isStale(generatedISO, now, days=10)` for the stale-data notice. `contrast.js`: `inkOn(bg)` picks dark/white text for a fill.
 - `scan.js`: the Team Scanner's evidence (`scanTeam` → archetype, matchups vs Pokémon/archetypes from real
   match results of "teams like yours", item check with item clause, teammate picks, weakest link). Thresholds in `LIMITS`.
 
@@ -122,12 +123,18 @@ Background: pixel field canvas.
   teammates, checks/counters. M-A and M-B have 3 months; M-C has none until Smogon publishes (early October).
 - So any spread / stat analysis uses ranked (+ Smogon where present) and must say which, with its sample.
 
-## Project status (handover, 2026-09-29, end of the UX round)
+## Project status (handover, 2026-09-29, end of the second smoke + UX round)
 - Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
   `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
-- **Weekly refresh Action** (`.github/workflows/refresh-data.yml`, Mondays 06:00 UTC + manual): its only run so far
-  (2026-09-29, manual) failed at the push (race, since fixed with rebase + retries); the fixed version has not run yet.
+- **Weekly refresh Action** (`.github/workflows/refresh-data.yml`, Mondays 06:00 UTC + manual): verified end to end
+  on 2026-09-29 (run 36573679607, 45.5 min, data commit touched only public/data). On any failed step it opens / comments
+  on the issue "Weekly data refresh failed" (run link, step, log tail from `$RUNNER_TEMP/refresh.log`); the next success
+  closes it. Build step has its own 300-min timeout (a job timeout would cancel and skip the alert). `data-raw/` is cached.
+  A new regulation: add it to `scripts/lib/regs.js`, `SUFFIX` in `scripts/sources/ladder.js`, `current` in build-data.js
+  (until then out-of-window ranked seasons are skipped with a warning, `reg: null`).
+- **Parked work:** step 4 (SP spread explorer in the deep dive + scanner SP check, `lib/spreads.js`) is on branch
+  `wip/sp-spread-explorer`, unreviewed and untested. Resume from there (review, finish tests, merge into this branch).
 - Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
 - Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
 - Team-level sections show an explicit "not available" state under the ranked source (no per-team ranked data).
@@ -162,6 +169,12 @@ Background: pixel field canvas.
   per-browser localStorage pref (`metalens.filtersCollapsed`), not part of the URL. `F` toggles it.
 - **Caching**: no hashed filenames, so `_headers` serves `/js/*` and `/css/*` with `no-cache` (ETag revalidation).
   Don't lengthen it or visitors run stale code after a deploy.
+- **Change vs previous period**: always `changeVsPrev()` (NEW when absent or under min-n before); never a delta from 0.
+- **Click hints** hide themselves while their card shows an `.empty-state` (`clickHint(text, {auto})` in ui/meta.js).
+- **Idle cost**: decorative animations must pause off-screen and animate only opacity/transform; the pixel field is a
+  timer loop (10 fps, 6 on weak devices), not rAF. Status colours use `--up/--down/--warn`, pills `--pill-*`.
+- **UI chrome** also holds the section jump nav (`ui/secnav.js`, inside `.stickybar`) and the first-visit tips strip
+  (`metalens.howtoDismissed`). Sections catching up carry `aria-busy`.
 - **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the
   branch during a run are fine.
 

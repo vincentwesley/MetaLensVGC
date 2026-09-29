@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 129 tests)
+### Automated: unit (`npm test`, 132 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -53,7 +53,7 @@ Cloud-session notes:
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 28 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 36 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -137,6 +137,27 @@ Smoke/edge-case pass (2026-09-29; haiku sweeps + own probes; bugs found are fixe
 - Memory: 4 rounds through M-A/M-B/M-C: heap flat at ~155 MB after the first round.
 - 4x CPU throttle: chip in the DOM <10 ms after a click and painted before the recompute.
 
+Second smoke + UX round (2026-09-29, evening; sonnet sweep with measurements, fixes in the suites):
+- NEW vs +pt: a Pokémon absent / under min-n in the previous period read "+54.7pt vs M-B" (Rillaboom,
+  n=1 in M-B). One rule now (`changeVsPrev`) for snapshot, shift table and risers/fallers (unit + e2e).
+- Idle CPU at 4x throttle: ~100% main thread -> 7-9% (desktop and 390px mobile). Causes: the credits
+  name glow animated text-shadow nonstop, and the pixel field ran an always-on rAF loop. Credits
+  animations now pause off-screen; the field runs a 10 fps timer (6 on weak devices), caches its blob
+  layer, skips frames while scrolling. Pauses while rendering / reduced motion / hidden tab re-verified.
+- Contrast in all four combos (library badges/tiers 1.4:1, speed pills 1.9:1, scanner 1x cell 1.15:1 in
+  light, red/green deltas ~3.3:1): new --up/--down/--warn/pill tokens, `inkOn()` for text on type and
+  heatmap fills; all >= 4.5:1 (test/contrast.test.js).
+- Click hints hide over empty states (one observer in clickHint); scanner has a hint; a paste with no
+  known Pokémon is rejected; chart aria-labels no longer contain NaN; Items under Ladder M-C says
+  "No ladder data for this regulation yet"; Teammate rate rows are role=button.
+- Verified fine (measured): type-chart clicks (plain type chip, leaderboard only that type, 36 hover
+  tooltips clean), every chart click matches what it plots, Teammate rate fallbacks (M-C sheets, M-B
+  ladder, M-C ladder -> sheets), scanner two columns at >= 1200px, credits links/image, no
+  vgcmetascope leftovers, no overflow at 390 in six modes.
+- UX: section jump nav (sticky, aria-current follows scroll), first-visit tips strip, aria-busy cue on
+  sections catching up, snapshot change line, hyphen-only Mega name breaks, quadrant corner labels
+  (all in e2e). Screenshots reviewed with real network: 390 pro dark, 1440 retro light, quadrant.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
@@ -145,4 +166,6 @@ Smoke/edge-case pass (2026-09-29; haiku sweeps + own probes; bugs found are fixe
 - Real screen readers (NVDA/VoiceOver) with the ECharts aria descriptions; real touch devices
   (tap tooltips, `[data-tip]`, Android back gesture on the drawer).
 - Browser zoom via the real zoom control (only DPR emulation was used).
-- A full smoke pass over everything changed in the UX round above (only targeted checks ran).
+- Step 4 of the 2026-09-29 plan (SP spread explorer + scanner SP check) is parked unreviewed on branch
+  `wip/sp-spread-explorer`; nothing of it is tested.
+- Retro type sizes with the real VT323 font at 390 (the UX probe had fonts stubbed).
