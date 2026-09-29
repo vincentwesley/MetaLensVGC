@@ -83,18 +83,42 @@ Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 ## Commands
 - `npm run data`: full pipeline (incremental: completed tournaments already in public/data are reused).
 - `npm test`: unit tests. `npm run serve`: static server on :8080. `npm run e2e`: Playwright checks. `npm run shot`: screenshots.
+- `npm run e2e:cloud`: the functional checks with the preinstalled Chromium and third-party hosts stubbed (cloud sessions).
+- **`docs/TESTING.md`** is the test source of truth: how to run things, a coverage ledger of what's already verified, and
+  what isn't yet. Update it whenever you test something. `docs/prompts/` holds reusable task prompts.
 
 ## Style
 Plain modern JS, no TypeScript, no frameworks, no new runtime deps. Small modules. CSS custom properties for all colours;
 type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback exact form → base species → type-coloured placeholder.
 
-## Project status (handover, 2026-09-29)
-- Every GOAL_PROMPT.md "Definition of done" item is met on branch `claude/pokemon-vgc-metagame-dashboard-9whe1a`: data for M-A/M-B/M-C committed, `npm test` (84) and `npm run e2e` (9 checks + screenshots) green, screenshots reviewed in both skins, README complete (decisions, coverage, Cloudflare steps). No PR has been opened; don't open one unless asked.
+## Project status (handover, 2026-09-29, updated after the performance/filter/UX rounds)
+- Live on Cloudflare Pages from branch `claude/pokemon-vgc-metagame-dashboard-9whe1a` (no `main` branch yet). Commit and push
+  to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
 - Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
-- Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Commit and push to this branch in logical steps. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
+- Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
 - Where things stand: the in-game ranked data does not exist per team, so team-level sections show an explicit "not available" state under that source. Smogon M-C (September) stats are expected in early October and the weekly Action picks them up automatically.
 
+### Invariants learned the hard way (keep them)
+- **Rendering** (`main.js`): sections update on-screen first, yielding between them; off-screen ones are marked dirty and
+  catch up in idle time or when scrolled near (IntersectionObserver). `<html data-rendering>` is set while anything is
+  dirty. The previous regulation's file loads after first paint and only refreshes `snapshot` and `trends`.
+- **Charts** are created via `ctx.echarts.init` (a wrapper that hides the tooltip before every `setOption`; ECharts
+  throws if a notMerge redraw lands mid-hover). Tooltip formatters must handle every component that can trigger them
+  (markLine, item vs axis params) and never throw: a throwing formatter also swallows clicks on that chart.
+- **Every chart click must add the chip kind that matches what it plots** (see "Chip semantics"). New Pokémon-level
+  sections read `view.monTeams`; team-level ones read `view.teams`.
+- **Hand-typed sheet strings** go through `normalizeTerm` (decode + pipeline); ladder names through `ladderMerge(..., dex)`.
+- **Hot aggregations** are memoized per filtered array (`usage`, `itemsBySpecies`); results are shared, so treat them as read-only.
+- **UI chrome**: the filter bar and active-filter chips share one sticky wrapper (`.stickybar`); collapse state is a
+  per-browser localStorage pref (`vgcms.filtersCollapsed`), not part of the URL. `F` toggles it.
+- **Caching**: no hashed filenames, so `_headers` serves `/js/*` and `/css/*` with `no-cache` (ETag revalidation).
+  Don't lengthen it or visitors run stale code after a deploy.
+- **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the
+  branch during a run are fine.
+
 ### Working in a cloud session
-- The SessionStart hook runs `npm ci && npm test`. Playwright needs a browser first: `npx playwright install --with-deps chromium`.
+- The SessionStart hook runs `npm ci && npm test`. For browser checks use `npm run e2e:cloud` (preinstalled Chromium at
+  `/opt/pw-browsers/chromium`; don't `playwright install`). Sprites and Google Fonts are unreachable there, so placeholders
+  and fallback fonts are expected. See `docs/TESTING.md` for probe-script tips.
 - `npm run data` needs outbound access to play.limitlesstcg.com, limitlessvgc.com, standings.limitlessvgc.com, smogon.com, championsbattledata.com and play.pokemonshowdown.com. The raw cache (`data-raw/`) is gitignored, so it starts empty. It still runs incrementally from the committed `public/data` (completed tournaments and finished ranked seasons are reused), so a refresh is minutes, not hours. The weekly GitHub Action does this anyway, so only run it if you need fresh data now.
 - Visual review: `npm run serve`, then `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` writes viewport-sized slices into `screenshots/tmp/` (gitignored). The committed full-page shots come from `npm run shot`.

@@ -2,6 +2,16 @@
 // Each bullet in GOAL_PROMPT.md's "Definition of done" #3 gets its own test.
 import { test, expect } from '@playwright/test';
 
+// E2E_OFFLINE=1 (sandboxes without internet, e.g. cloud sessions): answer the only
+// third-party hosts the page uses (Showdown sprites, Google Fonts) with an empty
+// 204, so "no console errors" measures the app, not the network. Sprites then show
+// their built-in placeholder, as they would if Showdown were down.
+if (process.env.E2E_OFFLINE) {
+  test.beforeEach(async ({ page }) => {
+    await page.route(/play\.pokemonshowdown\.com|fonts\.googleapis\.com|fonts\.gstatic\.com/, (r) => r.fulfill({ status: 204, body: '' }));
+  });
+}
+
 /** Wait for a render pass to finish: the usage leaderboard always renders
  *  either a data table or an "Insufficient data" empty-state once `main.js`
  *  has computed a view, for every regulation/source/filter combination. */
@@ -303,4 +313,19 @@ test('archetype chip from the donut leaves a single slice; species chip leaves o
   await row.click();
   await waitForAllSections(page);
   await expect(page.locator('main [data-section="archetypes"] tbody tr')).toHaveCount(1);
+});
+
+test('active filters stay visible while scrolling and Clear all empties them', async ({ page }) => {
+  await page.goto('/#chips=type:Electric,!species:Rillaboom');
+  await waitForAllSections(page);
+  const bar = page.locator('#chips');
+  await expect(bar.locator('.chips__count')).toHaveText('2');
+  await expect(bar.locator('.chip--neg')).toHaveCount(1);
+  await page.locator('main [data-section="library"]').scrollIntoViewIfNeeded();
+  const box = await bar.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeLessThan(200); // pinned under the header, not scrolled away
+  await bar.locator('.chips__clear').click();
+  await expect(bar).toBeEmpty();
+  expect(await page.evaluate(() => location.hash)).not.toContain('chips=');
 });

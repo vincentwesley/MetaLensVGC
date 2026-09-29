@@ -44,6 +44,8 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
 - **Two skins:** Pro (default: JetBrains Mono and Inter) and Retro (Press Start 2P, Silkscreen,
   VT323, CRT scanlines, pixel borders; warm charcoal with antique gold in dark, soft parchment in light). Each comes in light and dark; dark is the default.
   The layout is responsive down to 390px.
+- **Active filters always visible.** Chips sit in a highlighted bar pinned under the filter bar, with a count and
+  a Clear all button, so you always know what the page is filtered by.
 - **Collapsible filter bar.** "▲ Hide" (or the **F** key) folds the filters and the header settings
   into a one-line summary; the choice is remembered per browser. Small screens start collapsed.
 
@@ -161,6 +163,7 @@ npm run data     # full pipeline (incremental; first run takes ~3 h due to Limit
 npm test         # node:test unit tests
 npm run serve    # http://localhost:8080
 npm run e2e      # Playwright checks against the local server
+npm run e2e:cloud # same checks with a preinstalled Chromium, third-party hosts stubbed (offline sandboxes)
 npm run shot     # screenshots of both skins, desktop + mobile, into screenshots/
 ```
 
@@ -172,7 +175,9 @@ Useful pipeline flags: `node scripts/build-data.js --reg M-C` (one regulation) a
 from the Actions tab. It:
 
 1. runs `npm ci`, `npm run data` and `npm test`;
-2. commits `public/data/` if anything changed, which makes Cloudflare Pages redeploy automatically.
+2. commits `public/data/` if anything changed and pushes it, which makes Cloudflare Pages redeploy automatically.
+   The run can take a while, so before pushing it rebases the data commit onto the branch's latest tip (retrying if
+   the branch moves again). Commits pushed to the branch during a run no longer make it fail. Runs never overlap.
 
 The pipeline is **incremental**:
 
@@ -183,6 +188,8 @@ The pipeline is **incremental**:
 - Raw responses are cached in `data-raw/` (gitignored). Requests are rate-limited per host and sent
   with a descriptive User-Agent.
 - The build fails (and nothing is committed) if schema validation fails (`scripts/validate.js`).
+
+See `docs/TESTING.md` for what is covered, what has been verified by hand, and what hasn't been tested yet.
 
 ## Deploying on Cloudflare Pages
 
