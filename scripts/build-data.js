@@ -11,7 +11,7 @@ import { REG_IDS, REGULATIONS } from './lib/regs.js';
 import { fetchLimitlessOnline, RECENT_BEFORE } from './sources/limitless.js';
 import { fetchOfficialEvents } from './sources/official.js';
 import { fetchLadder } from './sources/ladder.js';
-import { fetchRanked } from './sources/ranked.js';
+import { fetchRanked, renormalizeRanked } from './sources/ranked.js';
 import { buildDex } from './dex.js';
 import { resolveSprites } from './sprites.js';
 import { normalizeSpecies } from '../public/js/lib/names.js';
@@ -256,6 +256,7 @@ async function main() {
         for (const mon of row.mons) mon.species = normalizeSpecies(mon.species, dex);
       }
     }
+    renormalizeRanked(rankedByReg[reg], dex);
   }
 
   // 7) Write teams-<REG>.json + ladder-<REG>.json per regulation, and manifest.json.

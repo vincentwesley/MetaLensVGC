@@ -187,7 +187,7 @@ export default {
         tdRank.textContent = String(i + 1);
         const tdSprite = document.createElement('td');
         tdSprite.className = 'col-sprite';
-        tdSprite.appendChild(ctx.sprite(r.key, { size: 36, animated: state.anim }));
+        tdSprite.appendChild(drawerButton(ctx, r.key, state.anim));
         const tdName = document.createElement('td');
         tdName.className = 'col-name';
         tdName.textContent = r.key;
@@ -295,7 +295,7 @@ export default {
         for (const [text, cls] of cells) {
           const td = tr.insertCell();
           td.className = cls;
-          if (text == null) td.appendChild(ctx.sprite(key, { size: 36, animated: view.state.anim }));
+          if (text == null) td.appendChild(drawerButton(ctx, key, view.state.anim));
           else td.textContent = text;
         }
       }
@@ -311,3 +311,16 @@ export default {
     };
   },
 };
+
+// Sprite doubles as the deep-dive entry point; the rest of the row adds a filter chip.
+function drawerButton(ctx, key, anim) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'sprite-btn';
+  btn.title = `Details: ${key}`;
+  btn.setAttribute('aria-label', `Open details for ${key}`);
+  btn.appendChild(ctx.sprite(key, { size: 36, animated: anim }));
+  btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.openDrawer(key); });
+  btn.addEventListener('keydown', (e) => e.stopPropagation());
+  return btn;
+}

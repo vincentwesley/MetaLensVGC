@@ -64,3 +64,12 @@ test('parseRankingTable: extracts rank-ordered names from the static SEO table',
 test('parseRankingTable: returns null when the table is missing (e.g. page layout changed)', () => {
   assert.equal(parseRankingTable('<html><body>nothing here</body></html>'), null);
 });
+
+test('renormalizeRanked re-keys species through the dex spelling', async () => {
+  const { renormalizeRanked } = await import('../scripts/sources/ranked.js');
+  const dex = { species: { 'Farfetch’d': { id: 'farfetchd' }, Rillaboom: { id: 'rillaboom' } } };
+  const file = { seasons: [{ ranking: ["Farfetch'd"], mons: { "Farfetch'd": { teammates: ['Rillaboom'] } } }] };
+  renormalizeRanked(file, dex);
+  assert.deepEqual(file.seasons[0].ranking, ['Farfetch’d']);
+  assert.ok(file.seasons[0].mons['Farfetch’d']);
+});

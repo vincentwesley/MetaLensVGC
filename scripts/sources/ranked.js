@@ -187,3 +187,13 @@ export async function fetchRanked(reg, dex, opts = {}) {
   }
   return { reg, source: 'championsbattledata', format: FORMAT, attribution: ATTRIBUTION, seasons };
 }
+
+/** Re-key a ranked file's species through the built dex (fetch runs before the dex exists). Mutates and returns it. */
+export function renormalizeRanked(file, dex) {
+  const norm = (n) => normalizeSpecies(n, dex);
+  for (const s of file.seasons) {
+    if (s.ranking) s.ranking = s.ranking.map(norm);
+    s.mons = Object.fromEntries(Object.entries(s.mons).map(([k, m]) => [norm(k), { ...m, teammates: m.teammates.map(norm) }]));
+  }
+  return file;
+}
