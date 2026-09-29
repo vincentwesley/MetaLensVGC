@@ -1,7 +1,7 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
 // Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
-import { usage, kpis, changeVsPrev, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
+import { usage, kpis, changeVsPrev, changeText, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
 import { rankedSource, clickHint } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
 
@@ -78,12 +78,12 @@ function monCard(ctx, key, pct, winPct, change, label, anim, prevN, minN) {
     const lowSample = !prevN || prevN < Math.max(minN || 0, 50);
     if (isNew) {
       d.className = 'kpi__delta kpi__delta--up';
-      d.textContent = `NEW ${label}`;
+      d.textContent = changeText(change);
       d.setAttribute('data-tip', `Not used (or under min n) in ${String(label).replace(/^vs /, '')}`);
     } else {
       d.className = `kpi__delta ${deltaPts > 0 ? 'kpi__delta--up' : deltaPts < 0 ? 'kpi__delta--down' : ''}${lowSample ? ' kpi__delta--low' : ''}`;
-      const nText = prevN ? `, prev n=${ctx.fmt.n(prevN)}` : '';
-      d.textContent = `${deltaPts > 0 ? '▲' : deltaPts < 0 ? '▼' : '—'} ${deltaPts > 0 ? '+' : ''}${deltaPts.toFixed(1)}pt ${label}${nText}${lowSample ? ' (low sample)' : ''}`;
+      d.textContent = changeText(change);
+      d.setAttribute('data-tip', `Change in usage share ${label}, in percentage points`);
     }
     card.appendChild(d);
   }
@@ -99,8 +99,12 @@ function kpiTile(label, value, opts = {}) {
   if (opts.tip) { l.setAttribute('data-tip', opts.tip); l.tabIndex = 0; }
   const v = document.createElement('div');
   v.className = 'kpi__value';
-  if (opts.sprite) { v.appendChild(opts.sprite); v.appendChild(document.createTextNode(' ' + value)); }
-  else v.textContent = value;
+  if (opts.sprite) {
+    // Long names (Salamence-Mega) may only break after a hyphen, never mid-word.
+    const t = document.createElement('span');
+    String(value).split(/(?<=-)/).forEach((part, i) => { if (i) t.appendChild(document.createElement('wbr')); t.appendChild(document.createTextNode(part)); });
+    v.append(opts.sprite, t);
+  } else v.textContent = value;
   el.append(l, v);
   return el;
 }
@@ -124,6 +128,8 @@ export default {
     hero.className = 'snapshot__hero';
     const kpiRow = document.createElement('div');
     kpiRow.className = 'snapshot__kpis';
+    const changeNote = document.createElement('p');
+    changeNote.className = 'snapshot__change';
     body.append(hero, kpiRow);
     card.append(head, body);
     el.appendChild(card);
@@ -137,6 +143,7 @@ export default {
       if (!view) return;
       const state = view.state;
       const anim = !!state.anim;
+      changeNote.remove();
 
       if (state.source === 'ranked') {
         const season = rankedSeason(view.ranked, state.from, state.to);
@@ -214,6 +221,11 @@ export default {
         const prevRows = view.prev && view.prev.length ? new Map(usage(view.prev).map((r) => [r.key, r])) : null;
         const label = deltaLabel(view);
         const prevN = view.prev ? view.prev.length : 0;
+        if (label) {
+          const low = prevN < Math.max(state.minN || 0, 50);
+          changeNote.textContent = `Change ${label} (prev n=${ctx.fmt.n(prevN)} teams)${low ? ' · low sample' : ''}`;
+          hero.after(changeNote);
+        }
         top.forEach((r) => {
           const change = prevRows ? changeVsPrev(r.pct, prevRows.get(r.key), state.minN) : null;
           hero.appendChild(monCard(ctx, r.key, r.pct, r.winPct, change, label || '', anim, prevN, state.minN));

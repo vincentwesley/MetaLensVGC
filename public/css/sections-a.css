@@ -53,6 +53,8 @@ main.grid .section[data-section="quadrant"] {
 }
 [data-skin="retro"] .snapshot__mon-stats { font-family: var(--font-body); font-size: 22px; }
 .snapshot__mon-win { color: var(--muted); font-size: .8em; }
+.snapshot__mon-stats { flex-wrap: wrap; justify-content: center; }
+.snapshot__mon-stats > span { white-space: nowrap; }
 .snapshot__mon .kpi__delta {
   font-size: 11px; font-family: var(--font-label); white-space: normal; line-height: 1.3;
 }
@@ -140,8 +142,11 @@ main.grid .section[data-section="quadrant"] {
 .sprite-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* long names (e.g. "Rillaboom", Mega forms) must wrap inside KPI tiles at 390px */
 .snapshot__kpis .kpi { min-width: 0; }
-.snapshot__kpis .kpi__value { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+.snapshot__kpis .kpi__value { min-width: 0; }
+.snapshot__kpis .kpi__value > span { min-width: 0; overflow-wrap: normal; word-break: normal; }  /* breaks only at <wbr> after '-' */
 .snapshot__kpis .kpi__value img.sprite { flex-shrink: 0; }
+@media (max-width: 500px) { .snapshot__kpis .kpi__value { font-size: .85em; } }
+.snapshot__change { margin: calc(-1 * var(--space-2)) 0 var(--space-3); color: var(--muted); font-size: var(--fs-small); }
 
 /* ---------- item usage ---------- */
 .items-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-4); }
