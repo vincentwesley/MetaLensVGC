@@ -532,3 +532,50 @@ button[data-tip] { cursor: pointer; }
 
 /* "what this shows · click: …" line under a chart (ui/meta.js clickHint) */
 .click-hint { margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--fs-small); font-family: var(--font-body); line-height: 1.4; }
+
+/* ---------- credits: pixel fireflies + sparkles + name glow (pure CSS) ---------- */
+.creator__fx { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.creator__art, .creator__text { position: relative; z-index: 1; }
+.creator__fx i {
+  position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s);
+  background: #e6ffb0; image-rendering: pixelated;
+  box-shadow: 0 0 4px 1px #b8f06a, 0 0 12px 4px color-mix(in srgb, #5fd07a 70%, transparent), 0 0 26px 8px color-mix(in srgb, #3fae6a 35%, transparent);
+  animation: ff-drift var(--d) ease-in-out var(--delay) infinite alternate, ff-blink var(--b) steps(6, end) var(--delay) infinite;
+}
+@keyframes ff-drift {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(calc(var(--dx) * .6), calc(var(--dy) * -.4)); }
+  100% { transform: translate(var(--dx), var(--dy)); }
+}
+@keyframes ff-blink { 0%, 100% { opacity: .15; } 35% { opacity: 1; } 60% { opacity: .75; } 80% { opacity: .3; } }
+/* 4-point pixel star, like the sparkles on vwesley.dev */
+.creator__fx .spark {
+  position: absolute; left: var(--x); top: var(--y); width: 15px; height: 15px; color: #8ff0a4;
+  background:
+    linear-gradient(currentColor, currentColor) 50% 50% / 3px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) 50% 50% / 100% 3px no-repeat;
+  filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 10px color-mix(in srgb, #3fae6a 60%, transparent));
+  animation: ff-twinkle var(--t) steps(8, end) var(--delay, 0s) infinite;
+}
+.creator__fx .spark--sm { width: 9px; height: 9px; }
+@keyframes ff-twinkle { 0%, 100% { opacity: 0; transform: scale(.4); } 45% { opacity: 1; transform: scale(1); } 60% { opacity: .9; transform: scale(.85); } }
+.creator__name span {
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 22px color-mix(in srgb, #3fae6a 55%, transparent);
+  animation: name-glow 3.6s ease-in-out infinite;
+}
+@keyframes name-glow {
+  0%, 100% { text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 16px color-mix(in srgb, #3fae6a 40%, transparent); }
+  50% { text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 85%, transparent), 0 0 30px color-mix(in srgb, #3fae6a 70%, transparent); }
+}
+/* light themes: deeper green pixels so they read on a pale card */
+:root[data-theme="light"] .creator__fx i { background: #5fbf4a; box-shadow: 0 0 3px 1px #7fd65f, 0 0 10px 3px color-mix(in srgb, #3fae6a 45%, transparent); }
+:root[data-theme="light"] .creator__fx .spark { color: #2f9a55; }
+@media (prefers-reduced-motion: reduce) {
+  .creator__fx i, .creator__fx .spark, .creator__name span { animation: none !important; }
+  .creator__fx i { opacity: .6; }
+  .creator__fx .spark { opacity: .8; }
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] .creator__fx i { background: #5fbf4a; box-shadow: 0 0 3px 1px #7fd65f, 0 0 10px 3px color-mix(in srgb, #3fae6a 45%, transparent); }
+  :root[data-theme="auto"] .creator__fx .spark { color: #2f9a55; }
+}
