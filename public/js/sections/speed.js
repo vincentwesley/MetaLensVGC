@@ -89,7 +89,7 @@ function speciesList(view, dex, season) {
 function buildRows(view, dex) {
   const season = rankedSeason(view.ranked, view.state.from, view.state.to);
   const tiers = speciesList(view, dex, season);
-  const merged = ladderMerge(view.ladder, view.state.from, view.state.to);
+  const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
   const rows = [];
   for (const t of tiers) {
     const bs = dex.species[t.key]?.bs;

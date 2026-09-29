@@ -321,3 +321,52 @@ test('rankedMon / rankedMegaKey / rankedSpeed', () => {
   assert.equal(s.spe, calcStat(120, 32, 5, 'Timid'));
   assert.equal(rankedSpeed({ spreads: {}, natures: {} }, bs), null);
 });
+
+// --- items ---
+import { itemsBySpecies, itemUsage, ladderItemUsage, isMegaStone, ladderMerge } from '../public/js/lib/aggregate.js';
+import { displayName } from '../public/js/lib/names.js';
+
+test('itemsBySpecies: per-key slot counts and shares match a brute-force count', () => {
+  const by = itemsBySpecies(teams);
+  assert.equal(itemsBySpecies(teams), by, 'memoized per array');
+  const key = usage(teams)[0].key;
+  const slots = teams.flatMap((t) => t.mons.filter((m) => m.k === key));
+  const row = by.get(key);
+  assert.equal(row.n, slots.length);
+  const top = row.items[0];
+  assert.equal(top.n, slots.filter((m) => m.item === top.name).length);
+  assert.ok(Math.abs(top.pct - top.n / row.n) < 1e-12);
+  for (let i = 1; i < row.items.length; i++) assert.ok(row.items[i - 1].n >= row.items[i].n);
+});
+
+test('itemUsage: team counts, mega-stone toggle, holders', () => {
+  const rows = itemUsage(teams, dex);
+  const top = rows[0];
+  assert.equal(top.n, teams.filter((t) => t.mons.some((m) => m.item === top.name)).length);
+  assert.ok(Math.abs(top.pct - top.n / teams.length) < 1e-12);
+  assert.ok(top.slots >= top.n);
+  assert.equal(top.holders.reduce((a, h) => a + h.n, 0) <= top.slots, true);
+  const stones = rows.filter((r) => isMegaStone(r.name, dex));
+  assert.ok(stones.length > 0, 'fixture has a Mega Stone');
+  const noStones = itemUsage(teams, dex, { megaStones: false });
+  assert.ok(noStones.every((r) => !isMegaStone(r.name, dex)));
+  assert.equal(noStones.length, rows.length - stones.length);
+});
+
+test('ladderMerge with dex maps Smogon ids to display names; ladderItemUsage weights by usage', () => {
+  const d = { items: { 'Life Orb': {}, 'Sitrus Berry': {} }, moves: { 'Fake Out': {} }, species: { A: { abilities: ['Intimidate'] } } };
+  const ladder = { cutoff: 1760, months: [{ month: '2026-08', battles: 10, url: 'u', mons: {
+    A: { usage: 0.6, raw: 6, items: { lifeorb: 0.5, sitrusberry: 0.5 }, abilities: { intimidate: 1 }, moves: { fakeout: 1, '': 0.1 } },
+    B: { usage: 0.2, raw: 2, items: { lifeorb: 1, nothing: 0 } },
+  } }] };
+  const m = ladderMerge(ladder, '', '', d);
+  const a = m.mons.find((x) => x.key === 'A');
+  assert.deepEqual(a.items.map((i) => i.name).sort(), ['Life Orb', 'Sitrus Berry']);
+  assert.equal(a.abilities[0].name, 'Intimidate');
+  assert.deepEqual(a.moves.map((x) => x.name), ['Fake Out']);
+  const iu = ladderItemUsage(m, d);
+  assert.equal(iu[0].name, 'Life Orb');
+  assert.ok(Math.abs(iu[0].pct - (0.6 * 0.5 + 0.2 * 1) / 0.8) < 1e-9);
+  assert.equal(displayName('nothing', d), 'No item');
+  assert.equal(displayName('unknownthing', d), 'unknownthing');
+});

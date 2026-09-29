@@ -309,7 +309,7 @@ export default {
       results.appendChild(wCard);
 
       // --- top meta threats with no answer ---
-      const merged = ladderMerge(view.ladder, view.state.from, view.state.to);
+      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       const sheetTiers = speedTiers(view.teams, dex, 99999);
       const sheetTiersByKey = new Map(sheetTiers.map((r) => [r.key, r]));
       const mySpeeds = mons.map((m) => {

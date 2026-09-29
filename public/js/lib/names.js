@@ -115,3 +115,42 @@ export function megaKey(species, item, dex) {
   if (entry.megaOf && entry.megaOf === species) return entry.mega || null;
   return null;
 }
+
+const displayIndexCache = new WeakMap();
+const DISPLAY_SPECIAL = { nothing: 'No item', noability: 'No ability' };
+/**
+ * Display name for a Showdown id (items, moves, abilities), e.g. "lifeorb" -> "Life Orb".
+ * Smogon ladder stats key their item/ability/move tables by id; this resolves them
+ * through the names already in `dex` (items, moves, every species' abilities).
+ * Unknown ids come back unchanged; already-display names pass through.
+ */
+export function displayName(id, dex) {
+  if (id == null || id === '') return id;
+  if (DISPLAY_SPECIAL[id]) return DISPLAY_SPECIAL[id];
+  if (!dex) return id;
+  let idx = displayIndexCache.get(dex);
+  if (!idx) {
+    idx = new Map();
+    for (const name in dex.items || {}) idx.set(toID(name), name);
+    for (const name in dex.moves || {}) idx.set(toID(name), name);
+    for (const sp of Object.values(dex.species || {})) for (const a of sp.abilities || []) idx.set(toID(a), a);
+    displayIndexCache.set(dex, idx);
+  }
+  return idx.get(toID(id)) || id;
+}
+
+// Placeholder "items" some team sheets carry instead of leaving the slot empty.
+const NO_ITEM_IDS = new Set(['', 'none', 'noitem', 'nothing', 'helditem', 'item']);
+/**
+ * Canonical display name for a held item, move or ability from a hand-typed team
+ * sheet: fixes case/punctuation ("focus sash", "U-Turn", "King’s Shield") through
+ * `dex`, maps placeholders ("None", "No Item", "Held Item:", "-") to null, and
+ * leaves unknown spellings as typed (trimmed).
+ */
+export function normalizeTerm(raw, dex, kind = 'item') {
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  const id = toID(s);
+  if (id === '' || (kind === 'item' && NO_ITEM_IDS.has(id))) return null;
+  return displayName(s, dex);
+}
