@@ -495,3 +495,37 @@ button[data-tip] { cursor: pointer; }
 .toast--error { border-color: var(--status-critical); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* ---------- creator credits ---------- */
+.creator__body {
+  display: grid; grid-template-columns: minmax(160px, 260px) 1fr; gap: var(--space-4); align-items: center;
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 90% at 18% 55%, color-mix(in srgb, #3fae6a 28%, transparent), transparent 70%),
+    radial-gradient(circle, color-mix(in srgb, #3fae6a 22%, transparent) 1.2px, transparent 1.6px) 0 0 / 14px 14px;
+}
+.creator__art img {
+  display: block; width: 100%; height: auto; max-height: 340px; object-fit: contain; object-position: bottom;
+  /* the drawing is cut at the bottom: fade it out like a vignette */
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  filter: drop-shadow(0 0 18px color-mix(in srgb, #3fae6a 45%, transparent));
+}
+.creator__eyebrow { margin: 0; font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.creator__name { margin: 2px 0 var(--space-2); font-family: var(--font-head); font-size: clamp(1.25rem, 3vw, 1.75rem); color: var(--accent); }
+.creator__blurb { margin: 0 0 var(--space-3); color: var(--ink-2); max-width: 52ch; }
+.creator__links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.creator__links a {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 36px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2);
+  color: var(--ink); text-decoration: none; font-family: var(--font-label); font-size: var(--fs-small);
+}
+.creator__links a:hover { border-color: var(--accent); color: var(--accent); }
+.creator__links svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.creator__links svg .fill { fill: currentColor; stroke: none; }
+.site-footer a { color: inherit; }
+@media (max-width: 600px) {
+  .creator__body { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .creator__art { width: min(220px, 60vw); }
+  .creator__links { justify-content: center; }
+}

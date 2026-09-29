@@ -102,7 +102,7 @@ export default {
     body.appendChild(refCard);
 
     // --- credits ---
-    const { card: credCard, body: credBody } = sectionCard('Credits');
+    const { card: credCard, body: credBody } = sectionCard('Data credits');
     credBody.appendChild(elm('p', null, 'Sprites from Pokémon Showdown (play.pokemonshowdown.com).'));
     credBody.appendChild(elm('p', null, 'Data from Limitless (play.limitlesstcg.com), Limitless VGC (limitlessvgc.com) and Smogon (smogon.com).'));
     const rankedCredit = elm('p');
