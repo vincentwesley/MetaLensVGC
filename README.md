@@ -176,25 +176,48 @@ Useful pipeline flags: `node scripts/build-data.js --reg M-C` (one regulation) a
 
 ## How the data refresh works
 
-`.github/workflows/refresh-data.yml` runs every Monday at 06:00 UTC, and you can also start it by hand
-from the Actions tab. It:
+`.github/workflows/refresh-data.yml` runs every **Monday at 06:00 UTC**, and you can also start it by hand:
+**Actions → Refresh data → Run workflow**.
 
-1. runs `npm ci`, `npm run data` and `npm test`;
-2. commits `public/data/` if anything changed and pushes it, which makes Cloudflare Pages redeploy automatically.
-   The run can take a while, so before pushing it rebases the data commit onto the branch's latest tip (retrying if
-   the branch moves again). Commits pushed to the branch during a run no longer make it fail. Runs never overlap.
+**What it does:**
+1. Checks out the branch, restores the `data-raw/` HTTP cache, runs `npm ci`, `npm run data` and `npm test`.
+2. Commits and pushes `public/data/` (if anything changed), which triggers a Cloudflare Pages redeploy.
+   Before pushing, the data commit rebases onto the branch's latest tip (with retries). Other commits pushed
+   during the run don't cause failures; runs never overlap.
 
-The pipeline is **incremental**:
+The pipeline is **incremental**: it reuses every completed tournament and finished ranked season already in the
+committed `public/data`, refetches online events from the last 7 days (they may have been captured mid-event),
+skips events under 48 hours old, and rate-limits requests per host with a descriptive User-Agent.
 
-- It reads the committed `public/data/teams-*.json` and reuses every completed tournament already
-  in them.
-- It refetches online events from the last 7 days, because they may have been captured mid-event.
-- It skips events that are less than 48 hours old.
-- Raw responses are cached in `data-raw/` (gitignored). Requests are rate-limited per host and sent
-  with a descriptive User-Agent.
-- The build fails (and nothing is committed) if schema validation fails (`scripts/validate.js`).
+**Failure handling:**
+- If any step fails, a github-script step opens an issue titled "**Weekly data refresh failed**" (or comments
+  on the open one) with the run link, trigger name, failing step, and the last 40 log lines of that step.
+  Nothing is committed on failure, so the site keeps serving the last good data.
+- A hang fails the build step at 300 min, allowing the alert to still run (a job-level timeout would cancel it).
+- On the next successful run, the issue is commented "Refresh succeeded in <run>" and closed.
+- The repo owner is notified of new issues by default. To ensure notifications reach you, go to **GitHub →
+  Settings → Notifications**, enable "Issues" for email and/or GitHub Mobile push, and "Watch" the repo
+  (at minimum "Issues"). Scheduled workflows are disabled after 60 days without activity; the weekly data
+  commit counts as activity, but if the site goes quiet, re-enable it in the Actions tab.
 
-See `docs/TESTING.md` for what is covered, what has been verified by hand, and what hasn't been tested yet.
+**Data staleness:**
+- When `manifest.generated` is more than 10 days old, a notice under the page header says "**Data last refreshed
+  <date> — the weekly update may have failed; figures may be out of date.**" (`lib/stale.js`; an e2e check
+  verifies this notice).
+
+**Pipeline robustness:**
+- A new in-game ranked season that starts after the last known regulation (`scripts/lib/regs.js`) is skipped with
+  a warning instead of failing the run. When a new regulation is announced, add it to `scripts/lib/regs.js` (and
+  update `SUFFIX` in `scripts/sources/ladder.js`, and `manifest.current` in `scripts/build-data.js`).
+- Smogon's monthly stats (e.g., 2026-09) land in early October; the pipeline automatically tries each month
+  up to the current one and skips 404s. Schema validation failures still fail the run.
+
+**Performance:**
+- From an empty `data-raw/` cache on GitHub's runner: ~47 min total (official events ~21 min, Limitless online
+  ~15 min, ranked M-C ~5 min, sprite checks ~6 min). No host blocked or rate-limited the runner.
+- The cache (~5 MB) is saved only after a successful run.
+
+See `docs/TESTING.md` for test coverage and what has been verified.
 
 ## Deploying on Cloudflare Pages
 
