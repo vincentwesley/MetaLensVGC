@@ -228,6 +228,7 @@ export function mountFilterbar(root, ctx, manifest) {
       if (state.place !== 'all') parts.push(PLACEMENTS.find(([v]) => v === state.place)?.[1] || state.place);
     }
     if (state.from || state.to) parts.push(`${state.from || '…'} → ${state.to || '…'}`);
+    if (state.chips.length) parts.push(`${state.chips.length} filter${state.chips.length === 1 ? '' : 's'} active`);
     summary.textContent = parts.join(' · ');
   }
   paintSummary(ctx.store.get());

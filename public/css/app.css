@@ -229,8 +229,11 @@ button, input, select { font-family: inherit; color: inherit; }
 .toggle input:focus-visible + .toggle__track { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 
 /* ---------- filter bar ---------- */
+/* Filter bar + active-filter chips stick together under the header, so the
+   filters in effect (and Clear all) stay visible while scrolling. */
+.stickybar { position: sticky; top: var(--header-h); z-index: 250; }
 .filterbar {
-  position: sticky; top: var(--header-h); z-index: 250;
+  position: relative;
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
   background: var(--surface-2);
@@ -280,7 +283,8 @@ button, input, select { font-family: inherit; color: inherit; }
 :root[data-filters-collapsed] .filterbar__toggle-btn { margin-left: auto; }
 
 @media (max-width: 700px) {
-  .filterbar { position: static; }
+  /* expanded filters are tall on phones: only stick while collapsed */
+  :root:not([data-filters-collapsed]) .stickybar { position: static; }
   :root:not([data-filters-collapsed]) .filterbar__body { display: flex; flex-wrap: wrap; gap: var(--space-3); width: 100%; }
   .filterbar__sample { flex-basis: 100%; margin-left: 0; order: 10; white-space: normal; }
   :root:not([data-filters-collapsed]) .filterbar__toggle-btn { order: -1; margin-left: auto; }
@@ -291,16 +295,25 @@ button, input, select { font-family: inherit; color: inherit; }
   .filterbar input[type="date"] { flex: 1 1 120px; min-width: 0; }
 }
 
-/* ---------- chips ---------- */
+/* ---------- chips (active filters) ---------- */
 .chips {
   display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;
   padding: var(--space-2) var(--space-4);
-  background: var(--surface-1);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface-1));
   border-bottom: 1px solid var(--border);
-  min-height: 40px;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .chips:empty { display: none; }
+.chips__title {
+  font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase; color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 6px; margin-right: var(--space-1);
+}
+.chips__count {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--surface-1); font-weight: 700;
+}
 .chips__note { flex-basis: 100%; color: var(--muted); font-size: var(--fs-small); }
+@media (max-width: 700px) { .chips__note { display: none; } .chips { padding-block: var(--space-1); } }
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--surface-2); border: 2px solid var(--frame); border-radius: 12px;
@@ -318,9 +331,12 @@ button, input, select { font-family: inherit; color: inherit; }
 }
 .chip__x:hover { background: var(--status-critical); color: #fff; }
 .chips__clear {
-  border: 0; background: transparent; color: var(--accent); cursor: pointer; font-family: var(--font-label);
-  font-size: var(--fs-small); text-decoration: underline; padding: 4px;
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-1); color: var(--ink); border: 1px solid var(--accent); border-radius: var(--radius);
+  cursor: pointer; font-family: var(--font-label); font-size: var(--fs-small); padding: 4px 10px;
 }
+.chips__clear:hover { background: var(--accent); color: var(--surface-1); }
+.chips__clear:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 @keyframes chip-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .chip { animation: none; } }
 
