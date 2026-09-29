@@ -2,7 +2,7 @@
 // risers & fallers, and a regulation-shift table. All three need per-team
 // dates, which the ladder payload doesn't carry, so the whole section is
 // tournament-only (same "switch Source" rule as archetypes.js).
-import { usage, weekly, movers } from '../lib/aggregate.js';
+import { usage, weekly, movers, changeVsPrev } from '../lib/aggregate.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
@@ -228,7 +228,7 @@ export default {
       // when that n fell short of minN there (that's exactly the "low
       // sample" case worth flagging, not something to hide).
       const currNMap = new Map(usage(view.monTeams).map((r) => [r.key, r.n]));
-      const prevNMap = new Map(usage(prev).map((r) => [r.key, r.n]));
+      const prevRowMap = new Map(usage(prev).map((r) => [r.key, r]));
       const currTop = usage(view.monTeams).filter((r) => r.n >= minN).slice(0, 20);
       // Rank *every* previous-period species that cleared minN, not just its
       // top 20 — a mon can have existed last regulation with a real sample
@@ -255,7 +255,7 @@ export default {
         const tdSprite = document.createElement('td'); tdSprite.appendChild(ctx.sprite(r.key, { size: 22 }));
         const tdName = document.createElement('td'); tdName.textContent = r.key;
         const nNow = currNMap.get(r.key) || 0;
-        const nPrev = prevNMap.get(r.key) || 0;
+        const nPrev = prevRowMap.get(r.key)?.n || 0;
         const tdNNow = document.createElement('td'); tdNNow.className = 'num';
         tdNNow.textContent = ctx.fmt.n(nNow) + (nNow < minN ? ' ⚠' : '');
         if (nNow < minN) tdNNow.title = `Below the minimum sample (n ≥ ${minN})`;
@@ -269,7 +269,7 @@ export default {
         // "NEW" only when the previous period's sample was too small to rank
         // at all (nPrev < minN) — a mon that existed with a real sample but
         // outside the previous top 20 gets its real (possibly >20) rank below.
-        else if (pRank == null || nPrev < minN || nPrev === 0) { tdChange.textContent = 'NEW'; tdChange.classList.add('sb-stat--up'); }
+        else if (pRank == null || changeVsPrev(r.pct, prevRowMap.get(r.key), minN).isNew) { tdChange.textContent = 'NEW'; tdChange.classList.add('sb-stat--up'); tdChange.dataset.tip = `Not used (or under min n) in ${prev[0].reg === view.reg ? 'the prior window' : prev[0].reg}`; }
         else {
           const d = pRank - r.rank;
           tdChange.textContent = d === 0 ? '—' : (d > 0 ? `▲ ${d}` : `▼ ${Math.abs(d)}`);
