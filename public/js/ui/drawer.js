@@ -24,8 +24,16 @@ export function mountDrawer(el) {
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
+  // Back (browser button, Android back gesture) closes the drawer instead of
+  // leaving the page: opening adds a history entry with the same URL.
+  const isOpen = () => el.classList.contains('is-open');
+  window.addEventListener('popstate', () => { if (isOpen() && !history.state?.drawer) close({ fromHistory: true }); });
+
   function open(key) {
-    lastFocused = document.activeElement;
+    if (!isOpen()) {
+      lastFocused = document.activeElement;
+      history.pushState({ drawer: true }, '', location.href);
+    }
     el.classList.add('is-open');
     el.setAttribute('aria-hidden', 'false');
     document.addEventListener('keydown', onKeydown);
@@ -33,7 +41,11 @@ export function mountDrawer(el) {
     body.dispatchEvent(new CustomEvent('deepdive:open', { detail: { key }, bubbles: true }));
   }
 
-  function close() {
+  function close({ fromHistory = false } = {}) {
+    if (!isOpen()) return;
+    // Closed with the X / Escape / backdrop: drop the entry open() added, unless
+    // something (a chip clicked inside the drawer) has been pushed on top of it.
+    if (!fromHistory && history.state?.drawer) history.back();
     el.classList.remove('is-open');
     el.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', onKeydown);
@@ -41,8 +53,8 @@ export function mountDrawer(el) {
     body.dispatchEvent(new CustomEvent('deepdive:close', { bubbles: true }));
   }
 
-  closeBtn?.addEventListener('click', close);
-  backdrop?.addEventListener('click', close);
+  closeBtn?.addEventListener('click', () => close());
+  backdrop?.addEventListener('click', () => close());
 
   return { open, close, body };
 }
