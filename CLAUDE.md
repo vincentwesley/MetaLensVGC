@@ -48,7 +48,8 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   `speciesChipFilter(chips, dex)` applies species/mega/core/type/weak there (main filters `view.ladder` / `view.ranked`) and
   reports the rest as unsupported (shown under the chips). `archetypeMatrix(teams, matches, opponents)` counts the view's
   teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots.
-  Owner's call: all three type charts add a plain `type` chip (no weak-to / move-type variants from clicks;
+  Owner's call: both type charts add a plain `type` chip. The weakness chart shows only real multipliers
+  (share of the field at 4×/2×/½×/¼×/0×), never an averaged multiplier (the old "1.69×" chart read as a type-chart value) (no weak-to / move-type variants from clicks;
   `weak` / `movetype` chips still work from old links).
 - `paste.js`: `toPaste(team, dex) → Showdown text` (Showdown's Champions formats store SP in the `EVs:` line, e.g. `EVs: 32 Atk / 2 SpD / 32 Spe`), `parsePaste(text, dex) → Mon[]` (accepts `EVs:` and `SPs:` lines; a value above 32 means a classic EV spread, which is dropped as `sp: null`).
 - `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`,

@@ -56,3 +56,17 @@ test('item / species / archetype / core clicks: the clicked mark is 100% of its 
   assert.ok(vc.teams.every((t) => t.species.has(a) && t.species.has(b)));
   assert.ok(coUsage);
 });
+
+test('weakness chart buckets: only real multipliers (4, 2, 1, 1/2, 1/4, 0), summing to the whole field', () => {
+  const v = view({ kind: 'type', value: 'Ground' });
+  for (const r of weaknesses(v.mon, dex)) {
+    const sum = r.x4 + r.x2 + r.x1 + r.x05 + r.x025 + r.x0;
+    assert.ok(Math.abs(sum - 1) < 1e-9, `${r.type}: ${sum}`);
+    assert.ok(Math.abs(r.x4 + r.x2 - r.weak) < 1e-9);
+    assert.ok(Math.abs(r.x05 + r.x025 - r.resist) < 1e-9);
+  }
+  // With the Ground filter, Water hits every pure Ground / Ground-Steel / Ground-Rock 2x and never 1.69x.
+  const water = weaknesses(v.mon, dex).find((r) => r.type === 'Water');
+  const expect2 = slotsOf(v).filter((m) => effectiveness('Water', typesOf(m)) === 2).length / slotsOf(v).length;
+  assert.ok(Math.abs(water.x2 - expect2) < 1e-9);
+});

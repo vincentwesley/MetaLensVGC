@@ -331,13 +331,20 @@ export function weaknesses(teams, dex) {
     let weak = 0;
     let resist = 0;
     let immune = 0;
+    // Exact multipliers (type chart values only: 4, 2, 1, 1/2, 1/4, 0), as shares of the field.
+    const by = { x4: 0, x2: 0, x1: 0, x05: 0, x025: 0, x0: 0 };
     for (const { types, count } of combos) {
       const mult = effectiveness(atk, types);
       if (mult === 0) immune += count;
       else if (mult < 1) resist += count;
       else if (mult > 1) weak += count;
+      by[mult >= 4 ? 'x4' : mult >= 2 ? 'x2' : mult === 1 ? 'x1' : mult >= 0.5 ? 'x05' : mult > 0 ? 'x025' : 'x0'] += count;
     }
-    return { type: atk, weak: n ? weak / n : 0, resist: n ? resist / n : 0, immune: n ? immune / n : 0 };
+    const share = (v) => (n ? v / n : 0);
+    return {
+      type: atk, weak: share(weak), resist: share(resist), immune: share(immune),
+      x4: share(by.x4), x2: share(by.x2), x1: share(by.x1), x05: share(by.x05), x025: share(by.x025), x0: share(by.x0),
+    };
   });
 }
 
