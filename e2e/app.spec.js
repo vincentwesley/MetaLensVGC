@@ -507,3 +507,20 @@ test('stale-data notice: shown when the manifest is over 10 days old, absent whe
   await expect(page.locator('#stale-notice')).toContainText('may be out of date');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('snapshot cards show NEW (not a +pt jump) for a Pokémon absent from the previous regulation', async ({ page }) => {
+  await page.goto('/'); // default reg M-C; the M-B file loads after first paint
+  await waitForAllSections(page);
+  const cards = page.locator('[data-section="snapshot"] .snapshot__mon');
+  await expect(cards.locator('.kpi__delta').first()).toContainText('vs M-B', { timeout: 30_000 });
+  // Rillaboom: 1 team in M-B (< min n 20), 1955 in M-C.
+  const rilla = cards.filter({ hasText: 'Rillaboom' });
+  await expect(rilla).toHaveCount(1);
+  await expect(rilla.locator('.kpi__delta')).toContainText('NEW');
+  await expect(rilla.locator('.kpi__delta')).not.toContainText(/NaN|undefined|pt/);
+  await expect(rilla.locator('.kpi__delta')).toHaveAttribute('data-tip', /Not used \(or under min n\) in M-B/);
+  for (const t of await cards.allTextContents()) {
+    if (t.includes('Rillaboom')) expect(t).not.toMatch(/\+\d+(\.\d+)?pt/);
+    expect(t).not.toMatch(/NaN|undefined/);
+  }
+});

@@ -1,7 +1,7 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
 // Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
-import { usage, kpis, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
+import { usage, kpis, changeVsPrev, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
 import { rankedSource, clickHint } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
 
@@ -36,7 +36,7 @@ function deltaLabel(view) {
   return `vs prior ${days} day${days === 1 ? '' : 's'}`;
 }
 
-function monCard(ctx, key, pct, winPct, deltaPts, label, anim, prevN, minN) {
+function monCard(ctx, key, pct, winPct, change, label, anim, prevN, minN) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = 'snapshot__mon';
@@ -69,16 +69,22 @@ function monCard(ctx, key, pct, winPct, deltaPts, label, anim, prevN, minN) {
   }
   card.appendChild(stats);
 
-  if (deltaPts != null) {
+  if (change) {
     const d = document.createElement('div');
-    const sign = deltaPts > 0 ? '+' : '';
+    const { isNew, pts: deltaPts } = change;
     // Low-sample previous period: the delta is still the real number, but a
     // handful of prior teams makes it noisy, so grey it out and say why
     // rather than hide it (still real data, just a shakier comparison).
     const lowSample = !prevN || prevN < Math.max(minN || 0, 50);
-    d.className = `kpi__delta ${deltaPts > 0 ? 'kpi__delta--up' : deltaPts < 0 ? 'kpi__delta--down' : ''}${lowSample ? ' kpi__delta--low' : ''}`;
-    const nText = prevN ? `, prev n=${ctx.fmt.n(prevN)}` : '';
-    d.textContent = `${deltaPts > 0 ? '▲' : deltaPts < 0 ? '▼' : '—'} ${sign}${deltaPts.toFixed(1)}pt ${label}${nText}${lowSample ? ' (low sample)' : ''}`;
+    if (isNew) {
+      d.className = 'kpi__delta kpi__delta--up';
+      d.textContent = `NEW ${label}`;
+      d.setAttribute('data-tip', `Not used (or under min n) in ${String(label).replace(/^vs /, '')}`);
+    } else {
+      d.className = `kpi__delta ${deltaPts > 0 ? 'kpi__delta--up' : deltaPts < 0 ? 'kpi__delta--down' : ''}${lowSample ? ' kpi__delta--low' : ''}`;
+      const nText = prevN ? `, prev n=${ctx.fmt.n(prevN)}` : '';
+      d.textContent = `${deltaPts > 0 ? '▲' : deltaPts < 0 ? '▼' : '—'} ${deltaPts > 0 ? '+' : ''}${deltaPts.toFixed(1)}pt ${label}${nText}${lowSample ? ' (low sample)' : ''}`;
+    }
     card.appendChild(d);
   }
   return card;
@@ -209,12 +215,8 @@ export default {
         const label = deltaLabel(view);
         const prevN = view.prev ? view.prev.length : 0;
         top.forEach((r) => {
-          let deltaPts = null;
-          if (prevRows) {
-            const p = prevRows.get(r.key);
-            deltaPts = (r.pct - (p ? p.pct : 0)) * 100;
-          }
-          hero.appendChild(monCard(ctx, r.key, r.pct, r.winPct, deltaPts, label || '', anim, prevN, state.minN));
+          const change = prevRows ? changeVsPrev(r.pct, prevRows.get(r.key), state.minN) : null;
+          hero.appendChild(monCard(ctx, r.key, r.pct, r.winPct, change, label || '', anim, prevN, state.minN));
         });
       }
 

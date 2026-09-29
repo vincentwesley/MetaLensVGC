@@ -724,6 +724,14 @@ export function weekly(teams, keys) {
   return { weeks, totals, series };
 }
 
+// The one rule for "change vs previous period": a Pokémon with no previous row,
+// or fewer than max(minN, 1) previous teams, is NEW (no meaningful delta from ~0).
+// Otherwise pts is the usage change in percentage points. curPct/prevRow.pct are fractions.
+export function changeVsPrev(curPct, prevRow, minN = 0) {
+  if (!prevRow || !(prevRow.n >= Math.max(minN, 1))) return { isNew: true, pts: null };
+  return { isNew: false, pts: (curPct - prevRow.pct) * 100 };
+}
+
 // Compares the last two *qualifying* ISO weeks present in the data (see
 // qualifyingWeeks — a partial/small week, e.g. one still in progress, is
 // skipped so it can't masquerade as a huge riser or faller). A mover must
@@ -743,8 +751,10 @@ export function movers(teams, minN) {
   const rows = [];
   for (const key of keys) {
     const last = lastUsage.get(key) || { n: 0, pct: 0 };
-    const prev = prevUsage.get(key) || { n: 0, pct: 0 };
-    if (last.n < minN || prev.n < minN) continue;
+    const prevRow = prevUsage.get(key);
+    // NEW in the latest week (absent / under minN before) is not a riser: skipped.
+    if (last.n < minN || changeVsPrev(last.pct, prevRow, minN).isNew) continue;
+    const prev = prevRow;
     rows.push({ key, nLast: last.n, nPrev: prev.n, pctLast: last.pct, pctPrev: prev.pct, delta: last.pct - prev.pct });
   }
   const risers = rows.filter((r) => r.delta > 0).sort((a, b) => b.delta - a.delta);

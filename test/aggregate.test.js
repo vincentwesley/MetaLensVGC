@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import {
   decode, filterTeams, previousPeriod, usage, kpis, typeUsage, attackingTypes,
   weaknesses, archetypeSplit, archetypeMatrix, coUsage, cores, speciesDetail,
-  weekly, movers, speedTiers, closestTeams, toCSV, toJSONRows,
+  weekly, movers, changeVsPrev, speedTiers, closestTeams, toCSV, toJSONRows,
 } from '../public/js/lib/aggregate.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -493,4 +493,13 @@ test('metaSpeed: sheets -> in-game ranked -> ladder -> bounds (shared by Speed T
   assert.equal(bounds.spe, null);
   assert.ok(bounds.min < bounds.max);
   assert.equal(metaSpeed('Nope', {}, dex), null);
+});
+
+test('changeVsPrev: NEW when prev row absent, n=0 or n < minN; else pt delta', () => {
+  assert.deepEqual(changeVsPrev(0.5, undefined, 20), { isNew: true, pts: null });
+  assert.deepEqual(changeVsPrev(0.5, { n: 0, pct: 0 }, 0), { isNew: true, pts: null });
+  assert.deepEqual(changeVsPrev(0.5, { n: 1, pct: 0.00003 }, 20), { isNew: true, pts: null });
+  assert.equal(changeVsPrev(0.5, { n: 20, pct: 0.3 }, 20).isNew, false);
+  assert.ok(Math.abs(changeVsPrev(0.5, { n: 50, pct: 0.3 }, 20).pts - 20) < 1e-9);
+  assert.ok(Math.abs(changeVsPrev(0.1, { n: 50, pct: 0.25 }, 20).pts + 15) < 1e-9);
 });
