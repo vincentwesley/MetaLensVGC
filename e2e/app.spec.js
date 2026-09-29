@@ -487,3 +487,23 @@ test('Teammate rate uses tournament sheets when there is no ladder data (M-C) an
   await rows.first().click();
   await expect(page.locator('#chips .chip__label')).toHaveText([`Core: ${picked} + ${mate}`]);
 });
+
+test('stale-data notice: shown when the manifest is over 10 days old, absent when fresh, no overflow at 390px', async ({ page }) => {
+  const withGenerated = (iso) => page.route('**/data/manifest.json', async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ response: res, json: { ...(await res.json()), generated: iso } });
+  });
+  await withGenerated(new Date().toISOString());
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  await expect(page.locator('#stale-notice')).toBeHidden();
+
+  await page.unroute('**/data/manifest.json');
+  await withGenerated(new Date(Date.now() - 30 * 864e5).toISOString());
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  await expect(page.locator('#stale-notice')).toBeVisible();
+  await expect(page.locator('#stale-notice')).toContainText('may be out of date');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
