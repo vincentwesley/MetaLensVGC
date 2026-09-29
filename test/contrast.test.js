@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { inkOn, contrast } from '../public/js/lib/contrast.js';
+import { TYPE_COLORS } from '../public/js/lib/types.js';
 
 // Text tokens must stay readable (WCAG AA, 4.5:1) on every surface in every
 // skin/theme. Reads the colour tokens straight from app.css.
@@ -49,3 +51,38 @@ for (const skin of ['pro', 'retro']) {
     });
   }
 }
+
+// Status text (--up / --down / --warn), badges and pills, per skin x theme.
+const tokens = (skin, theme) => ({
+  ...block(`[data-skin="${skin}"]`), ...block(`:root`),
+  ...(theme === 'light' ? lightBlock(skin) : { ...block(`:root[data-theme="dark"]`), ...block(`[data-skin="${skin}"][data-theme="dark"]`) }),
+});
+for (const skin of ['pro', 'retro']) {
+  for (const theme of ['light', 'dark']) {
+    test(`contrast: ${skin} ${theme} status text, badges and pills >= 4.5:1`, () => {
+      const t = tokens(skin, theme);
+      for (const fg of ['up', 'down', 'warn']) {
+        for (const bg of ['surface-0', 'surface-1', 'surface-2']) {
+          assert.ok(t[fg], `${skin} ${theme}: missing --${fg}`);
+          assert.ok(ratio(t[fg], t[bg]) >= 4.5, `${skin} ${theme}: --${fg} ${t[fg]} on --${bg} is ${ratio(t[fg], t[bg]).toFixed(2)}:1`);
+        }
+      }
+      // .lib-badge / .lib-tier / .lib-arch: --surface-1 text on --accent, --accent-2 or --muted fills.
+      for (const fill of ['accent', 'accent-2', 'muted']) {
+        const bg = t[fill];
+        assert.ok(ratio(t['surface-1'], bg) >= 4.5, `${skin} ${theme}: --surface-1 on --${fill} is ${ratio(t['surface-1'], bg).toFixed(2)}:1`);
+      }
+      // Speed legend pills: --pill-ink-N on --pill-N.
+      for (const n of [1, 2, 3, 4]) {
+        const r = ratio(t[`pill-ink-${n}`], t[`pill-${n}`]);
+        assert.ok(r >= 4.5, `${skin} ${theme}: --pill-ink-${n} on --pill-${n} is ${r.toFixed(2)}:1`);
+      }
+    });
+  }
+}
+
+test('contrast: inkOn gives >= 4.5:1 on every type colour and diverging ramp colour', () => {
+  const div = { ...block(':root'), ...block(':root[data-theme="dark"]') };
+  const fills = [...Object.values(TYPE_COLORS), ...['div-neg-2', 'div-neg-1', 'div-mid', 'div-pos-1', 'div-pos-2'].map((k) => div[k]), '#f0efec'];
+  for (const bg of fills) assert.ok(contrast(inkOn(bg), bg) >= 4.5, `${bg}: ${contrast(inkOn(bg), bg).toFixed(2)}:1`);
+});

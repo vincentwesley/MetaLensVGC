@@ -29,6 +29,9 @@
   --seq-1:#e1f3e6; --seq-2:#bfe6cb; --seq-3:#93d3a8; --seq-4:#5fbd82; --seq-5:#379f60; --seq-6:#217d46; --seq-7:#135a31;
   /* diverging blue<->red, neutral mid overridden per theme */
   --div-neg-2:#104281; --div-neg-1:#3987e5; --div-mid:#f0efec; --div-pos-1:#e66767; --div-pos-2:#8a1f1f;
+  /* speed legend pills: fill + text, >= 4.5:1 (series colours nudged where white text needs it) */
+  --pill-1:#1a7d44; --pill-2:#2270d0; --pill-3:#d98a1a; --pill-4:#52623f;
+  --pill-ink-1:#ffffff; --pill-ink-2:#ffffff; --pill-ink-3:#0d1409; --pill-ink-4:#ffffff;
   /* status: fixed, never themed */
   --status-good:#0ca30c; --status-warning:#fab219; --status-serious:#ec835a; --status-critical:#d03b3b;
 
@@ -50,12 +53,16 @@
     --series-1:#5fd38a; --series-2:#5b9cf0; --series-3:#f0b44c; --series-4:#a98bf0;
     --series-5:#f07a92; --series-6:#3cc8c8; --series-7:#b5d65a; --series-8:#e8765c;
     --div-mid:#2a332d;
+    --pill-1:#5fd38a; --pill-2:#5b9cf0; --pill-3:#f0b44c; --pill-4:#8e9d80;
+    --pill-ink-1:#0d1409; --pill-ink-2:#0d1409; --pill-ink-3:#0d1409; --pill-ink-4:#0d1409;
   }
 }
 :root[data-theme="dark"] {
   --series-1:#5fd38a; --series-2:#5b9cf0; --series-3:#f0b44c; --series-4:#a98bf0;
   --series-5:#f07a92; --series-6:#3cc8c8; --series-7:#b5d65a; --series-8:#e8765c;
   --div-mid:#2a332d;
+  --pill-1:#5fd38a; --pill-2:#5b9cf0; --pill-3:#f0b44c; --pill-4:#8e9d80;
+  --pill-ink-1:#0d1409; --pill-ink-2:#0d1409; --pill-ink-3:#0d1409; --pill-ink-4:#0d1409;
 }
 
 /* ---------- skin: retro ---------- */
@@ -84,6 +91,7 @@
   --accent: #2d6a2f;   /* forest green */
   --accent-2: #1d5e4d; /* deep teal-green */
   --fx-1: #3f8f2a; --fx-2: #b8683f; --fx-3: #6f5fb3;
+  --up: #126812; --down: #a82424; --warn: #7a4e00; /* text on the surfaces, >= 4.5:1 (test/contrast.test.js) */
 }
 [data-skin="retro"][data-theme="dark"] {
   --surface-0: #0d110e; --surface-1: #131913; --surface-2: #1a221b;
@@ -94,6 +102,7 @@
   --accent: #a6d65e;   /* lime */
   --accent-2: #7fd6a8; /* mint */
   --fx-1: #7fd34a; --fx-2: #e9a07f; --fx-3: #a996e0;
+  --up: #4bc94b; --down: #ef7070; --warn: #fab219;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -105,6 +114,7 @@
     --tooltip-bg: #1a221b;
     --accent: #a6d65e; --accent-2: #7fd6a8;
     --fx-1: #7fd34a; --fx-2: #e9a07f; --fx-3: #a996e0;
+    --up: #4bc94b; --down: #ef7070; --warn: #fab219;
     color-scheme: dark;
   }
 }
@@ -122,6 +132,7 @@
   --accent: #2f6a17;   /* forest green (vwesley.dev light accent) */
   --accent-2: #14673a; /* mint-forest (links, focus) */
   --fx-1: #35a52a; --fx-2: #c7704a; --fx-3: #7d68c4; /* background pixel field */
+  --up: #167e16; --down: #ce2c2c; --warn: #996100;
 }
 [data-skin="pro"] {
   --surface-0: #f3f7ec; --surface-1: #f9fbf5; --surface-2: #ffffff;
@@ -137,6 +148,7 @@
   --tooltip-bg: #1a2015;
   --accent: #8fd15a; --accent-2: #4fe0a0;
   --fx-1: #6fe23c; --fx-2: #e9a07f; --fx-3: #a996e0;
+  --up: #4bc94b; --down: #ef7070; --warn: #fab219;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -147,6 +159,7 @@
     --tooltip-bg: #1a2015;
     --accent: #8fd15a; --accent-2: #4fe0a0;
     --fx-1: #6fe23c; --fx-2: #e9a07f; --fx-3: #a996e0;
+    --up: #4bc94b; --down: #ef7070; --warn: #fab219;
     color-scheme: dark;
   }
 }
@@ -423,8 +436,8 @@ main.grid .section.span-4 { grid-column: span 4; }
 .kpi__value { font-family: var(--font-head); font-size: 28px; color: var(--ink); font-variant-numeric: tabular-nums; }
 [data-skin="retro"] .kpi__value { font-family: var(--font-body); font-size: 34px; }
 .kpi__delta { font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-.kpi__delta--up { color: var(--status-good); }
-.kpi__delta--down { color: var(--status-critical); }
+.kpi__delta--up { color: var(--up); }
+.kpi__delta--down { color: var(--down); }
 
 /* ---------- table ---------- */
 .table-wrap { overflow-x: auto; max-width: 100%; }
@@ -442,7 +455,7 @@ table.data-table tbody tr:hover { background: var(--surface-2); cursor: pointer;
 /* ---------- pill / chip (static, for legends etc.) ---------- */
 .pill {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px;
-  font-family: var(--font-label); font-size: var(--fs-small); color: #fff;
+  font-family: var(--font-label); font-size: var(--fs-small); color: var(--surface-1);
 }
 [data-skin="pro"] .pill { border-radius: 3px; }
 
@@ -555,6 +568,7 @@ button[data-tip] { cursor: pointer; }
   position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s);
   background: #e6ffb0; image-rendering: pixelated;
   box-shadow: 0 0 4px 1px #b8f06a, 0 0 12px 4px color-mix(in srgb, #5fd07a 70%, transparent), 0 0 26px 8px color-mix(in srgb, #3fae6a 35%, transparent);
+  will-change: transform, opacity;
   animation: ff-drift var(--d) ease-in-out var(--delay) infinite alternate, ff-blink var(--b) steps(6, end) var(--delay) infinite;
 }
 @keyframes ff-drift {
@@ -574,19 +588,27 @@ button[data-tip] { cursor: pointer; }
 }
 .creator__fx .spark--sm { width: 9px; height: 9px; }
 @keyframes ff-twinkle { 0%, 100% { opacity: 0; transform: scale(.4); } 45% { opacity: 1; transform: scale(1); } 60% { opacity: .9; transform: scale(.85); } }
+/* Name glow: a static soft glow plus a stronger one on a pseudo-element whose OPACITY pulses
+   (compositor-only; animating text-shadow repainted the text every frame). */
 .creator__name span {
-  text-shadow: 0 0 8px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 22px color-mix(in srgb, #3fae6a 55%, transparent);
-  animation: name-glow 3.6s ease-in-out infinite;
+  position: relative;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 16px color-mix(in srgb, #3fae6a 40%, transparent);
 }
-@keyframes name-glow {
-  0%, 100% { text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 16px color-mix(in srgb, #3fae6a 40%, transparent); }
-  50% { text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 85%, transparent), 0 0 30px color-mix(in srgb, #3fae6a 70%, transparent); }
+.creator__name span::after {
+  content: "Vin" / ""; position: absolute; left: 0; top: 0; color: transparent; pointer-events: none;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 85%, transparent), 0 0 30px color-mix(in srgb, #3fae6a 70%, transparent);
+  will-change: opacity; animation: name-glow 3.6s ease-in-out infinite;
 }
+@keyframes name-glow { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+/* All credits animations idle until the card is on screen (.is-live, set by ui/pixelfield.js). */
+.creator__fx i, .creator__fx .spark, .creator__name span::after { animation-play-state: paused; }
+.creator.is-live .creator__fx i, .creator.is-live .creator__fx .spark, .creator.is-live .creator__name span::after { animation-play-state: running; }
 /* light themes: deeper green pixels so they read on a pale card */
 :root[data-theme="light"] .creator__fx i { background: #5fbf4a; box-shadow: 0 0 3px 1px #7fd65f, 0 0 10px 3px color-mix(in srgb, #3fae6a 45%, transparent); }
 :root[data-theme="light"] .creator__fx .spark { color: #2f9a55; }
 @media (prefers-reduced-motion: reduce) {
-  .creator__fx i, .creator__fx .spark, .creator__name span { animation: none !important; }
+  .creator__fx i, .creator__fx .spark, .creator__name span::after { animation: none !important; }
+  .creator__name span::after { opacity: .5; }
   .creator__fx i { opacity: .6; }
   .creator__fx .spark { opacity: .8; }
 }

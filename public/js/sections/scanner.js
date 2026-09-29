@@ -6,6 +6,7 @@ import { usage, ladderMerge, closestTeams, speedTiers, metaSpeed, rankedSeason }
 import { parsePaste, toPaste, anyKnownSpecies } from '../lib/paste.js';
 import { calcStat } from '../lib/stats.js';
 import { TYPES, TYPE_COLORS, effectiveness } from '../lib/types.js';
+import { inkOn } from '../lib/contrast.js';
 import { toast } from '../ui/toast.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 import { scanTeam, LIMITS, archLabel } from '../lib/scan.js';
@@ -138,6 +139,9 @@ function bucketColor(mult, theme) {
   if (mult === 4) return d.pos2;
   return d.pos1; // 2x
 }
+
+// Cell text: dark or white, whichever reads better on the bucket colour (the near-white 1x cell in light themes).
+const bucketInk = (mult, theme) => inkOn(bucketColor(mult, theme));
 
 const SPEED_SOURCE = { sheet: 'sheet', ranked: 'in-game ranked', ladder: 'Smogon ladder' };
 
@@ -317,7 +321,7 @@ export default {
           for (const f of freq) {
             const mult = types ? effectiveness(f.type, types) : null;
             const td = elm('td', 'scn-cell', mult == null ? '—' : multLabel(mult));
-            if (mult != null) { td.style.background = bucketColor(mult, theme); td.style.color = '#fff'; }
+            if (mult != null) { td.style.background = bucketColor(mult, theme); td.style.color = bucketInk(mult, theme); }
             tr.appendChild(td);
           }
           const exp = expectedEff(types, freq);

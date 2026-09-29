@@ -62,8 +62,8 @@ main.grid .section[data-section="trends"] {
 }
 .sb-stat { font-variant-numeric: tabular-nums; font-size: var(--fs-small); color: var(--ink); min-width: 56px; text-align: right; flex: none; }
 .sb-stat--muted { color: var(--muted); }
-.sb-stat--up { color: var(--status-good); }
-.sb-stat--down { color: var(--status-critical); }
+.sb-stat--up { color: var(--up); }
+.sb-stat--down { color: var(--down); }
 
 .sb-badge { font-family: var(--font-label); font-size: 10px; text-transform: uppercase; padding: 1px 6px; border-radius: 8px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); flex: none; white-space: nowrap; }
 .sb-badge--you { background: var(--accent); color: var(--surface-1); border-color: var(--accent); }

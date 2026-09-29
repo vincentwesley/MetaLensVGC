@@ -13,6 +13,7 @@ import { speciesDetail, speedTiers, ladderMerge, rankedSeason, rankedMon, ranked
 import { rankedSource, RANKED_ATTRIBUTION } from '../ui/meta.js';
 import { calcStats, calcStat } from '../lib/stats.js';
 import { TYPE_COLORS } from '../lib/types.js';
+import { inkOn } from '../lib/contrast.js';
 
 function elm(tag, className, text) {
   const e = document.createElement(tag);
@@ -174,6 +175,7 @@ export default {
       for (const t of sp.types) {
         const pill = elm('span', 'pill', t);
         pill.style.background = TYPE_COLORS[t] || 'var(--muted)';
+        if (TYPE_COLORS[t]) pill.style.color = inkOn(TYPE_COLORS[t]);
         pill.addEventListener('click', (e) => ctx.chip('type', t, e));
         pill.style.cursor = 'pointer';
         pill.tabIndex = 0;
