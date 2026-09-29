@@ -1,7 +1,7 @@
 // One-off script: builds test/fixtures/teams-sample.json and dex-sample.json
 // from real recon payloads (data-raw/recon/limitless/04-standings-big.json +
 // 05-pairings-big.json), using the installed pokemon-showdown package for
-// species/moves/items canonical data. Run: node test/fixtures/make-fixture.js
+// species/moves/items canonical data. Run: node scripts/make-fixture.js (needs data-raw/recon)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -11,7 +11,8 @@ const require = createRequire(import.meta.url);
 const { Dex } = require('pokemon-showdown');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = join(__dirname, '..', '..');
+const root = join(__dirname, '..');
+const out = join(root, 'test', 'fixtures');
 const standings = JSON.parse(readFileSync(join(root, 'data-raw/recon/limitless/04-standings-big.json'), 'utf8'));
 const pairings = JSON.parse(readFileSync(join(root, 'data-raw/recon/limitless/05-pairings-big.json'), 'utf8'));
 
@@ -128,7 +129,7 @@ const teamsFile = {
   matches,
 };
 
-writeFileSync(join(__dirname, 'teams-sample.json'), JSON.stringify(teamsFile));
-writeFileSync(join(__dirname, 'dex-sample.json'), JSON.stringify({ species: dexSpecies, items: dexItems, moves: dexMoves }));
+writeFileSync(join(out, 'teams-sample.json'), JSON.stringify(teamsFile));
+writeFileSync(join(out, 'dex-sample.json'), JSON.stringify({ species: dexSpecies, items: dexItems, moves: dexMoves }));
 
 console.log('teams:', teams.length, 'matches:', matches.length, 'species:', Object.keys(dexSpecies).length, 'moves:', Object.keys(dexMoves).length, 'items:', Object.keys(dexItems).length);
