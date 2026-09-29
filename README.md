@@ -11,7 +11,7 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
 ## Features
 
 - **Global filter bar** (sticky): regulation (M-A / M-B / M-C, defaults to the current one), source
-  (Tournaments / Ladder), event tier (Worlds / Internationals / Regionals / Online), placement
+  (Tournaments / Smogon Ladder / Ranked in-game), event tier (Worlds / Internationals / Regionals / Online), placement
   (All / Top Cut / Top 8 / Winners), date range and a minimum-sample slider.
 - **Cross-filtering everywhere.** Click a Pokémon, type, archetype, item, move, Mega, core or team
   to add a filter chip, and every chart recomputes on "teams matching all chips".
@@ -57,6 +57,7 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
 | [Limitless Play API](https://play.limitlesstcg.com) (`/api/tournaments`, `/standings`, `/pairings`) | Online tournament teams (open team lists), W-L records, top cut, match results | Formats `M-A`, `M-B`, `M-C`. Public API with a 50 requests / 5 min limit |
 | [Limitless VGC](https://limitlessvgc.com) + [standings.limitlessvgc.com](https://standings.limitlessvgc.com) | Official events (Regionals, Special Events, Internationals, Worlds): published team lists, records, top cut, pairings | RK9 team lists are disallowed by RK9's robots.txt, so RK9 is not used |
 | [Smogon usage stats](https://www.smogon.com/stats) (chaos JSON, `gen9championsvgc2026reg{ma,mb,mc}-1760`) | "Ladder" source: usage, items, abilities, moves, SP spreads, teammates | Kept separate from tournament data. Cutoff 1760, non-Bo3 ladder |
+| [Pokémon Champions Battle Data](https://championsbattledata.com/) (`/api`, `/api/battle/Doubles/<id>?season=`) | "Ranked (in-game)" source: the official in-game ranked ladder's Battle Data (usage rank, and per-Pokémon moves, items, abilities, natures, SP spreads, teammate order) | Doubles only, last snapshot of each in-game season (M1–M2 = M-A, M3–M5 = M-B, M6 = M-C). The game publishes ranks, not usage shares, so none are shown. **Battle data provided by Pokémon Champions Battle Data**, used under its [API rules](https://championsbattledata.com/api-rules/) (attribution; no redistribution as a data service) |
 | [`pokemon-showdown`](https://www.npmjs.com/package/pokemon-showdown) npm package (`champions` mod) | Dex: types, base stats, abilities, move data, Mega Stones | Covers every Champions and Z-A Mega, so no override table was needed |
 | [Pokémon Showdown sprites](https://play.pokemonshowdown.com/sprites/) | gen5 sprites, plus gen5ani/ani animated sprites | Availability is resolved at build time, so the browser never requests missing sprites |
 
@@ -98,6 +99,12 @@ Decisions made while building, and the gaps they leave:
   selected one, inside the same regulation. If that window starts before the regulation does, the
   comparison is against the whole previous regulation. The previous sample size is shown, and deltas
   from small samples are flagged.
+- **Ranked (in-game) source.** This data covers individual Pokémon, not teams, so the team-level views
+  (types, archetypes, quadrant, trends, library, scanner) say they are unavailable instead of guessing.
+  Speed tiers prefer a real source in this order: team-sheet SP, then the ranked ladder's most common
+  spread with its most common nature, then the Smogon ladder, then theoretical bounds. The game reports
+  spreads and natures separately, so pairing the top spread with the top nature is an approximation,
+  and the chart labels it as one.
 - **Stable team ids** are `eventId:playername`, so shared links and chips survive data rebuilds.
 - **Differences from other usage sites.** The numbers here are an open-team-list tournament sample,
   dominated by online Limitless events. Pikalytics and similar sites mix in other sources and time
