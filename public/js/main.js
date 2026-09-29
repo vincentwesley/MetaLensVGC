@@ -113,6 +113,7 @@ async function boot() {
   const { decode, filterTeams, previousPeriod } = lib.aggregate;
 
   const ladderCache = new Map();
+  const rankedCache = new Map();
 
   function prevRegId(reg) {
     const ids = (manifest.regs || []).map((r) => r.id);
@@ -180,6 +181,11 @@ async function boot() {
     return l;
   }
 
+  async function getRanked(reg) {
+    if (!rankedCache.has(reg)) rankedCache.set(reg, await data.loadRankedFile(reg));
+    return rankedCache.get(reg);
+  }
+
   let raf = null;
   let rendering = false;
   function scheduleRender() {
@@ -194,6 +200,7 @@ async function boot() {
     try {
       const regData = await ensureReg(state.reg);
       const ladder = await getLadder(state.reg);
+      const ranked = await getRanked(state.reg);
       const teams = filterTeams(regData.teams, state, state.chips, dex);
       const base = filterTeams(regData.teams, state, [], dex);
       let prev = [];
@@ -203,7 +210,7 @@ async function boot() {
         prev = previousPeriod(regData.teams, state, prevRegTeams);
       } catch (err) { console.warn('[main] previousPeriod failed:', err); prev = []; }
 
-      const view = { state, reg: state.reg, manifest, dex, teams, base, prev, matches: regData.matches, ladder };
+      const view = { state, reg: state.reg, manifest, dex, teams, base, prev, matches: regData.matches, ladder, ranked };
       for (const s of mounted) {
         try { s.api?.update?.(view); } catch (err) { console.warn(`[main] section "${s.id}" update failed:`, err); }
       }

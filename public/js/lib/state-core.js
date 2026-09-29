@@ -2,7 +2,7 @@
 
 export const DEFAULT_STATE = {
   reg: 'M-C',
-  source: 'tournaments',
+  source: 'tournaments', // 'tournaments' | 'ladder' | 'ranked'
   tiers: ['worlds', 'international', 'regional', 'online'],
   place: 'all',
   from: '',

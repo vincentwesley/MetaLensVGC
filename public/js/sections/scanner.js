@@ -7,6 +7,7 @@ import { parsePaste, toPaste } from '../lib/paste.js';
 import { calcStat } from '../lib/stats.js';
 import { TYPES, TYPE_COLORS, effectiveness } from '../lib/types.js';
 import { toast } from '../ui/toast.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 function elm(tag, className, text) {
   const e = document.createElement(tag);
@@ -221,6 +222,7 @@ export default {
     function renderResults() {
       const view = lastView;
       results.innerHTML = '';
+      if (view?.state.source === 'ranked') { emptyState(results, RANKED_NA); return; }
       const text = textarea.value.trim();
       if (!text) { emptyState(results, 'Paste a team and hit Scan'); return; }
       if (!view) { emptyState(results, 'Data still loading'); return; }
@@ -402,7 +404,14 @@ export default {
     scanBtn.addEventListener('click', renderResults);
 
     return {
-      update(view) { lastView = view; },
+      update(view) {
+        const ranked = view.state.source === 'ranked';
+        const was = lastView?.state.source === 'ranked';
+        lastView = view;
+        if (ranked) ctx.meta(metaEl, { source: rankedSource(null) });
+        else metaEl.textContent = '';
+        if (ranked || was) renderResults();
+      },
     };
   },
 };

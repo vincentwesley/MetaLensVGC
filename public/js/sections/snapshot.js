@@ -1,7 +1,8 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
 // Tournament mode: aggregate.usage()/kpis() over view.teams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
-import { usage, kpis, ladderMerge } from '../lib/aggregate.js';
+import { usage, kpis, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
+import { rankedSource } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
 
 function emptyState(el, title, detail) {
@@ -58,7 +59,7 @@ function monCard(ctx, key, pct, winPct, deltaPts, label, anim, prevN, minN) {
   const stats = document.createElement('div');
   stats.className = 'snapshot__mon-stats';
   const usageEl = document.createElement('span');
-  usageEl.textContent = ctx.fmt.pct(pct);
+  usageEl.textContent = typeof pct === 'string' ? pct : ctx.fmt.pct(pct); // string = in-game rank label
   stats.appendChild(usageEl);
   if (winPct != null) {
     const winEl = document.createElement('span');
@@ -128,6 +129,35 @@ export default {
       if (!view) return;
       const state = view.state;
       const anim = !!state.anim;
+
+      if (state.source === 'ranked') {
+        const season = rankedSeason(view.ranked, state.from, state.to);
+        const count = season ? Object.keys(season.mons).length : 0;
+        ctx.meta(meta, { source: rankedSource(season), n: count, unit: 'Pokémon' });
+        if (!season) { emptyState(body, 'No in-game ranked season in the selected range'); return; }
+        hero.innerHTML = ''; kpiRow.innerHTML = '';
+        body.querySelector('.empty-state')?.remove();
+        body.prepend(hero); body.append(kpiRow);
+        const ranking = (season.ranking || []).filter((k) => season.mons[k]);
+        if (!ranking.length) emptyState(hero, `Ranking not published for finished season ${season.season}`);
+        else ranking.slice(0, 6).forEach((k) => hero.appendChild(monCard(ctx, k, `Rank #${season.mons[k].rank}`, null, null, '', anim)));
+        const megas = ranking.filter((k) => rankedMegaKey(k, season.mons[k], ctx.dex)).slice(0, 3);
+        const notPub = 'Not published';
+        kpiRow.appendChild(kpiTile('Season', season.season));
+        kpiRow.appendChild(kpiTile('Snapshot', season.snapshot));
+        kpiRow.appendChild(kpiTile('Pokémon with data', ctx.fmt.n(count)));
+        kpiRow.appendChild(kpiTile('#1 ranked', ranking[0] || notPub, ranking[0] ? { sprite: ctx.sprite(ranking[0], { size: 20, animated: anim }) } : {}));
+        const megaTile = kpiTile('Top-ranked Mega Stone holder', megas.length ? `#${season.mons[megas[0]].rank} ${megas[0]}` : notPub,
+          { tip: 'Highest-ranked Pokémon whose most common held item is their own Mega Stone (50%+ of ranked sets).' });
+        if (megas.length > 1) {
+          const next = document.createElement('div');
+          next.className = 'ddv-note';
+          next.textContent = `then ${megas.slice(1).map((k) => `#${season.mons[k].rank} ${k}`).join(', ')}`;
+          megaTile.appendChild(next);
+        }
+        kpiRow.appendChild(megaTile);
+        return;
+      }
 
       if (state.source === 'ladder') {
         const merged = ladderMerge(view.ladder, state.from, state.to);

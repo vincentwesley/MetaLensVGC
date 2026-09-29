@@ -1,6 +1,7 @@
 // Global sticky filter bar. Builds all controls from `manifest`, wires them to
 // `ctx.store.set`, and mirrors state on every store change (so back/forward and
 // hash edits stay in sync). Exposes update(view) to paint the live sample line.
+import { rankedSeason } from '../lib/aggregate.js';
 
 const TIERS = [
   ['worlds', 'Worlds'],
@@ -60,7 +61,7 @@ export function mountFilterbar(root, ctx, manifest) {
   const srcLabel = document.createElement('span');
   srcLabel.className = 'filterbar__label';
   srcLabel.textContent = 'Source';
-  const source = segmented('Source', [['tournaments', 'Tournaments'], ['ladder', 'Ladder']], (v) => ctx.store.set({ source: v }));
+  const source = segmented('Source', [['tournaments', 'Tournaments'], ['ladder', 'Ladder'], ['ranked', 'Ranked (in-game)']], (v) => ctx.store.set({ source: v }));
   srcGroup.append(srcLabel, source.el);
 
   // Event tiers
@@ -154,6 +155,14 @@ export function mountFilterbar(root, ctx, manifest) {
       if (!hasLadder) ladderBtn.setAttribute('data-tip', 'No ladder data for this regulation');
       else ladderBtn.removeAttribute('data-tip');
     }
+    const hasRanked = (rm?.rankedSeasons?.length || 0) > 0;
+    const rankedBtn = source.buttons.get('ranked');
+    if (rankedBtn) {
+      rankedBtn.disabled = !hasRanked;
+      rankedBtn.title = hasRanked ? '' : 'No in-game ranked data for this regulation';
+      if (!hasRanked) rankedBtn.setAttribute('data-tip', 'No in-game ranked data for this regulation');
+      else rankedBtn.removeAttribute('data-tip');
+    }
     if (rm) { fromInput.min = toInput.min = rm.start; fromInput.max = toInput.max = rm.end; }
     if (fromInput.value !== (state.from || '')) fromInput.value = state.from || '';
     if (toInput.value !== (state.to || '')) toInput.value = state.to || '';
@@ -168,6 +177,13 @@ export function mountFilterbar(root, ctx, manifest) {
     const n = view?.teams?.length ?? 0;
     const events = view?.teams ? new Set(view.teams.map((t) => t.ev?.id)).size : 0;
     const updated = manifest?.generated ? manifest.generated.slice(0, 10) : '—';
+    if (view?.state?.source === 'ranked') {
+      const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+      sample.textContent = season
+        ? `In-game ranked ${season.season} · snapshot ${season.snapshot} · ${Object.keys(season.mons).length.toLocaleString('en-US')} Pokémon · updated ${updated}`
+        : `No in-game ranked season in range · updated ${updated}`;
+      return;
+    }
     sample.textContent = `${n.toLocaleString('en-US')} teams · ${events.toLocaleString('en-US')} events · updated ${updated}`;
   }
 

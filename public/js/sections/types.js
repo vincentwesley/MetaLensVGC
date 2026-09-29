@@ -3,6 +3,7 @@
 // payload has no per-team mon lists to derive type slots from).
 import { typeUsage, attackingTypes, weaknesses } from '../lib/aggregate.js';
 import { TYPE_COLORS } from '../lib/types.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 function emptyState(el, title) {
   el.innerHTML = '';
@@ -149,10 +150,11 @@ export default {
       const state = view.state;
       const theme = ctx.chartTheme();
 
-      if (state.source === 'ladder') {
+      if (state.source !== 'tournaments') {
+        const ranked = state.source === 'ranked';
         for (const p of [usagePanel, atkPanel, weakPanel]) {
-          ctx.meta(p.meta, { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
-          emptyState(p.body, 'Tournament-only view — switch Source to Tournaments');
+          ctx.meta(p.meta, ranked ? { source: rankedSource(null) } : { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
+          emptyState(p.body, ranked ? RANKED_NA : 'Tournament-only view — switch Source to Tournaments');
         }
         lastRows = null;
         return;

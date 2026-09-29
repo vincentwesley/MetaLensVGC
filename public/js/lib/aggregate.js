@@ -613,3 +613,48 @@ export function ladderMerge(ladder, from = '', to = '') {
   }).sort((a, b) => b.usage - a.usage);
   return { battles, months: months.map((m) => m.month), cutoff: ladder.cutoff, urls: months.map((m) => m.url), mons };
 }
+
+// --- ranked (official in-game Battle Data, see SCHEMA ranked-<REG>.json) --------
+// The game publishes RANKS, not usage shares: nothing here derives a usage %.
+
+/** Latest season in the file; with from/to ("" = open) the latest whose snapshot is in range. null if none. */
+export function rankedSeason(ranked, from = '', to = '') {
+  let best = null;
+  for (const s of ranked?.seasons || []) {
+    if ((from && s.snapshot < from) || (to && s.snapshot > to)) continue;
+    if (!best || s.snapshot > best.snapshot) best = s;
+  }
+  return best;
+}
+
+/** `{name: fraction}` -> `[{name, pct}]`, highest first. */
+export function rankedEntries(tbl) {
+  return Object.entries(tbl || {}).map(([name, pct]) => ({ name, pct })).sort((a, b) => b.pct - a.pct);
+}
+
+/** Ranked entry for a display key; Mega keys map to their base (the game tracks Megas as base + stone). */
+export function rankedMon(season, key, dex) {
+  if (!season) return null;
+  const name = season.mons[key] ? key : dex?.species?.[key]?.megaOf;
+  return name && season.mons[name] ? { name, mon: season.mons[name] } : null;
+}
+
+/** Mega form key when the mon's top item is its own Mega Stone at >= 50%, else null. */
+export function rankedMegaKey(name, mon, dex) {
+  const top = rankedEntries(mon?.items)[0];
+  const it = top && dex?.items?.[top.name];
+  return it?.mega && it.megaOf === name && top.pct >= 0.5 ? it.mega : null;
+}
+
+/**
+ * Speed from the top ranked spread's Spe SP + the top nature. The game reports those two as separate
+ * marginals, so this is "most common SP with most common nature", labelled as such by callers.
+ */
+export function rankedSpeed(mon, bs) {
+  const spread = rankedEntries(mon?.spreads)[0];
+  const nat = rankedEntries(mon?.natures)[0];
+  if (!spread || !nat || !bs) return null;
+  const sp = parseSP(spread.name);
+  if (!sp) return null;
+  return { spe: calcStat(bs[5], sp[5], 5, nat.name), nature: nat.name, naturePct: nat.pct, sp: sp[5], spreadPct: spread.pct };
+}

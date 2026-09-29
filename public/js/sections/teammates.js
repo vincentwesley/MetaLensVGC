@@ -3,7 +3,8 @@
 // list for a picked species. The heatmap/cores need real per-team rosters, so
 // they're tournament-only; the ladder list is its own independent panel (not
 // gated by the Source toggle) since Smogon chaos stats carry teammate % too.
-import { usage, coUsage, cores, ladderMerge } from '../lib/aggregate.js';
+import { usage, coUsage, cores, ladderMerge, rankedSeason } from '../lib/aggregate.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -114,7 +115,75 @@ export default {
       ctx.chip('core', [lastKeys[r], lastKeys[c]], p.event?.event);
     });
 
+    // In-game ranked: per-species teammate ORDER (the game publishes no teammate shares).
+    const heatTitle = heat.el.querySelector('h3');
+    let rankedPick = null;
+    function teammateRow(name, mon, anim) {
+      const row = document.createElement('div');
+      row.className = 'sb-row sb-row--clickable';
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-label', `Filter by ${name}`);
+      const head = document.createElement('div');
+      head.className = 'sb-sprites';
+      head.appendChild(ctx.sprite(name, { size: 28, animated: anim }));
+      const label = document.createElement('div');
+      label.className = 'sb-stat';
+      label.style.textAlign = 'left';
+      label.textContent = mon.rank ? `#${mon.rank} ${name}` : name;
+      const mates = document.createElement('div');
+      mates.className = 'sb-sprites';
+      for (const t of mon.teammates.slice(0, 6)) {
+        const img = ctx.sprite(t, { size: 24, animated: anim });
+        img.title = t;
+        mates.appendChild(img);
+      }
+      const names = document.createElement('div');
+      names.className = 'sb-names';
+      names.textContent = mon.teammates.slice(0, 6).map((t, i) => `${i + 1}. ${t}`).join('  ');
+      row.append(head, label, mates, names);
+      const act = (e) => ctx.chip('species', name, e);
+      row.addEventListener('click', act);
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(e); } });
+      return row;
+    }
+    function renderRankedTeammates(view) {
+      heatChartEl.style.display = 'none';
+      controls.style.display = 'none';
+      heatTitle.textContent = 'Ranked teammate order';
+      heatEmptyEl.textContent = '';
+      lastKeys = [];
+      const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+      ctx.meta(heat.meta, { source: rankedSource(season), n: season ? Object.keys(season.mons).length : 0, unit: 'Pokémon' });
+      if (!season) { heatEmptyEl.appendChild(emptyState('No in-game ranked season in the selected range.')); return; }
+      const note = document.createElement('div');
+      note.className = 'ddv-note';
+      note.textContent = 'Top 6 teammates in the game’s rank order (1 = most common). The game publishes no teammate shares.';
+      heatEmptyEl.appendChild(note);
+      const ranking = (season.ranking || []).filter((k) => season.mons[k]);
+      let names = ranking.slice(0, 12);
+      if (!names.length) {
+        note.textContent += ` Ranking not published for finished season ${season.season}: pick a Pokémon (A–Z).`;
+        const all = Object.keys(season.mons).sort();
+        const sel = document.createElement('select');
+        sel.setAttribute('aria-label', 'Pokémon');
+        for (const k of all) sel.appendChild(new Option(k, k));
+        if (!all.includes(rankedPick)) rankedPick = all[0];
+        sel.value = rankedPick;
+        sel.addEventListener('change', () => { rankedPick = sel.value; renderHeat(lastView, ctx.chartTheme()); });
+        const wrap = document.createElement('div');
+        wrap.className = 'sb-controls';
+        wrap.appendChild(sel);
+        heatEmptyEl.appendChild(wrap);
+        names = rankedPick ? [rankedPick] : [];
+      }
+      for (const k of names) if (season.mons[k].teammates.length) heatEmptyEl.appendChild(teammateRow(k, season.mons[k], view.state.anim));
+    }
+
     function renderHeat(view, theme) {
+      controls.style.display = '';
+      heatTitle.textContent = 'Teammate co-usage';
+      if (view.state.source === 'ranked') { renderRankedTeammates(view); return; }
       if (view.state.source === 'ladder') {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';
@@ -235,9 +304,10 @@ export default {
 
     function renderCores(view) {
       coresWrap.textContent = '';
-      if (view.state.source === 'ladder') {
-        coresWrap.appendChild(emptyState('Switch Source to Tournaments to see top cores.', 'Tournament-only view'));
-        ctx.meta(coresCard.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
+      if (view.state.source !== 'tournaments') {
+        const ranked = view.state.source === 'ranked';
+        coresWrap.appendChild(emptyState(ranked ? RANKED_NA : 'Switch Source to Tournaments to see top cores.', 'Tournament-only view'));
+        ctx.meta(coresCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
       const rows = cores(view.teams, 3, 10, view.state.minN);

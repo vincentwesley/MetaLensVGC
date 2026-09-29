@@ -277,3 +277,47 @@ test('ladderMerge weights months by battles and filters by date', async () => {
   assert.equal(ladderMerge(ladder, '2026-08-01').mons[0].key, 'B');
   assert.equal(ladderMerge(ladder, '2026-09-01'), null);
 });
+
+// --- ranked helpers ---
+import { rankedSeason, rankedEntries, rankedMon, rankedMegaKey, rankedSpeed } from '../public/js/lib/aggregate.js';
+import { calcStat } from '../public/js/lib/stats.js';
+
+const RANKED = { seasons: [
+  { season: 'M3', snapshot: '2026-07-08', ranking: null, mons: {} },
+  { season: 'M5', snapshot: '2026-09-10', ranking: null, mons: {} },
+  { season: 'M4', snapshot: '2026-08-05', ranking: null, mons: {} },
+] };
+
+test('rankedSeason: latest season, or latest whose snapshot is within from/to', () => {
+  assert.equal(rankedSeason(RANKED).season, 'M5');
+  assert.equal(rankedSeason(RANKED, '', '2026-09-09').season, 'M4');
+  assert.equal(rankedSeason(RANKED, '2026-07-01', '2026-07-31').season, 'M3');
+  assert.equal(rankedSeason(RANKED, '2026-07-09', '2026-08-04'), null);
+  assert.equal(rankedSeason({ seasons: [] }), null);
+  assert.equal(rankedSeason(null), null);
+});
+
+test('rankedMon / rankedMegaKey / rankedSpeed', () => {
+  const dex = {
+    species: { 'Salamence-Mega': { megaOf: 'Salamence' }, Salamence: {} },
+    items: { Salamencite: { mega: 'Salamence-Mega', megaOf: 'Salamence' } },
+  };
+  const mon = {
+    items: { 'Life Orb': 0.01, Salamencite: 0.977 },
+    natures: { Modest: 0.3, Timid: 0.6 },
+    spreads: { '2/0/0/32/0/32': 0.4, '32/0/0/32/2/0': 0.1 },
+  };
+  const season = { mons: { Salamence: mon } };
+  assert.deepEqual(rankedEntries(mon.items).map((e) => e.name), ['Salamencite', 'Life Orb']);
+  assert.equal(rankedMon(season, 'Salamence-Mega', dex).name, 'Salamence');
+  assert.equal(rankedMon(season, 'Salamence', dex).mon, mon);
+  assert.equal(rankedMon(season, 'Garchomp', dex), null);
+  assert.equal(rankedMegaKey('Salamence', mon, dex), 'Salamence-Mega');
+  assert.equal(rankedMegaKey('Salamence', { items: { Salamencite: 0.4, 'Life Orb': 0.35 } }, dex), null);
+  const bs = [95, 145, 130, 120, 90, 120];
+  const s = rankedSpeed(mon, bs);
+  assert.equal(s.nature, 'Timid');
+  assert.equal(s.sp, 32);
+  assert.equal(s.spe, calcStat(120, 32, 5, 'Timid'));
+  assert.equal(rankedSpeed({ spreads: {}, natures: {} }, bs), null);
+});

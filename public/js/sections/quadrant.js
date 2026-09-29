@@ -2,6 +2,7 @@
 // median usage / 50% win, four quadrant labels. Tournament-only (ladder has
 // no win rate, so a win axis isn't meaningful there).
 import { usage } from '../lib/aggregate.js';
+import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
 const QUADRANTS = [
   { id: 'pillars', label: 'Meta Pillars', xHigh: true, yHigh: true },
@@ -136,9 +137,10 @@ export default {
       const view = lastView;
       if (!view) return;
       const state = view.state;
-      if (state.source === 'ladder') {
-        ctx.meta(meta, { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
-        emptyState(body, 'Tournament-only view — switch Source to Tournaments');
+      if (state.source !== 'tournaments') {
+        const ranked = state.source === 'ranked';
+        ctx.meta(meta, ranked ? { source: rankedSource(null) } : { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
+        emptyState(body, ranked ? RANKED_NA : 'Tournament-only view — switch Source to Tournaments');
         lastRows = null;
         return;
       }

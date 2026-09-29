@@ -41,7 +41,7 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
 ### State (`public/js/state.js`)
 ```js
 state = {
-  reg: "M-C", source: "tournaments" | "ladder",
+  reg: "M-C", source: "tournaments" | "ladder" | "ranked",
   tiers: ["worlds","international","regional","online"],   // enabled tiers
   place: "all" | "topcut" | "top8" | "winner",
   from: "" | "YYYY-MM-DD", to: "" | "YYYY-MM-DD", minN: 20,
@@ -60,7 +60,7 @@ export default {
 }
 ```
 `view` is computed once per state change in `main.js`:
-`{ state, reg, manifest, dex, teams /*bar filters + chips*/, base /*bar filters, no chips*/, prev /*previous period*/, matches, ladder /*ladder-<reg>.json*/ }`.
+`{ state, reg, manifest, dex, teams /*bar filters + chips*/, base /*bar filters, no chips*/, prev /*previous period*/, matches, ladder /*ladder-<reg>.json*/, ranked /*ranked-<reg>.json*/ }`.
 `ctx` gives `{ store, dex, echarts, sprite(key, opts) → HTMLImageElement, spriteUrl(key), openDrawer(key), chip(kind, value, event) /* shift/alt = neg */, hover(key|null), meta(el, {source, n, unit}) /* source/sample/updated line */, cssVar(name), fmt }`.
 Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 

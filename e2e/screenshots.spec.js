@@ -19,10 +19,10 @@ async function waitForCharts(page) {
   await page.waitForTimeout(300);
 }
 
-async function setup(page, { skin, theme, viewport }) {
+async function setup(page, { skin, theme, viewport, extra = '' }) {
   await page.emulateMedia({ reducedMotion: 'reduce' }); // kills CSS animations app-wide (see app.css)
   await page.setViewportSize(viewport);
-  await page.goto(`/#skin=${skin}&theme=${theme}`); // state.anim defaults to false: sprites are static too
+  await page.goto(`/#skin=${skin}&theme=${theme}${extra}`); // state.anim defaults to false: sprites are static too
   await waitForUsageRendered(page);
   await waitForCharts(page);
 }
@@ -35,6 +35,16 @@ for (const skin of ['retro', 'pro']) {
         await page.screenshot({ path: `screenshots/${skin}-${theme}-${device}.png`, fullPage: true });
       });
     }
+  }
+}
+
+// In-game ranked source (M-C: current season with a published ranking).
+for (const [skin, theme] of [['retro', 'light'], ['pro', 'dark']]) {
+  for (const [device, viewport] of [['desktop', DESKTOP], ['mobile', MOBILE]]) {
+    test(`${skin}-${theme}-ranked-${device}`, async ({ page }) => {
+      await setup(page, { skin, theme, viewport, extra: '&source=ranked' });
+      await page.screenshot({ path: `screenshots/${skin}-${theme}-ranked-${device}.png`, fullPage: true });
+    });
   }
 }
 

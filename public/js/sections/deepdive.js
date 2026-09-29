@@ -9,7 +9,8 @@
 // pinned to the top of the drawer body, always visible while the drawer is
 // open, so the intent (search species in the current view -> open drawer)
 // is still met without new markup outside owned files.
-import { speciesDetail, speedTiers, ladderMerge } from '../lib/aggregate.js';
+import { speciesDetail, speedTiers, ladderMerge, rankedSeason, rankedMon, rankedEntries } from '../lib/aggregate.js';
+import { rankedSource, RANKED_ATTRIBUTION } from '../ui/meta.js';
 import { calcStats, calcStat } from '../lib/stats.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
@@ -327,6 +328,62 @@ export default {
         tmBody.appendChild(grid);
       }
       content.appendChild(tmCard);
+
+      // in-game ranked ladder (shown whenever it has this species, regardless of source)
+      const season = rankedSeason(view.ranked, view.state.from, view.state.to);
+      const rm = rankedMon(season, key, dex);
+      if (rm) {
+        const { card: rkCard, body: rkBody } = sectionCard('Ranked ladder (in-game)');
+        const { name, mon } = rm;
+        const rankTxt = mon.rank ? `in-game rank #${mon.rank}` : season.ranking ? 'not in the published ranking' : `ranking not published for finished season ${season.season}`;
+        rkBody.appendChild(elm('div', 'ddv-note', `${rankedSource(season)} · ${name === key ? '' : `${name} (Megas are tracked as base + stone) · `}${rankTxt}. Shares are within this Pokémon's ranked sets; the game publishes no usage %.`));
+        const sub = (label, tbl, onClick) => {
+          rkBody.appendChild(elm('div', 'ddv-picker__label', label));
+          barList(rkBody, rankedEntries(tbl), { onClick });
+        };
+        sub('Moves', mon.moves, (n, e) => ctx.chip('move', n, e));
+        sub('Items', mon.items, (n, e) => ctx.chip('item', n, e));
+        sub('Abilities', mon.abilities);
+        sub('Natures', mon.natures);
+        rkBody.appendChild(elm('div', 'ddv-picker__label', 'SP spreads'));
+        const spreads = rankedEntries(mon.spreads);
+        if (!spreads.length) emptyState(rkBody, 'Insufficient data');
+        else {
+          const wrap = elm('div', 'table-wrap');
+          const table = elm('table', 'data-table');
+          const trh = table.createTHead().insertRow();
+          for (const h of ['HP/Atk/Def/SpA/SpD/Spe', '%']) trh.appendChild(elm('th', h === '%' ? 'num' : null, h));
+          const tbody = table.createTBody();
+          for (const r of spreads) {
+            const tr = tbody.insertRow();
+            tr.append(elm('td', null, r.name), elm('td', 'num', ctx.fmt.pct(r.pct)));
+          }
+          wrap.appendChild(table);
+          rkBody.appendChild(wrap);
+        }
+        rkBody.appendChild(elm('div', 'ddv-picker__label', 'Teammates (rank order, no shares published)'));
+        if (!mon.teammates.length) emptyState(rkBody, 'Insufficient data');
+        else {
+          const grid = elm('div', 'sprite-grid');
+          mon.teammates.forEach((t, i) => {
+            const cell = elm('button', 'sprite-cell');
+            cell.type = 'button';
+            cell.appendChild(ctx.sprite(t, { size: 32, animated: view.state.anim }));
+            cell.appendChild(elm('span', null, t));
+            cell.appendChild(elm('span', 'ddv-note', `#${i + 1}`));
+            cell.addEventListener('click', (e) => ctx.chip('species', t, e));
+            grid.appendChild(cell);
+          });
+          rkBody.appendChild(grid);
+        }
+        const attr = elm('div', 'ddv-note');
+        const a = document.createElement('a');
+        a.href = RANKED_ATTRIBUTION.url; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = RANKED_ATTRIBUTION.text;
+        attr.appendChild(a);
+        rkBody.appendChild(attr);
+        content.appendChild(rkCard);
+      }
 
       // checks & counters (ladder)
       const { card: ccCard, body: ccBody } = sectionCard('Checks & counters (ladder)');
