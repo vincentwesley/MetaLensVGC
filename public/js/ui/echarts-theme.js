@@ -53,6 +53,22 @@ export function echartsBase(theme) {
   };
 }
 
+// Every chart's tooltip stays inside its chart (so it never runs off the screen,
+// e.g. near the edge on a phone) and wraps long lines instead of growing wider
+// than the viewport. ECharts' default tooltip CSS is `white-space: nowrap`.
+const TOOLTIP_CSS = 'white-space:normal;width:max-content;max-width:min(320px,calc(100vw - 32px));overflow-wrap:anywhere;';
+export function withChartDefaults(opt) {
+  if (!opt || typeof opt !== 'object') return opt;
+  const fix = (t) => (t && typeof t === 'object'
+    ? { confine: true, ...t, extraCssText: TOOLTIP_CSS + (t.extraCssText || '') }
+    : t);
+  const out = { ...opt };
+  if (opt.tooltip) out.tooltip = Array.isArray(opt.tooltip) ? opt.tooltip.map(fix) : fix(opt.tooltip);
+  // Screen readers: ECharts generates a text description of the data.
+  if (opt.series && !('aria' in opt)) out.aria = { enabled: true };
+  return out;
+}
+
 const subs = new Set();
 export function onTheme(fn) { subs.add(fn); return () => subs.delete(fn); }
 export function notifyThemeSubs() { const t = chartTheme(); subs.forEach((fn) => fn(t)); }

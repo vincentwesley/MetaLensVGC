@@ -8,8 +8,9 @@ import { mountChips } from './ui/chips.js';
 import { mountDrawer } from './ui/drawer.js';
 import { renderMetaLine } from './ui/meta.js';
 import { fmt } from './ui/fmt.js';
-import { chartTheme, onTheme, notifyThemeSubs } from './ui/echarts-theme.js';
+import { chartTheme, onTheme, notifyThemeSubs, withChartDefaults } from './ui/echarts-theme.js';
 import { toast } from './ui/toast.js';
+import { installTips } from './ui/tip.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
@@ -29,7 +30,7 @@ function safeEcharts(echarts) {
       const setOption = inst.setOption.bind(inst);
       inst.setOption = (opt, ...rest) => {
         try { inst.dispatchAction({ type: 'hideTip' }); } catch { /* no tooltip yet */ }
-        return setOption(opt, ...rest);
+        return setOption(withChartDefaults(opt), ...rest);
       };
       return inst;
     },
@@ -108,6 +109,7 @@ async function loadLib() {
 }
 
 async function boot() {
+  installTips();
   buildHeaderControls();
 
   let manifest, dex;
@@ -118,6 +120,7 @@ async function boot() {
     document.querySelectorAll('.section__mount').forEach((el) => placeholderBox(el, 'Data unavailable'));
     return;
   }
+  store.setRegs((manifest.regs || []).map((r) => r.id));
 
   let lib;
   try {
