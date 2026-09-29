@@ -144,8 +144,8 @@ export default {
         lastRows = null;
         return;
       }
-      const rows = usage(view.teams).filter((r) => r.n >= state.minN && r.winPct != null);
-      ctx.meta(meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      const rows = usage(view.monTeams).filter((r) => r.n >= state.minN && r.winPct != null);
+      ctx.meta(meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       body.querySelector('.empty-state')?.remove();
       if (!body.contains(chartEl)) body.appendChild(chartEl);
       if (rows.length < 2) {

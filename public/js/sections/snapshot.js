@@ -1,5 +1,5 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
-// Tournament mode: aggregate.usage()/kpis() over view.teams, delta vs view.prev.
+// Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
 import { usage, kpis, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
 import { rankedSource } from '../ui/meta.js';
@@ -188,17 +188,17 @@ export default {
         return;
       }
 
-      ctx.meta(meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      ctx.meta(meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       hero.innerHTML = ''; kpiRow.innerHTML = '';
       body.querySelector('.empty-state')?.remove();
       body.prepend(hero); body.append(kpiRow);
 
-      if (!view.teams.length) {
+      if (!view.monTeams.length) {
         emptyState(hero, 'Insufficient data');
         return;
       }
 
-      const rows = usage(view.teams).filter((r) => r.n >= state.minN);
+      const rows = usage(view.monTeams).filter((r) => r.n >= state.minN);
       const top = rows.slice(0, 6);
       if (!top.length) {
         emptyState(hero, 'Insufficient data');
@@ -216,7 +216,7 @@ export default {
         });
       }
 
-      const k = kpis(view.teams);
+      const k = kpis(view.monTeams);
       kpiRow.appendChild(kpiTile('Teams sampled', ctx.fmt.n(k.teams)));
       kpiRow.appendChild(kpiTile('Unique species', ctx.fmt.n(k.species)));
       kpiRow.appendChild(kpiTile('Meta diversity', k.diversity.toFixed(1),

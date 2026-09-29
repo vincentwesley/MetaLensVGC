@@ -211,7 +211,7 @@ export default {
     }
 
     function renderHeatmap(view, theme) {
-      const mat = archetypeMatrix(view.teams, view.matches);
+      const mat = archetypeMatrix(view.teams, view.matches, view.base);
       if (!mat) {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';

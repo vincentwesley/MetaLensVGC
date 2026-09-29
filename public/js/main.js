@@ -16,6 +16,26 @@ const SECTION_IDS = [
   'teammates', 'speed', 'trends', 'library', 'scanner', 'methodology',
 ];
 
+// Every chart is created through this: a full redraw (setOption with notMerge)
+// while the pointer is over a chart disposes the tooltip component while a show
+// is still pending, and ECharts then writes into a removed element (throws).
+// Hiding the tooltip first avoids it for all sections.
+function safeEcharts(echarts) {
+  if (!echarts) return echarts;
+  return {
+    ...echarts,
+    init(...args) {
+      const inst = echarts.init(...args);
+      const setOption = inst.setOption.bind(inst);
+      inst.setOption = (opt, ...rest) => {
+        try { inst.dispatchAction({ type: 'hideTip' }); } catch { /* no tooltip yet */ }
+        return setOption(opt, ...rest);
+      };
+      return inst;
+    },
+  };
+}
+
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
@@ -110,7 +130,7 @@ async function boot() {
     return;
   }
 
-  const { decode, filterTeams, previousPeriod } = lib.aggregate;
+  const { decode, filterTeams, previousPeriod, projectTeams, speciesChipFilter } = lib.aggregate;
 
   const ladderCache = new Map();
   const rankedCache = new Map();
@@ -124,7 +144,7 @@ async function boot() {
   const ctx = {
     store,
     dex,
-    echarts: window.echarts,
+    echarts: safeEcharts(window.echarts),
     sprite: (key, opts) => sprite(key, dex, opts),
     spriteUrl: (key, opts) => spriteUrl(key, dex, opts),
     openDrawer: (key) => drawerApi.open(key),
@@ -293,11 +313,40 @@ async function boot() {
   function computePrev(state, regTeams) {
     try {
       const prevRegTeams = prevRegTeamsFor(state);
-      const prev = previousPeriod(regTeams, state, prevRegTeams || []);
+      const window = previousPeriod(regTeams, state, prevRegTeams || []);
       // Without the previous regulation loaded yet, show no deltas rather than
       // comparing against an empty period.
-      return prevRegTeams === null && prev.length === 0 ? null : prev;
+      if (prevRegTeams === null && window.length === 0) return null;
+      // Compare like with like: the same chips (and Pokémon-level projection)
+      // as the current view. previousPeriod already applied the bar filters.
+      return projectTeams(filterTeams(window, {}, state.chips, dex), state.chips, dex);
     } catch (err) { console.warn('[main] previousPeriod failed:', err); return []; }
+  }
+
+  // Ladder / ranked files hold per-species rows, so the chips that can be checked
+  // per species (Pokémon, type, weak-to) filter those rows here, once, for every
+  // section. (Usage shares stay shares of all battles.)
+  function chipLadder(ladder, test) {
+    if (!test || !ladder?.months) return ladder;
+    return {
+      ...ladder,
+      months: ladder.months.map((m) => ({ ...m, mons: Object.fromEntries(Object.entries(m.mons).filter(([k]) => test(k))) })),
+    };
+  }
+  const megaFormsOf = (name) => Object.keys(dex.species).filter((k) => dex.species[k].megaOf === name);
+  function chipRanked(ranked, test) {
+    if (!test || !ranked?.seasons) return ranked;
+    // The game tracks Megas under the base species (+ stone), so a base name also
+    // passes when one of its Mega forms does.
+    const ok = (name) => test(name) || megaFormsOf(name).some(test);
+    return {
+      ...ranked,
+      seasons: ranked.seasons.map((se) => ({
+        ...se,
+        mons: Object.fromEntries(Object.entries(se.mons).filter(([k]) => ok(k))),
+        ranking: se.ranking ? se.ranking.filter(ok) : se.ranking,
+      })),
+    };
   }
 
   async function render() {
@@ -313,7 +362,17 @@ async function boot() {
       const base = filterTeams(regData.teams, state, [], dex);
       const prev = computePrev(state, regData.teams);
 
-      const view = { state, reg: state.reg, manifest, dex, teams, base, prev, matches: regData.matches, ladder, ranked, regTeams: regData.teams };
+      // teams: whole teams in view (team-level sections). monTeams: the same teams
+      // reduced to the Pokémon that pass type/item/move chips (Pokémon-level sections).
+      const monTeams = projectTeams(teams, state.chips, dex);
+      // Deep dive: any Pokémon can be opened, under the type/item/move chips only.
+      const ddTeams = projectTeams(teams, state.chips, dex, { keys: false });
+      // Ladder / in-game ranked rows are per species: which chips can apply there.
+      const speciesFilter = speciesChipFilter(state.chips, dex);
+      const view = {
+        state, reg: state.reg, manifest, dex, teams, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
+        ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams,
+      };
       lastView = view;
       filterbarApi.update(view);
       for (const s of mounted) dirty.add(s.id);

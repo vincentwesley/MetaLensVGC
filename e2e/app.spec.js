@@ -251,3 +251,56 @@ test('Item Usage: per-Pokémon items render and clicking an item adds an item ch
   await section.locator('.items-search').fill(key.slice(0, 5));
   await expect(section.locator('.items-table tbody tr').first()).toHaveAttribute('data-key', /.+/);
 });
+
+// Cross-filter contract: a chip from any chart narrows the Pokémon-level views to
+// exactly the Pokémon it describes (see CLAUDE.md "Chip semantics").
+async function clickFirstBar(page, chartLocator) {
+  await chartLocator.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  const pt = await chartLocator.evaluate((el) => {
+    const inst = window.echarts.getInstanceByDom(el);
+    const s = inst.getOption().series[0];
+    const last = s.data.length - 1; // horizontal bars are listed bottom-up; last = top bar
+    const d = s.data[last];
+    const [x, y] = inst.convertToPixel({ seriesIndex: 0 }, [d.value / 2, last]);
+    const r = el.getBoundingClientRect();
+    return { x: r.left + x, y: r.top + y, type: d.type };
+  });
+  await page.mouse.click(pt.x, pt.y);
+  return pt.type;
+}
+
+test('type charts add the matching chip kind and the leaderboard only lists matching Pokémon', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const charts = page.locator('main [data-section="types"] .types-panel__chart');
+  await charts.nth(2).scrollIntoViewIfNeeded();
+  const weakType = await clickFirstBar(page, charts.nth(2));
+  await expect(page.locator('#chips .chip__label')).toHaveText([`Weak to: ${weakType}`]);
+  await waitForAllSections(page);
+  const keys = await page.$$eval('[data-section="usage"] tbody tr', (trs) => trs.map((t) => t.dataset.key));
+  expect(keys.length).toBeGreaterThan(0);
+  const allWeak = await page.evaluate(async ({ keys, weakType }) => {
+    const { effectiveness } = await import('/js/lib/types.js');
+    const dex = await (await fetch('/data/dex.json')).json();
+    return keys.every((k) => effectiveness(weakType, dex.species[k].types) > 1);
+  }, { keys, weakType });
+  expect(allWeak).toBe(true);
+});
+
+test('archetype chip from the donut leaves a single slice; species chip leaves only that Pokémon', async ({ page }) => {
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const first = page.locator('[data-section="usage"] tbody tr').first();
+  const key = await first.getAttribute('data-key');
+  await first.click();
+  await waitForAllSections(page);
+  await expect(page.locator('[data-section="usage"] tbody tr')).toHaveCount(1);
+  await expect(page.locator('[data-section="usage"] tbody tr').first()).toHaveAttribute('data-key', key);
+  await page.locator('#chips .chips__clear').click();
+  await waitForAllSections(page);
+  const row = page.locator('main [data-section="archetypes"] tbody tr').first();
+  await row.scrollIntoViewIfNeeded();
+  await row.click();
+  await waitForAllSections(page);
+  await expect(page.locator('main [data-section="archetypes"] tbody tr')).toHaveCount(1);
+});

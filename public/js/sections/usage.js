@@ -115,9 +115,9 @@ export default {
         rows = merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null, topItem: m.items[0] || null }))
           .filter((r) => r.n >= state.minN);
       } else {
-        cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.teams.length;
-        const byItem = itemsBySpecies(view.teams);
-        rows = usage(view.teams).filter((r) => r.n >= state.minN)
+        cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.monTeams.length;
+        const byItem = itemsBySpecies(view.monTeams);
+        rows = usage(view.monTeams).filter((r) => r.n >= state.minN)
           .map((r) => ({ ...r, topItem: byItem.get(r.key)?.items[0] || null }));
       }
 
