@@ -50,7 +50,10 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots
   (types.js: type usage -> `type`, best attacking types -> `movetype`, weaknesses -> `weak`).
 - `paste.js`: `toPaste(team, dex) → Showdown text` (Showdown's Champions formats store SP in the `EVs:` line, e.g. `EVs: 32 Atk / 2 SpD / 32 Spe`), `parsePaste(text, dex) → Mon[]` (accepts `EVs:` and `SPs:` lines; a value above 32 means a classic EV spread, which is dropped as `sp: null`).
-- `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`.
+- `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`,
+  `sanitizeState(state, {regs})` (every state the store accepts goes through it; unknown values fall back).
+- `scan.js`: the Team Scanner's evidence (`scanTeam` → archetype, matchups vs Pokémon/archetypes from real
+  match results of "teams like yours", item check with item clause, teammate picks, weakest link). Thresholds in `LIMITS`.
 
 ### State (`public/js/state.js`)
 ```js
@@ -107,6 +110,14 @@ type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback
   (markLine, item vs axis params) and never throw: a throwing formatter also swallows clicks on that chart.
 - **Every chart click must add the chip kind that matches what it plots** (see "Chip semantics"). New Pokémon-level
   sections read `view.monTeams`; team-level ones read `view.teams`.
+- **Tooltips**: the chart wrapper (`withChartDefaults` in `ui/echarts-theme.js`) confines and wraps every ECharts
+  tooltip; hover help is `data-tip="…"` on any element (shown by `ui/tip.js`, clamped to the viewport). Don't add
+  CSS-only tooltips.
+- **Keyboard**: make custom clickable rows/cards `tabIndex = 0`; `ui/keys.js` turns Enter/Space into a click
+  (Shift kept). The deep-dive drawer owns a history entry (Back closes it).
+- **Speed** of a species always comes from `metaSpeed()` (sheets -> in-game ranked -> Smogon -> bounds). No
+  sheet has SP spreads, and Smogon months lag, so the ranked spreads are usually what's used.
+- **Colours**: text tokens must stay >= 4.5:1 on every surface (`test/contrast.test.js`).
 - **Hand-typed sheet strings** go through `normalizeTerm` (decode + pipeline); ladder names through `ladderMerge(..., dex)`.
 - **Hot aggregations** are memoized per filtered array (`usage`, `itemsBySpecies`); results are shared, so treat them as read-only.
 - **UI chrome**: the filter bar and active-filter chips share one sticky wrapper (`.stickybar`); collapse state is a

@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 95 tests)
+### Automated: unit (`npm test`, 115 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -40,8 +40,16 @@ Cloud-session notes:
 - Cross-filter semantics: archetype chip = primary archetype; type/weak/movetype/item/move
   chips test one Pokémon; species + item = that Pokémon holding it; core; negatives;
   projectTeams (incl. `{keys:false}`); speciesChipFilter; archetypeMatrix vs opponents.
+- `sanitizeState` (garbage hashes: unknown reg/source/place/skin/theme, bad/reversed dates,
+  min-n out of range, unknown/duplicate/empty chips, one-key cores).
+- `metaSpeed` source chain (sheets -> in-game ranked -> Smogon -> bounds).
+- `lib/scan.js` (scanner evidence: similar teams, matchups, archetype fallback, items +
+  item clause, teammate picks, weakest link) on synthetic fixtures.
+- Chart defaults (`withChartDefaults`: confine, wrapping, aria) and `clampTip` positioning.
+- WCAG contrast of `--ink`/`--ink-2`/`--muted` on every surface in all four skin/theme combos
+  (reads app.css).
 
-### Automated: browser (`npm run e2e:cloud`, 14 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 20 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -53,6 +61,13 @@ Cloud-session notes:
 - Type charts add the matching chip kind (weak-to), and every leaderboard row matches it.
 - Species chip leaves one leaderboard row; archetype chip leaves one donut/table row.
 - Active-filter bar stays pinned while scrolling; Clear all empties it and the hash.
+- Every chart's tooltip (grid of hover points, 390px) and a long `[data-tip]` tip stay inside
+  the viewport and inside their chart.
+- Hand-edited hash is sanitized and rewritten canonically; no errors or NaN.
+- Enter on an archetype row adds a chip; Shift+Enter on a leaderboard row adds a NOT chip.
+- Regulation-shift table has no NaN at min-n 0.
+- Back closes the deep-dive drawer (stays on the page); closing with X leaves history as it was.
+- Scanner on M-C: speed position has data, all evidence cards render, item clause flagged.
 
 ### Verified once, by hand or ad-hoc script (not in the suite)
 - Performance profile (CPU profiler, 1440×900): longest main-thread block on first load
@@ -70,33 +85,46 @@ Cloud-session notes:
   views, active-filter bar (desktop, collapsed, Retro, 390px).
 - Data normalization: unknown item strings −80%, ~200 lowercase Mega Stones now recognized.
 
-## Not yet tested (candidates for the next smoke/edge-case pass)
+Smoke/edge-case pass (2026-09-29; haiku sweeps + own probes; bugs found are fixed and in the suites above):
+- Hash/filter edge cases: from > to, dates outside the reg, one side only, malformed dates;
+  min-n 0/1/200/9999/-5/abc; all tiers off; unknown tiers; Winner + one small tier; chips
+  matching 0 teams (every section shows its empty state); unknown reg/source/kind, bad
+  percent-encoding, very long hash, 30 chips, duplicates; switching reg with chips that only
+  exist in M-C; Ladder M-C and Ranked for every reg; rapid hash changes (last one wins);
+  back/forward through chip changes. Found: NaN in the regulation-shift table (fixed).
+- Tooltips: every chart at 390/768/1024/1440/2560 (now confined; `[data-tip]` tips were
+  CSS-only and ran off-screen: replaced by `ui/tip.js`).
+- Layout: no horizontal scroll at 390/768/1024/1440/2560 in both skins; 12+ long chips wrap
+  (sticky bar ~4% of a phone screen); charts follow window resizes and filter-bar collapse;
+  720px CSS width at 2x DPR.
+- Keyboard: every focusable element shows a focus ring; drawer has role=dialog, aria-modal,
+  focus trap, Escape, focus return. Found: archetype rows and deep-dive type pills not
+  focusable, shift-table rows without Enter, focus hidden under the sticky bars (all fixed).
+- Screen readers: landmarks, labelled regions (chips bar is a polite live region), labelled
+  inputs (min-n slider was missing one, fixed); charts now carry ECharts' aria description.
+- Contrast: `--muted` was 3.6–4.0:1 in the light themes (fixed, see unit test).
+  `theme=auto` follows the OS; `prefers-reduced-motion` stops CSS animation.
+- Scanner: empty/whitespace/prose pastes, 1/3/6/8 mons, duplicates, unknown species,
+  nicknames, gender, EV spreads (dropped), SPs lines, Tera lines ignored, CRLF, 50 KB paste.
+  Found: speed position empty on M-C (no sheet SP, no Smogon month; now uses in-game ranked
+  spreads) and pasted mons without SP assumed 0 SP (now their species' most common spread).
+- Library: empty / no-match / regex-character / accented / 1000-char searches, every sort,
+  copy one / copy all (0 and many visible), long names at 390px.
+- Downloads: JSON/CSV with default filters, many chips and 0 teams (`[]` / header only);
+  CSV quoting of commas/quotes verified on real player names; counts match the view.
+- Memory: 4 rounds through M-A/M-B/M-C: heap flat at ~155 MB after the first round.
+- 4x CPU throttle: chip in the DOM <10 ms after a click and painted before the recompute.
 
-UI/UX
-- Tooltips near viewport edges (ECharts `confine`, custom tooltips, long names, mobile).
-- Keyboard-only use: tab order through filter bar → chips → sections → drawer; focus
-  visibility; focus trap and return in the drawer; Enter/Space on every clickable row.
-- Screen-reader labels (aria) on charts, chips, segmented controls, sticky bar landmarks.
-- Contrast of Pro light and Retro light after the palette changes; `theme=auto` following OS.
-- `prefers-reduced-motion`; the animated-sprites toggle; the sprite fallback chain with real network.
-- Tablet widths (768–1100px), very wide (2560px), browser zoom 200%.
-- Long content: many chips (10+) wrapping in the sticky bar; long Mega names; long player names.
-- Charts resizing when the filter bar collapses/expands or the window resizes.
+## Not yet tested (candidates for the next pass)
 
-Filters and state edge cases
-- Date range: from > to, dates outside the regulation, clearing one side; min-n at 0 and 200.
-- All tiers unchecked; Winner placement with few teams; chips that match 0 teams (every
-  section should show "Insufficient data", no errors).
-- Hand-edited / garbage URL hashes (unknown reg, unknown chip kind, bad encoding, duplicate chips).
-- Browser back/forward through chip and filter changes; the drawer and state.
-- Switching regulation with chips that don't exist there (e.g. a Mega only in M-C).
-- Ladder source with M-C (no months yet); ranked finished season without a published ranking.
-- Deep dive opened for a Pokémon with no data under the current chips.
-- Library search/sort edge cases; scanner with malformed paste, EV-style spreads, unknown species,
-  fewer than 6 Pokémon, duplicates.
-- Downloads (JSON/CSV) with chips and 0 teams; CSV escaping of commas/quotes in player names.
-
-Platform
-- Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation).
-- The GitHub Action end to end (needs GitHub's network): `npm run data` → validate → rebase-push.
-- CPU-throttled (4×) interaction latency; memory after switching regulations repeatedly.
+- Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache`
+  revalidation) and the sprite fallback chain with real network.
+- The GitHub Action end to end (needs GitHub's network): `npm run data` -> validate -> rebase-push.
+- Real screen readers (NVDA/VoiceOver) reading the ECharts aria descriptions; only the DOM
+  attributes were checked. Chart bars themselves are mouse/touch only (every chart has a
+  keyboard-reachable table or leaderboard with the same chips).
+- Real touch devices: tap-to-show tooltips and `[data-tip]` on iOS/Android, the Android back
+  gesture on the drawer (emulated Back was tested).
+- The scanner evidence cards in M-A/M-B were checked programmatically (no errors/NaN) but
+  only M-C was reviewed visually; Retro dark not screenshotted.
+- Browser zoom via the real zoom control (only DPR emulation was used).
