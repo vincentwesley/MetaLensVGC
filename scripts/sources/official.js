@@ -214,7 +214,8 @@ export async function fetchOfficialEvents(dex, opts = {}) {
         const mons = parseTeamPage(teamHtml)
           .filter((m) => m.id)
           .map((m) => ({
-            species: normalizeSpecies(m.id, dex),
+            // official lists sometimes omit Indeedee's gender; per owner's call, assume female
+            species: ((s) => (s === 'Indeedee' ? 'Indeedee-F' : s))(normalizeSpecies(m.id, dex)),
             item: m.item,
             ability: m.ability,
             moves: m.moves,
