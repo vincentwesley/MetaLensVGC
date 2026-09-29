@@ -299,7 +299,9 @@ async function boot() {
   let rendering = false;
   function scheduleRender() {
     if (raf) return;
-    raf = requestAnimationFrame(() => { raf = null; render(); });
+    // rAF + task: let the browser paint the immediate feedback (the new chip,
+    // the pressed button) before the recompute starts.
+    raf = requestAnimationFrame(() => setTimeout(() => { raf = null; render(); }, 0));
   }
 
   // The previous regulation's file (up to ~9 MB) is only needed for the
