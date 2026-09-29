@@ -33,8 +33,11 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
   - My Team Scanner
   - Pokémon deep-dive drawer
   - Data & methodology, with JSON/CSV download
-- **Two skins:** Retro (default: Press Start 2P, Silkscreen, VT323, CRT scanlines, pixel borders)
-  and Pro (JetBrains Mono and Inter). Each comes in light and dark. The layout is responsive down to 390px.
+- **Two skins:** Pro (default: JetBrains Mono and Inter) and Retro (Press Start 2P, Silkscreen,
+  VT323, CRT scanlines, pixel borders). Each comes in light and dark; dark is the default.
+  The layout is responsive down to 390px.
+- **Collapsible filter bar.** "▲ Hide" (or the **F** key) folds the filters and the header settings
+  into a one-line summary; the choice is remembered per browser. Small screens start collapsed.
 
 ## Champions mechanics used
 

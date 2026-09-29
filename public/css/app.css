@@ -1,10 +1,11 @@
 /* VGC MetaScope — design tokens, skins, layout, components.
-   Retro (default): Press Start 2P / Silkscreen / VT323, pixel-window chrome.
-   Pro: JetBrains Mono / Inter, dense Bloomberg-terminal grid.
+   Pro (default, dark theme by default): JetBrains Mono / Inter, dense Bloomberg-terminal grid.
+   Retro: Press Start 2P / Silkscreen / VT323, pixel-window chrome.
    Categorical chart palette validated via dataviz skill's validate_palette.js
    against all four skin×theme surfaces (see agent report). */
 
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+/* Google Fonts are loaded by a <link> in index.html (an @import here would
+   delay them until this file has downloaded). */
 
 /* ---------- tokens ---------- */
 :root {
@@ -161,9 +162,12 @@ button, input, select { font-family: inherit; color: inherit; }
 [data-skin="retro"] body::before {
   content: "";
   position: fixed; inset: 0; pointer-events: none; z-index: 500;
-  background: repeating-linear-gradient(to bottom, rgba(0,0,0,.06) 0, rgba(0,0,0,.06) 1px, transparent 1px, transparent 3px);
-  opacity: .35;
-  mix-blend-mode: multiply;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,.021) 0, rgba(0,0,0,.021) 1px, transparent 1px, transparent 3px);
+  /* No mix-blend-mode: blending a full-screen fixed layer forces the browser to
+     re-composite the whole page on every scroll frame. A plain translucent
+     layer on its own compositor layer looks the same and scrolls smoothly. */
+  transform: translateZ(0);
+  contain: strict;
 }
 [data-skin="pro"] body::before { content: none; }
 
@@ -242,17 +246,40 @@ button, input, select { font-family: inherit; color: inherit; }
 .filterbar__multi input { accent-color: var(--accent); }
 .filterbar__multi label:has(input:checked) { background: var(--accent); color: var(--surface-1); }
 .filterbar__sample { margin-left: auto; color: var(--ink-2); font-size: var(--fs-small); white-space: nowrap; }
-.filterbar__toggle-btn { display: none; }
+.filterbar__body { display: contents; }
+
+/* collapse / expand */
+.filterbar__toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  background: var(--surface-1); color: var(--ink-2); border: 2px solid var(--ink);
+  border-radius: var(--radius); padding: 4px 8px; font-family: var(--font-label); font-size: var(--fs-small); cursor: pointer;
+}
+[data-skin="pro"] .filterbar__toggle-btn { border: 1px solid var(--border); }
+.filterbar__toggle-btn:hover { background: var(--surface-2); color: var(--ink); }
+.filterbar__summary {
+  display: none; min-width: 0; flex: 1 1 0; text-align: left;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--font-label); font-size: var(--fs-small); color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.filterbar__summary::after { content: " · " attr(data-sample); color: var(--muted); }
+.filterbar__summary:not([data-sample])::after, .filterbar__summary[data-sample=""]::after { content: none; }
+:root[data-filters-collapsed] .filterbar { padding-block: var(--space-1); }
+:root[data-filters-collapsed] .filterbar__body,
+:root[data-filters-collapsed] .header__controls { display: none; }
+:root[data-filters-collapsed] .filterbar__summary { display: block; }
+:root[data-filters-collapsed] .filterbar__toggle-btn { margin-left: auto; }
 
 @media (max-width: 700px) {
   .filterbar { position: static; }
-  .filterbar__toggle-btn {
-    display: inline-flex; margin-left: 0; background: var(--surface-1); border: 2px solid var(--ink);
-    border-radius: var(--radius); padding: 6px 10px; font-family: var(--font-label); cursor: pointer;
-  }
-  .filterbar__body { display: none; flex-basis: 100%; }
-  .filterbar.is-open .filterbar__body { display: flex; flex-wrap: wrap; gap: var(--space-3); width: 100%; margin-top: var(--space-2); }
-  .filterbar__sample { flex-basis: 100%; margin-left: 0; order: 10; }
+  :root:not([data-filters-collapsed]) .filterbar__body { display: flex; flex-wrap: wrap; gap: var(--space-3); width: 100%; }
+  .filterbar__sample { flex-basis: 100%; margin-left: 0; order: 10; white-space: normal; }
+  :root:not([data-filters-collapsed]) .filterbar__toggle-btn { order: -1; margin-left: auto; }
+  :root[data-filters-collapsed] .filterbar { flex-wrap: nowrap; }
+  .filterbar__toggle-more { display: none; }
+  .filterbar__group { flex-wrap: wrap; max-width: 100%; }
+  .filterbar__multi { flex-wrap: wrap; gap: 4px; }
+  .filterbar input[type="date"] { flex: 1 1 120px; min-width: 0; }
 }
 
 /* ---------- chips ---------- */

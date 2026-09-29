@@ -38,9 +38,36 @@ function segmented(name, options, onPick) {
 export function mountFilterbar(root, ctx, manifest) {
   const toggleBtn = document.getElementById('filterbar-toggle');
   const body = document.getElementById('filterbar-body');
-  toggleBtn?.addEventListener('click', () => {
-    const open = root.classList.toggle('is-open');
-    toggleBtn.setAttribute('aria-expanded', String(open));
+  const summary = document.getElementById('filterbar-summary');
+
+  // Collapse: hides the filter controls and the header settings, leaving a
+  // one-line summary. The choice is a per-viewer preference kept in
+  // localStorage (not in the shareable URL). Small screens start collapsed.
+  const PREF = 'vgcms.filtersCollapsed';
+  let collapsed;
+  try { collapsed = localStorage.getItem(PREF); } catch { collapsed = null; }
+  collapsed = collapsed == null ? matchMedia('(max-width: 700px)').matches : collapsed === '1';
+  function setCollapsed(v, save) {
+    collapsed = v;
+    document.documentElement.toggleAttribute('data-filters-collapsed', v);
+    toggleBtn.setAttribute('aria-expanded', String(!v));
+    toggleBtn.innerHTML = v
+      ? '<span aria-hidden="true">▼</span> Filters<span class="filterbar__toggle-more"> &amp; settings</span>'
+      : '<span aria-hidden="true">▲</span> Hide';
+    toggleBtn.title = `${v ? 'Show' : 'Hide'} filters and settings (F)`;
+    if (save) { try { localStorage.setItem(PREF, v ? '1' : '0'); } catch { /* storage unavailable */ } }
+  }
+  setCollapsed(collapsed, false);
+  toggleBtn.addEventListener('click', () => setCollapsed(!collapsed, true));
+  summary?.addEventListener('click', () => setCollapsed(false, true));
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'f' && e.key !== 'F') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (document.querySelector('#deepdive[aria-hidden="false"]')) return;
+    e.preventDefault();
+    setCollapsed(!collapsed, true);
   });
 
   const regs = manifest?.regs || [];
@@ -126,9 +153,12 @@ export function mountFilterbar(root, ctx, manifest) {
   slider.step = '5';
   const sliderVal = document.createElement('span');
   sliderVal.className = 'filterbar__label';
+  // Dragging fires dozens of input events; only re-render once the value settles.
+  let sliderTimer = null;
   slider.addEventListener('input', () => {
     sliderVal.textContent = slider.value;
-    ctx.store.set({ minN: Number(slider.value) }, { replace: true });
+    clearTimeout(sliderTimer);
+    sliderTimer = setTimeout(() => ctx.store.set({ minN: Number(slider.value) }, { replace: true }), 180);
   });
   sliderGroup.append(sliderLabel, slider, sliderVal);
 
@@ -174,6 +204,7 @@ export function mountFilterbar(root, ctx, manifest) {
   ctx.store.subscribe(sync);
 
   function update(view) {
+    if (summary) summary.dataset.sample = view?.state?.source === 'ranked' ? '' : `${(view?.teams?.length ?? 0).toLocaleString('en-US')} teams`;
     const n = view?.teams?.length ?? 0;
     const events = view?.teams ? new Set(view.teams.map((t) => t.ev?.id)).size : 0;
     const updated = manifest?.generated ? manifest.generated.slice(0, 10) : '—';
@@ -186,6 +217,21 @@ export function mountFilterbar(root, ctx, manifest) {
     }
     sample.textContent = `${n.toLocaleString('en-US')} teams · ${events.toLocaleString('en-US')} events · updated ${updated}`;
   }
+
+  // One-line summary shown while collapsed: the active bar filters at a glance.
+  function paintSummary(state) {
+    if (!summary) return;
+    const srcLabel = { tournaments: 'Tournaments', ladder: 'Ladder', ranked: 'Ranked (in-game)' }[state.source] || state.source;
+    const parts = [state.reg, srcLabel];
+    if (state.source === 'tournaments') {
+      if (state.tiers.length !== TIERS.length) parts.push(TIERS.filter(([v]) => state.tiers.includes(v)).map(([, l]) => l).join('+') || 'No tiers');
+      if (state.place !== 'all') parts.push(PLACEMENTS.find(([v]) => v === state.place)?.[1] || state.place);
+    }
+    if (state.from || state.to) parts.push(`${state.from || '…'} → ${state.to || '…'}`);
+    summary.textContent = parts.join(' · ');
+  }
+  paintSummary(ctx.store.get());
+  ctx.store.subscribe(paintSummary);
 
   return { update };
 }

@@ -81,8 +81,8 @@ main.grid .section[data-section="trends"] {
 .sb-bench input[type="range"] { width: 120px; accent-color: var(--accent); }
 .sb-bench__result { flex-basis: 100%; font-size: var(--fs-small); color: var(--ink-2); }
 
-.sb-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
-@media (max-width: 640px) { .sb-two-col { grid-template-columns: 1fr; } }
+.sb-two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); }
+@media (max-width: 640px) { .sb-two-col { grid-template-columns: minmax(0, 1fr); } }
 
 .sb-subhead { font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase; color: var(--muted); margin: 0 0 var(--space-2); }
 

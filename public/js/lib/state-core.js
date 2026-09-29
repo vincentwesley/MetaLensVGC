@@ -9,8 +9,8 @@ export const DEFAULT_STATE = {
   to: '',
   minN: 20,
   chips: [],
-  skin: 'retro',
-  theme: 'auto',
+  skin: 'pro',
+  theme: 'dark',
   anim: false,
 };
 
