@@ -512,7 +512,7 @@ test('snapshot cards show NEW (not a +pt jump) for a Pokémon absent from the pr
   await page.goto('/'); // default reg M-C; the M-B file loads after first paint
   await waitForAllSections(page);
   const cards = page.locator('[data-section="snapshot"] .snapshot__mon');
-  await expect(cards.locator('.kpi__delta').first()).toContainText('vs M-B', { timeout: 30_000 });
+  await expect(page.locator('[data-section="snapshot"] .snapshot__change')).toContainText('Change vs M-B', { timeout: 30_000 });
   // Rillaboom: 1 team in M-B (< min n 20), 1955 in M-C.
   const rilla = cards.filter({ hasText: 'Rillaboom' });
   await expect(rilla).toHaveCount(1);
@@ -569,5 +569,103 @@ test('no chart aria-label contains NaN or undefined (default view and M-B)', asy
     const bad = await page.evaluate(() => [...document.querySelectorAll('[aria-label]')]
       .map((e) => e.getAttribute('aria-label')).filter((t) => /NaN|undefined/.test(t)));
     expect(bad, hash).toEqual([]);
+  }
+});
+
+test('section nav: a link scrolls to its section and aria-current follows the scroll', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const nav = page.locator('#secnav');
+  await expect(nav.locator('a')).toHaveCount(11);
+  await nav.locator('a[data-jump="speed"]').click();
+  await expect(nav.locator('[aria-current="true"]')).toHaveText('Speed');
+  const top = await page.locator('main [data-section="speed"]').evaluate((e) => e.getBoundingClientRect().top);
+  const barBottom = await page.locator('#stickybar').evaluate((e) => e.getBoundingClientRect().bottom);
+  expect(top).toBeGreaterThanOrEqual(barBottom - 2); // not hidden behind the sticky bar
+  expect(await page.evaluate(() => location.hash)).toBe(''); // the hash holds dashboard state
+  await page.mouse.wheel(0, -100000);
+  await expect(nav.locator('[aria-current="true"]')).toHaveText('Snapshot');
+  await expect(nav.locator('[aria-current="true"]')).toHaveCount(1);
+});
+
+test('phones start with the filter bar collapsed when nothing is stored; a stored choice wins', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  await expect(page.locator('html')).toHaveAttribute('data-filters-collapsed', '');
+  await expect(page.locator('[aria-label="Regulation"]')).toBeHidden();
+  await page.locator('#filterbar-toggle').click();
+  await page.reload();
+  await waitForUsageRendered(page);
+  await expect(page.locator('html')).not.toHaveAttribute('data-filters-collapsed', '');
+});
+
+test('sticky bar (filters collapsed + section nav) stays under 15% of a phone screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const h = await page.locator('#stickybar').evaluate((e) => e.offsetHeight);
+  expect(h).toBeLessThanOrEqual(844 * 0.15);
+  await expect(page.locator('#secnav')).toBeVisible();
+  expect(await page.locator('#secnav').evaluate((e) => getComputedStyle(e).overflowX)).toBe('auto');
+});
+
+test('how-to strip shows on the first visit, dismiss persists across reload', async ({ page }) => {
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const strip = page.locator('#howto');
+  await expect(strip).toBeVisible();
+  await expect(strip).toContainText('Click any bar, row or card');
+  await expect(strip).toContainText('Shift-click to exclude');
+  await strip.getByRole('link', { name: /Scanner/ }).click();
+  await expect(page.locator('#secnav [aria-current="true"]')).toHaveText('Scanner');
+  await page.getByRole('button', { name: 'Dismiss tips' }).click();
+  await expect(strip).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('metalens.howtoDismissed'))).toBe('1');
+  await page.reload();
+  await waitForUsageRendered(page);
+  await expect(strip).toBeHidden();
+});
+
+test('snapshot: one "Change vs" line under the cards, cards show only the change', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const snap = page.locator('[data-section="snapshot"]');
+  await expect(snap.locator('.snapshot__change')).toHaveCount(1, { timeout: 30_000 });
+  await expect(snap.locator('.snapshot__change')).toContainText(/^Change vs M-B \(prev n=[\d,]+ teams\)/);
+  for (const t of await snap.locator('.snapshot__mon .kpi__delta').allTextContents()) {
+    expect(t).toMatch(/^(NEW|[▲▼—] [+-]?\d+\.\dpt)$/);
+  }
+});
+
+test('snapshot: the Most-used Mega name only breaks after a hyphen at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForAllSections(page);
+  const v = page.locator('[data-section="snapshot"] .kpi').filter({ hasText: 'Most-used Mega' }).locator('.kpi__value > span');
+  await expect(v.locator('wbr')).toHaveCount(await v.evaluate((s) => (s.textContent.match(/-/g) || []).length));
+  expect(await v.evaluate((s) => getComputedStyle(s).overflowWrap)).toBe('normal');
+  expect(await v.evaluate((s) => s.scrollWidth <= s.clientWidth + 1)).toBe(true);
+});
+
+test('off-screen sections carry aria-busy while they catch up, none once rendering is done', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__busySeen = false;
+    new MutationObserver((ms) => { for (const m of ms) if (m.target.getAttribute?.('aria-busy') === 'true') window.__busySeen = true; })
+      .observe(document, { subtree: true, attributes: true, attributeFilter: ['aria-busy'] });
+  });
+  await page.goto('/');
+  await waitForAllSections(page);
+  expect(await page.evaluate(() => window.__busySeen)).toBe(true);
+  await expect(page.locator('main [data-section][aria-busy="true"]')).toHaveCount(0);
+});
+
+test('no horizontal overflow at 390px in both skins with the nav and how-to strip present', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const hash of ['/#skin=retro', '/#skin=pro&theme=light']) {
+    await page.goto(hash);
+    await waitForAllSections(page);
+    await expect(page.locator('#howto')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), hash).toBeLessThanOrEqual(390);
   }
 });

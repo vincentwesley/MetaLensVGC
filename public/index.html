@@ -37,6 +37,11 @@
 
 <p class="stale-notice" id="stale-notice" role="status" hidden></p>
 
+<div class="howto" id="howto" role="note" hidden>
+  <p class="howto__text"><b>Tips</b> <span>Click any bar, row or card to filter the whole dashboard</span> <span>Shift-click to exclude</span> <span><a href="#h-scanner" data-jump="scanner">Paste a team in the Scanner</a></span></p>
+  <button type="button" class="howto__close" id="howto-close" aria-label="Dismiss tips">×</button>
+</div>
+
 <div class="stickybar" id="stickybar">
 <div class="filterbar" id="filterbar" role="region" aria-label="Filters">
   <button type="button" class="filterbar__summary" id="filterbar-summary" title="Show filters and settings (F)"></button>
@@ -47,6 +52,19 @@
 </div>
 
 <div class="chips" id="chips" role="region" aria-label="Active filters" aria-live="polite"></div>
+<nav class="secnav" id="secnav" aria-label="Jump to section">
+  <a href="#h-snapshot" data-jump="snapshot">Snapshot</a>
+  <a href="#h-usage" data-jump="usage">Usage</a>
+  <a href="#h-types" data-jump="types">Types</a>
+  <a href="#h-items" data-jump="items">Items</a>
+  <a href="#h-archetypes" data-jump="archetypes">Archetypes</a>
+  <a href="#h-teammates" data-jump="teammates">Teammates</a>
+  <a href="#h-speed" data-jump="speed">Speed</a>
+  <a href="#h-trends" data-jump="trends">Trends</a>
+  <a href="#h-library" data-jump="library">Library</a>
+  <a href="#h-scanner" data-jump="scanner">Scanner</a>
+  <a href="#h-methodology" data-jump="methodology">Data</a>
+</nav>
 </div>
 
 <main id="main" class="grid">

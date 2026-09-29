@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { withChartDefaults } from '../public/js/ui/echarts-theme.js';
 import { clampTip } from '../public/js/ui/tip.js';
+import { pickCurrent, isDismissed, dismiss } from '../public/js/ui/secnav.js';
+import { changeText } from '../public/js/lib/aggregate.js';
 
 test('withChartDefaults: every tooltip is confined and wraps, section options win', () => {
   const out = withChartDefaults({ tooltip: { trigger: 'item', extraCssText: 'color:red;' }, series: [] });
@@ -37,4 +39,29 @@ test('clampTip keeps the tip inside the viewport', () => {
   // Anchor at the very bottom with no room below either: stays on screen.
   p = clampTip({ left: 100, top: 30, width: 40, bottom: 840 }, { width: 300, height: 800 }, vw, vh);
   assert.ok(p.top >= 8 && p.top + 800 <= vh);
+});
+
+test('pickCurrent: first section in page order inside the band; keeps the previous when none is', () => {
+  const order = ['snapshot', 'usage', 'types'];
+  assert.equal(pickCurrent(order, new Set(['types', 'usage']), null), 'usage');
+  assert.equal(pickCurrent(order, new Set(), 'types'), 'types');
+  assert.equal(pickCurrent(order, new Set(), null), null);
+});
+
+test('how-to dismissal is stored, and a throwing storage never throws', () => {
+  const mem = new Map();
+  const ok = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  assert.equal(isDismissed(ok), false);
+  dismiss(ok);
+  assert.equal(isDismissed(ok), true);
+  const boom = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  assert.equal(isDismissed(boom), false);
+  assert.doesNotThrow(() => dismiss(boom));
+});
+
+test('changeText: NEW, or a signed point change with an arrow', () => {
+  assert.equal(changeText({ isNew: true, pts: null }), 'NEW');
+  assert.equal(changeText({ isNew: false, pts: 14.94 }), '▲ +14.9pt');
+  assert.equal(changeText({ isNew: false, pts: -14.6 }), '▼ -14.6pt');
+  assert.equal(changeText({ isNew: false, pts: 0 }), '— 0.0pt');
 });

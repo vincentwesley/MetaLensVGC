@@ -14,6 +14,7 @@ import { installTips } from './ui/tip.js';
 import { installKeyActivation } from './ui/keys.js';
 import { installPixelField } from './ui/pixelfield.js';
 import { isStale } from './lib/stale.js';
+import { mountSecnav, mountHowto } from './ui/secnav.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
@@ -132,6 +133,8 @@ async function boot() {
     ro.observe(header);
   }
   buildHeaderControls();
+  mountHowto(document.getElementById('howto'));
+  mountSecnav(document.getElementById('secnav'));
 
   let manifest, dex;
   try {
@@ -253,7 +256,12 @@ async function boot() {
 
   // <html data-rendering> is present while any section is out of date (tests
   // wait on it; it is also a handy hook for a loading indicator).
-  const syncPending = () => document.documentElement.toggleAttribute('data-rendering', dirty.size > 0);
+  // Each dirty section also carries aria-busy (css shows a thin accent bar on it).
+  const sectionEls = new Map(mounted.map((s) => [s.id, document.querySelector(`main [data-section="${s.id}"]`)]));
+  const syncPending = () => {
+    document.documentElement.toggleAttribute('data-rendering', dirty.size > 0);
+    for (const [id, el] of sectionEls) el?.setAttribute('aria-busy', String(dirty.has(id)));
+  };
 
   function updateSection(s, view) {
     dirty.delete(s.id);

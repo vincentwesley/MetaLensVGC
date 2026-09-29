@@ -732,6 +732,12 @@ export function changeVsPrev(curPct, prevRow, minN = 0) {
   return { isNew: false, pts: (curPct - prevRow.pct) * 100 };
 }
 
+/** Short text for a changeVsPrev result: "NEW", "▲ +14.9pt", "▼ -14.6pt" or "— 0.0pt". */
+export function changeText({ isNew, pts }) {
+  if (isNew) return 'NEW';
+  return `${pts > 0 ? '▲' : pts < 0 ? '▼' : '—'} ${pts > 0 ? '+' : ''}${pts.toFixed(1)}pt`;
+}
+
 // Compares the last two *qualifying* ISO weeks present in the data (see
 // qualifyingWeeks — a partial/small week, e.g. one still in progress, is
 // skipped so it can't masquerade as a huge riser or faller). A mover must

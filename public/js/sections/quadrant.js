@@ -51,33 +51,25 @@ export default {
     el.appendChild(card);
 
     const chart = ctx.echarts.init(chartEl);
-    new ResizeObserver(() => { chart.resize(); positionLabels(); }).observe(chartEl);
+    new ResizeObserver(() => chart.resize()).observe(chartEl);
 
     let lastRows = null;
-    let lastBounds = null;
 
     chart.on('click', (p) => { if (p.data?.key) ctx.chip('species', p.data.key, p.event?.event); });
     chart.on('mouseover', (p) => { if (p.data?.key) ctx.hover(p.data.key); });
     chart.on('mouseout', () => ctx.hover(null));
 
-    function positionLabels() {
-      if (!lastBounds) return;
-      const { xMedian, yMin, yMax, xMin, xMax } = lastBounds;
-      // x is a log axis: the midpoint between two bounds on a log scale is
-      // their geometric mean, not their arithmetic mean.
-      const geoMid = (a, b) => Math.sqrt(Math.max(a, 1e-6) * Math.max(b, 1e-6));
-      const graphics = QUADRANTS.map((q) => {
-        const x = q.xHigh ? geoMid(xMedian, xMax) : geoMid(xMin, xMedian);
-        const y = q.yHigh ? (50 + yMax) / 2 : (yMin + 50) / 2;
-        const px = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [x, y]);
-        if (!px) return null;
-        return {
-          id: q.id, type: 'text', left: px[0], top: px[1],
-          style: { text: q.label, fill: ctx.chartTheme().muted, fontFamily: ctx.chartTheme().labelFontFamily, fontSize: 11, opacity: 0.75 },
-          z: 5, silent: true,
-        };
-      }).filter(Boolean);
-      chart.setOption({ graphic: graphics });
+    // Region labels sit in the chart's four corners (away from the sprites), with a halo
+    // in the surface colour so they stay legible where a sprite still overlaps.
+    function cornerLabels(theme) {
+      const pos = { pillars: { right: 30, top: 20 }, gems: { left: 62, top: 20 }, overhyped: { right: 30, bottom: 46 }, fringe: { left: 62, bottom: 46 } };
+      return QUADRANTS.map((q) => ({
+        id: q.id, type: 'text', ...pos[q.id], z: 100, silent: true,
+        style: {
+          text: q.label, fill: theme.inkSecondary, fontFamily: theme.labelFontFamily, fontSize: 11, fontWeight: 700,
+          stroke: theme.surface, lineWidth: 4, opacity: 0.95,
+        },
+      }));
     }
 
     function draw(rows, theme) {
@@ -96,10 +88,11 @@ export default {
       const yMin = Math.floor(Math.max(0, Math.min(...yVals) - 5));
       const yMax = Math.ceil(Math.min(100, Math.max(...yVals) + 5));
       const xMedian = median(xVals);
-      lastBounds = { xMedian, yMin, yMax: Math.max(yMax, 55), xMin, xMax };
+      const lastBounds = { xMedian, yMin, yMax: Math.max(yMax, 55), xMin, xMax };
 
       chart.setOption({
         backgroundColor: 'transparent',
+        graphic: cornerLabels(theme),
         grid: { left: 56, right: 24, top: 16, bottom: 40 },
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink },
@@ -130,7 +123,6 @@ export default {
           },
         }],
       }, { notMerge: true });
-      positionLabels();
     }
 
     let lastView = null;
