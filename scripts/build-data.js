@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Entry point for `npm run data`. Builds public/data/{teams-<REG>.json, ladder-<REG>.json,
-// dex.json, manifest.json} from fetched sources. Incremental: completed tournaments
-// already present in public/data are reused rather than refetched.
+// ranked-<REG>.json, dex.json, manifest.json} from fetched sources. Incremental: completed
+// tournaments and finished ranked seasons already present in public/data are reused rather
+// than refetched.
 //
 // Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--max-tournaments N]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -10,6 +11,7 @@ import { REG_IDS, REGULATIONS } from './lib/regs.js';
 import { fetchLimitlessOnline, RECENT_BEFORE } from './sources/limitless.js';
 import { fetchOfficialEvents } from './sources/official.js';
 import { fetchLadder } from './sources/ladder.js';
+import { fetchRanked } from './sources/ranked.js';
 import { buildDex } from './dex.js';
 import { resolveSprites } from './sprites.js';
 import { normalizeSpecies } from '../public/js/lib/names.js';
@@ -199,6 +201,22 @@ async function main() {
     ladderByReg[reg].sort((a, b) => a.month.localeCompare(b.month));
   }
 
+  // 4b) Ranked ladder (official Champions "Battle Data", Doubles, all regs, always).
+  // Incremental like the ladder above: finished seasons already in the existing file are
+  // reused rather than refetched; the season currently being collected always refetches.
+  const rankedByReg = {};
+  for (const reg of REG_IDS) {
+    const existingRanked = await readJSONIfExists(path.join(DATA_DIR, `ranked-${reg}.json`));
+    const existingSeasons = new Set((existingRanked?.seasons || []).map((s) => s.season));
+    log(`Fetching ranked ladder (championsbattledata.com) for ${reg}...`);
+    const fresh = await fetchRanked(reg, null, { existingSeasons, log });
+    const have = new Set(fresh.seasons.map((s) => s.season));
+    const seasons = [...fresh.seasons];
+    for (const s of existingRanked?.seasons || []) if (!have.has(s.season)) seasons.push(s);
+    seasons.sort((a, b) => a.snapshot.localeCompare(b.snapshot));
+    rankedByReg[reg] = { ...fresh, seasons };
+  }
+
   // 5) Collect every species/move/item actually present, so far normalized without a dex.
   for (const reg of REG_IDS) {
     for (const ev of rawEventsByReg[reg]) {
@@ -215,6 +233,14 @@ async function main() {
         allSpecies.add(species);
         for (const it of Object.keys(mon.items)) allItems.add(it);
         for (const mv of Object.keys(mon.moves)) allMoves.add(mv);
+      }
+    }
+    for (const season of rankedByReg[reg].seasons) {
+      for (const [species, mon] of Object.entries(season.mons)) {
+        allSpecies.add(species);
+        for (const it of Object.keys(mon.items)) allItems.add(it);
+        for (const mv of Object.keys(mon.moves)) allMoves.add(mv);
+        for (const tm of mon.teammates) allSpecies.add(tm);
       }
     }
   }
@@ -241,6 +267,8 @@ async function main() {
     const ladderFile = { reg, source: 'smogon', cutoff: 1760, months: ladderByReg[reg] };
     await writeFile(path.join(DATA_DIR, `ladder-${reg}.json`), JSON.stringify(ladderFile));
 
+    await writeFile(path.join(DATA_DIR, `ranked-${reg}.json`), JSON.stringify(rankedByReg[reg]));
+
     const openSheets = teamsFile.teams.reduce((n, row) => n + (row[7].some((m) => typeof m[5] === 'string') ? 1 : 0), 0);
     manifestRegs.push({
       id: reg,
@@ -251,6 +279,7 @@ async function main() {
       openSheets,
       matches: teamsFile.matches.length,
       ladderMonths: ladderByReg[reg].map((m) => m.month),
+      rankedSeasons: rankedByReg[reg].seasons.map((s) => s.season),
     });
   }
 
@@ -269,6 +298,7 @@ async function main() {
         { id: 'limitless', name: 'Limitless (play.limitlesstcg.com)', url: 'https://play.limitlesstcg.com' },
         { id: 'limitlessvgc', name: 'Limitless VGC (limitlessvgc.com)', url: 'https://limitlessvgc.com' },
         { id: 'smogon', name: 'Smogon usage stats', url: 'https://www.smogon.com/stats' },
+        { id: 'championsbattledata', name: 'Pokémon Champions Battle Data (championsbattledata.com)', url: 'https://championsbattledata.com' },
       ],
     }),
   );

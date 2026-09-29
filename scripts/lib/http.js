@@ -13,6 +13,7 @@ const HOST_SPACING = {
   'limitlessvgc.com': 1500,
   'standings.limitlessvgc.com': 1500,
   'www.smogon.com': 500,
+  'championsbattledata.com': 1100, // no fixed public limit; be polite (per-pokemon battle endpoint means many requests)
 };
 const DEFAULT_SPACING = 500;
 
