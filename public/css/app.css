@@ -529,3 +529,6 @@ button[data-tip] { cursor: pointer; }
   .creator__art { width: min(220px, 60vw); }
   .creator__links { justify-content: center; }
 }
+
+/* "what this shows · click: …" line under a chart (ui/meta.js clickHint) */
+.click-hint { margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--fs-small); font-family: var(--font-body); line-height: 1.4; }

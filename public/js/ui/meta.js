@@ -32,3 +32,11 @@ export function rankedSource(season) {
   const base = 'In-game ranked (Pokémon Champions Battle Data)';
   return season ? `${base} · ${season.season} · snapshot ${season.snapshot}` : base;
 }
+
+/** One muted line under a chart: what it shows and what clicking it filters to. */
+export function clickHint(text) {
+  const p = document.createElement('p');
+  p.className = 'click-hint';
+  p.textContent = text;
+  return p;
+}
