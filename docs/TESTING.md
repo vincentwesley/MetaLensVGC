@@ -31,9 +31,9 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 120 tests)
+### Automated: unit (`npm test`, 129 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
-  normalization, archetype classification, paste export/parse, state hash codec, ranked helpers.
+  normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
   coUsage/cores/speciesDetail/weekly/movers/speedTiers/closestTeams/CSV/JSON, ladderMerge
   (+ display names with dex), items (itemsBySpecies, itemUsage, ladderItemUsage, mega-stone toggle).
@@ -53,7 +53,7 @@ Cloud-session notes:
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 22 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 28 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -74,8 +74,12 @@ Cloud-session notes:
 - Regulation-shift table has no NaN at min-n 0.
 - Back closes the deep-dive drawer (stays on the page); closing with X leaves history as it was.
 - Scanner on M-C: speed position has data, all evidence cards render, item clause flagged.
+- Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
 
 ### Verified once, by hand or ad-hoc script (not in the suite)
+- The weekly refresh Action end to end (run 36573240204: failure alert opened with correct step and log;
+  run 36573679607: real refresh succeeded in 45.5 min, data commit rebased cleanly over concurrent code pushes,
+  issue commented and closed).
 - Performance profile (CPU profiler, 1440×900): longest main-thread block on first load
   1.2 s → 0.10 s, M-B switch 2.2 s → 0.22 s, filter change 0.6 s → 0.08 s. The previous
   regulation's file loads after first paint.
@@ -135,10 +139,6 @@ Smoke/edge-case pass (2026-09-29; haiku sweeps + own probes; bugs found are fixe
 
 ## Not yet tested (candidates for the next pass)
 
-- **The weekly refresh Action end to end.** It has run once (2026-09-29, manual) and failed at the
-  push (the race since fixed by rebase + retry). The fixed version has never run on GitHub. It
-  fires Mondays 06:00 UTC from the default branch (`claude/pokemon-vgc-metagame-dashboard-9whe1a`)
-  or via Actions -> Refresh data -> Run workflow.
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
   the sprite fallback chain with real network, the creator image and pixel field on a real device.
 - Pixel field cost on low-end / mobile CPUs and battery (only desktop Chromium was profiled).
