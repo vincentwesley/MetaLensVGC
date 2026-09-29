@@ -2,7 +2,7 @@
 // median usage / 50% win, four quadrant labels. Tournament-only (ladder has
 // no win rate, so a win axis isn't meaningful there).
 import { usage } from '../lib/aggregate.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 const QUADRANTS = [
   { id: 'pillars', label: 'Meta Pillars', xHigh: true, yHigh: true },
@@ -45,7 +45,8 @@ export default {
     body.className = 'card__body';
     const chartEl = document.createElement('div');
     chartEl.className = 'quadrant__chart';
-    body.appendChild(chartEl);
+    const hint = clickHint('Each Pokémon plotted by usage and win rate. Click one: show only that Pokémon and its teams. Shift-click to exclude.');
+    body.append(hint, chartEl);
     card.append(head, body);
     el.appendChild(card);
 
@@ -160,7 +161,12 @@ export default {
     ctx.onTheme((theme) => { if (lastRows) draw(lastRows, theme); });
 
     return {
-      update(view) { lastView = view; render(); },
+      update(view) {
+        lastView = view; render();
+        // Empty states wipe the body; keep exactly one hint at the top, hidden when nothing is plotted.
+        if (body.firstChild !== hint) body.prepend(hint);
+        hint.hidden = !!body.querySelector('.empty-state');
+      },
       highlight(key) {
         if (!lastRows) return;
         const idx = key ? lastRows.findIndex((r) => r.key === key) : -1;

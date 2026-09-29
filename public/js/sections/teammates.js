@@ -1,10 +1,9 @@
 // teammates.js — co-usage heatmap of the top ~15 species (Raw % / Lift toggle,
-// sprite axis labels), top 3-Pokémon cores, and a ladder-side "teammate rate"
-// list for a picked species. The heatmap/cores need real per-team rosters, so
-// they're tournament-only; the ladder list is its own independent panel (not
-// gated by the Source toggle) since Smogon chaos stats carry teammate % too.
-import { usage, coUsage, cores, ladderMerge, rankedSeason } from '../lib/aggregate.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+// sprite axis labels), top 3-Pokémon cores, and a "teammate rate" list for a
+// picked species: tournament team sheets by default, Smogon's ladder teammate %
+// when Source = Ladder and that period has ladder data.
+import { usage, coUsage, cores, ladderMerge, rankedSeason, speciesDetail } from '../lib/aggregate.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -68,7 +67,7 @@ export default {
 
     const heat = card('Teammate co-usage');
     const coresCard = card('Top cores');
-    const ladderCard = card('Ladder teammate rate');
+    const ladderCard = card('Teammate rate');
     heat.el.classList.add('sb-full');
     coresCard.el.classList.add('sb-full');
     ladderCard.el.classList.add('sb-full');
@@ -88,7 +87,8 @@ export default {
     btnLift.setAttribute('data-tip', 'Lift = P(both) / (P(a) × P(b)). 1.0 = no relationship; >1 = seen together more than chance.');
     modeSeg.append(btnRaw, btnLift);
     controls.appendChild(modeSeg);
-    heat.body.appendChild(controls);
+    const heatHint = clickHint('How often two Pokémon share a team. Click a cell: show only teams with both. Shift-click to exclude.');
+    heat.body.append(heatHint, controls);
 
     const heatChartEl = document.createElement('div');
     heatChartEl.className = 'sb-chart sb-chart--tall';
@@ -151,6 +151,7 @@ export default {
       heatChartEl.style.display = 'none';
       controls.style.display = 'none';
       heatTitle.textContent = 'Ranked teammate order';
+      heatHint.textContent = 'Each row is a Pokémon and its usual teammates. Click a row: show only that Pokémon and its teams.';
       heatEmptyEl.textContent = '';
       lastKeys = [];
       const season = rankedSeason(view.ranked, view.state.from, view.state.to);
@@ -183,6 +184,7 @@ export default {
     function renderHeat(view, theme) {
       controls.style.display = '';
       heatTitle.textContent = 'Teammate co-usage';
+      heatHint.textContent = 'How often two Pokémon share a team. Click a cell: show only teams with both. Shift-click to exclude.';
       if (view.state.source === 'ranked') { renderRankedTeammates(view); return; }
       if (view.state.source === 'ladder') {
         heatChartEl.style.display = 'none';
@@ -300,7 +302,7 @@ export default {
 
     // --- top cores ---------------------------------------------------------
     const coresWrap = document.createElement('div');
-    coresCard.body.appendChild(coresWrap);
+    coresCard.body.append(clickHint('Most common trios of Pokémon. Click a row: show only teams running all three.'), coresWrap);
 
     function renderCores(view) {
       coresWrap.textContent = '';
@@ -341,32 +343,52 @@ export default {
       }
     }
 
-    // --- ladder teammate rate for a picked species --------------------------
+    // --- teammate rate for a picked species ----------------------------------
+    // Tournament team sheets by default (every regulation has them); Smogon's
+    // ladder teammate % only when Source = Ladder and that month exists.
     const ladderControls = document.createElement('div');
     ladderControls.className = 'sb-controls';
     const ladderLabel = document.createElement('span');
     ladderLabel.className = 'filterbar__label';
-    ladderLabel.textContent = 'Species';
+    ladderLabel.textContent = 'Pokémon';
     const ladderSelect = document.createElement('select');
+    ladderSelect.setAttribute('aria-label', 'Pokémon to show teammates for');
     ladderControls.append(ladderLabel, ladderSelect);
+    const rateHint = clickHint('Share of the picked Pokémon\'s teams that also run each teammate. Click a row: show only teams with both.');
     const ladderList = document.createElement('div');
-    ladderCard.body.append(ladderControls, ladderList);
+    ladderCard.body.append(rateHint, ladderControls, ladderList);
 
-    let lastMerged = null;
+    let rateView = null;
+    let rateSource = null; // { kind: 'sheets' | 'ladder', merged? }
+    function teammatesFor(key) {
+      if (rateSource?.kind === 'ladder') {
+        const mon = rateSource.merged.mons.find((m) => m.key === key);
+        return { n: null, rows: (mon?.teammates || []).map((t) => ({ name: t.name, pct: t.pct })) };
+      }
+      const det = speciesDetail(rateView.teams, key, rateView.dex);
+      return { n: det.n, rows: det.teammates.map((t) => ({ name: t.name, pct: t.pct, n: t.n })) };
+    }
     function renderLadderList() {
       ladderList.textContent = '';
-      if (!lastMerged) {
-        ladderList.appendChild(emptyState('No ladder data for this regulation.'));
+      const key = ladderSelect.value;
+      if (!rateView || !key) {
+        ladderList.appendChild(emptyState('No Pokémon with enough teams under the current filters.'));
         return;
       }
-      const mon = lastMerged.mons.find((m) => m.key === ladderSelect.value);
-      if (!mon || !mon.teammates.length) {
-        ladderList.appendChild(emptyState('No teammate data for this species.'));
+      const { n, rows } = teammatesFor(key);
+      if (rateSource.kind === 'sheets' && n < rateView.state.minN) {
+        ladderList.appendChild(emptyState(`${key} is on ${n} team${n === 1 ? '' : 's'} in view (minimum ${rateView.state.minN}).`));
         return;
       }
-      for (const t of mon.teammates.slice(0, 12)) {
+      if (!rows.length) {
+        ladderList.appendChild(emptyState(`No teammate data for ${key}.`));
+        return;
+      }
+      for (const t of rows.slice(0, 12)) {
         const row = document.createElement('div');
-        row.className = 'sb-row';
+        row.className = 'sb-row sb-row--clickable';
+        row.tabIndex = 0;
+        row.title = `Show only teams with ${key} and ${t.name}`;
         row.appendChild(ctx.sprite(t.name, { size: 24 }));
         const name = document.createElement('div');
         name.className = 'sb-names';
@@ -375,24 +397,35 @@ export default {
         pct.className = 'sb-stat';
         pct.textContent = ctx.fmt.pct(t.pct);
         row.append(name, pct);
+        row.addEventListener('click', (e) => ctx.chip('core', [key, t.name], e));
         ladderList.appendChild(row);
       }
     }
     ladderSelect.addEventListener('change', renderLadderList);
 
     function renderLadder(view) {
-      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
-      lastMerged = merged;
-      ctx.meta(ladderCard.meta, { source: 'Ladder (Smogon)', n: merged ? merged.battles : 0, unit: 'battles' });
-      if (!merged) { renderLadderList(); return; }
+      rateView = view;
+      const merged = view.state.source === 'ladder' ? ladderMerge(view.ladder, view.state.from, view.state.to, view.dex) : null;
+      let options;
+      if (merged?.mons.length) {
+        rateSource = { kind: 'ladder', merged };
+        options = merged.mons.slice(0, 40).map((m) => m.key);
+        ctx.meta(ladderCard.meta, { source: 'Ladder (Smogon)', n: merged.battles, unit: 'battles' });
+      } else {
+        rateSource = { kind: 'sheets' };
+        options = usage(view.teams).filter((r) => r.n >= view.state.minN).slice(0, 40).map((r) => r.key);
+        const note = view.state.source === 'ladder' ? 'Tournaments (no Smogon ladder data for this period)'
+          : view.state.source === 'ranked' ? 'Tournaments (in-game ranked data has teammate ranks only, see the deep dive)' : 'Tournaments';
+        ctx.meta(ladderCard.meta, { source: note, n: view.teams.length, unit: 'teams' });
+      }
       const prevVal = ladderSelect.value;
       ladderSelect.textContent = '';
-      for (const m of merged.mons.slice(0, 40)) {
+      for (const k of options) {
         const opt = document.createElement('option');
-        opt.value = m.key; opt.textContent = m.key;
+        opt.value = k; opt.textContent = k;
         ladderSelect.appendChild(opt);
       }
-      if (merged.mons.some((m) => m.key === prevVal)) ladderSelect.value = prevVal;
+      if (options.includes(prevVal)) ladderSelect.value = prevVal;
       renderLadderList();
     }
 

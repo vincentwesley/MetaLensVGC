@@ -3,7 +3,7 @@
 // dates, which the ladder payload doesn't carry, so the whole section is
 // tournament-only (same "switch Source" rule as archetypes.js).
 import { usage, weekly, movers } from '../lib/aggregate.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -65,7 +65,7 @@ export default {
     const lineChartEl = document.createElement('div');
     lineChartEl.className = 'sb-chart sb-chart--tall';
     const lineEmptyEl = document.createElement('div');
-    linesCard.body.append(linesControls, lineChartEl, lineEmptyEl);
+    linesCard.body.append(clickHint('Weekly usage of the top Pokémon. Drag the slider below the chart: set the date range for the whole dashboard.'), linesControls, lineChartEl, lineEmptyEl);
     const lineChart = ctx.echarts.init(lineChartEl);
     new ResizeObserver(() => lineChart.resize()).observe(lineChartEl);
 
@@ -134,7 +134,7 @@ export default {
     // --- risers & fallers ------------------------------------------------
     const compareLabel = document.createElement('div');
     compareLabel.className = 'sb-subhead';
-    moversCard.body.appendChild(compareLabel);
+    moversCard.body.append(clickHint('Biggest usage changes between the last two weeks. Click a row: show only that Pokémon and its teams. Shift-click to exclude.'), compareLabel);
     const moversWrap = document.createElement('div');
     moversWrap.className = 'sb-two-col';
     const risersCol = document.createElement('div');
@@ -199,7 +199,7 @@ export default {
 
     // --- regulation shift --------------------------------------------------
     const shiftWrap = document.createElement('div');
-    shiftCard.body.appendChild(shiftWrap);
+    shiftCard.body.append(clickHint('Top 20 now versus the previous period. Click a row: show only that Pokémon and its teams.'), shiftWrap);
 
     function renderShift(view) {
       shiftWrap.textContent = '';

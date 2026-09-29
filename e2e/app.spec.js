@@ -472,3 +472,18 @@ test('Scanner (M-C): speed position has data, evidence cards render, item clause
   expect(text).toMatch(/Item clause: Focus Sash/);
   expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
 });
+
+test('Teammate rate uses tournament sheets when there is no ladder data (M-C) and a row filters to the pair', async ({ page }) => {
+  await page.goto('/#source=ladder');
+  await waitForAllSections(page);
+  const card = page.locator('main [data-section="teammates"] .card').filter({ hasText: 'Teammate rate' });
+  await card.scrollIntoViewIfNeeded();
+  await waitForAllSections(page);
+  await expect(card.locator('.meta-line')).toContainText('Tournaments');
+  const rows = card.locator('.sb-row');
+  expect(await rows.count()).toBeGreaterThan(3);
+  const picked = await card.locator('select').inputValue();
+  const mate = (await rows.first().locator('.sb-names').innerText()).trim();
+  await rows.first().click();
+  await expect(page.locator('#chips .chip__label')).toHaveText([`Core: ${picked} + ${mate}`]);
+});

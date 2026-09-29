@@ -2,7 +2,7 @@
 // usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
 import { usage, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies } from '../lib/aggregate.js';
-import { rankedSource } from '../ui/meta.js';
+import { rankedSource, clickHint } from '../ui/meta.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
 const COLS_TEAM = [
@@ -64,6 +64,8 @@ export default {
     body.className = 'card__body';
     card.append(head, body);
     el.appendChild(card);
+    const hint = clickHint('Rows rank Pokémon by usage. Click a row: show only that Pokémon and its teams. Click the item under a name: Pokémon holding it. Sprite: details. Shift-click to exclude.');
+    body.prepend(hint);
 
     let showAll = false;
     let sortKey = 'n';
@@ -309,7 +311,12 @@ export default {
     }
 
     return {
-      update(view) { lastView = view; render(); },
+      update(view) {
+        lastView = view; render();
+        // Empty states wipe the body; keep exactly one hint at the top, hidden when there are no rows.
+        if (body.firstChild !== hint) body.prepend(hint);
+        hint.hidden = !body.querySelector('tbody tr');
+      },
       highlight(key) {
         body.querySelectorAll('tbody tr').forEach((tr) => tr.classList.toggle('is-hovered', key && tr.dataset.key === key));
       },

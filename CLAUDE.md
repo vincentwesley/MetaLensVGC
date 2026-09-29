@@ -47,8 +47,9 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   Team chips: archetype (PRIMARY archetype `arch[0]`, same as the donut), team. Ladder / ranked rows are per species:
   `speciesChipFilter(chips, dex)` applies species/mega/core/type/weak there (main filters `view.ladder` / `view.ranked`) and
   reports the rest as unsupported (shown under the chips). `archetypeMatrix(teams, matches, opponents)` counts the view's
-  teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots
-  (types.js: type usage -> `type`, best attacking types -> `movetype`, weaknesses -> `weak`).
+  teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots.
+  Owner's call: all three type charts add a plain `type` chip (no weak-to / move-type variants from clicks;
+  `weak` / `movetype` chips still work from old links).
 - `paste.js`: `toPaste(team, dex) → Showdown text` (Showdown's Champions formats store SP in the `EVs:` line, e.g. `EVs: 32 Atk / 2 SpD / 32 Spe`), `parsePaste(text, dex) → Mon[]` (accepts `EVs:` and `SPs:` lines; a value above 32 means a classic EV spread, which is dropped as `sp: null`).
 - `state-core.js`: `DEFAULT_STATE`, `toHash(state) → string`, `fromHash(hash, defaults) → state`,
   `sanitizeState(state, {regs})` (every state the store accepts goes through it; unknown values fall back).
@@ -114,7 +115,9 @@ and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white
 - **Charts** are created via `ctx.echarts.init` (a wrapper that hides the tooltip before every `setOption`; ECharts
   throws if a notMerge redraw lands mid-hover). Tooltip formatters must handle every component that can trigger them
   (markLine, item vs axis params) and never throw: a throwing formatter also swallows clicks on that chart.
-- **Every chart click must add the chip kind that matches what it plots** (see "Chip semantics"). New Pokémon-level
+- **Every chart click must add the chip kind that matches what it plots** (see "Chip semantics"), and every clickable
+  chart/table carries a `clickHint()` line saying what a click does. Teammate rate uses tournament sheets unless
+  Source = Ladder has data (never an empty "ladder only" panel). New Pokémon-level
   sections read `view.monTeams`; team-level ones read `view.teams`.
 - **Tooltips**: the chart wrapper (`withChartDefaults` in `ui/echarts-theme.js`) confines and wraps every ECharts
   tooltip; hover help is `data-tip="…"` on any element (shown by `ui/tip.js`, clamped to the viewport). Don't add
