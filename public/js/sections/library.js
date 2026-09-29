@@ -5,7 +5,7 @@
 import { ARCHETYPES } from '../lib/archetypes.js';
 import { toPaste } from '../lib/paste.js';
 import { toast } from '../ui/toast.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 const PAGE = 12;
 const MAJOR_TIERS = new Set(['worlds', 'international', 'regional']);
@@ -106,7 +106,7 @@ export default {
     const copyAllBtn = elm('button', 'lib-btn lib-btn--wide', 'Copy all visible');
     copyAllBtn.type = 'button';
     toolbar.append(searchLabel, sortLabel, copyAllBtn);
-    body.appendChild(toolbar);
+    body.append(clickHint('Click a team’s archetype tag: show only that archetype. Filter: show only that team. Sprite: Pokémon details.'), toolbar);
 
     const grid = elm('div', 'lib-grid');
     body.appendChild(grid);

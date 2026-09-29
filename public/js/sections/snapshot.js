@@ -2,7 +2,7 @@
 // Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
 import { usage, kpis, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
-import { rankedSource } from '../ui/meta.js';
+import { rankedSource, clickHint } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
 
 function emptyState(el, title, detail) {
@@ -121,6 +121,8 @@ export default {
     body.append(hero, kpiRow);
     card.append(head, body);
     el.appendChild(card);
+    const hint = clickHint('Top Pokémon by usage. Click a card: show only that Pokémon and its teams. Shift-click to exclude.');
+    body.prepend(hint);
 
     let lastView = null;
 
@@ -227,7 +229,12 @@ export default {
     }
 
     return {
-      update(view) { lastView = view; render(); },
+      update(view) {
+        lastView = view; render();
+        // render() re-prepends the hero and can wipe the body; keep one hint on top.
+        if (body.firstChild !== hint) body.prepend(hint);
+        hint.hidden = !body.querySelector('.snapshot__mon');
+      },
       highlight(key) {
         hero.querySelectorAll('.snapshot__mon').forEach((c) => c.classList.toggle('is-hovered', key && c.dataset.key === key));
       },

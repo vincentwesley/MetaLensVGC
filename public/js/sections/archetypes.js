@@ -2,7 +2,7 @@
 // win-rate heatmap (real match results only), and a classification disclosure.
 import { archetypeSplit, archetypeMatrix } from '../lib/aggregate.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -132,7 +132,7 @@ export default {
     // --- donut + legend side by side (falls back to stacked on narrow screens) ---
     const donutRow = document.createElement('div');
     donutRow.className = 'sb-split';
-    donut.body.appendChild(donutRow);
+    donut.body.append(clickHint('Teams grouped by main archetype. Click a slice or table row: show only teams of that archetype. Shift-click to exclude.'), donutRow);
 
     const donutChartEl = document.createElement('div');
     donutChartEl.className = 'sb-chart';
@@ -152,7 +152,7 @@ export default {
     const heatChartEl = document.createElement('div');
     heatChartEl.className = 'sb-chart sb-chart--tall';
     const heatEmptyEl = document.createElement('div');
-    heat.body.append(heatChartEl, heatEmptyEl);
+    heat.body.append(clickHint('Row archetype’s win rate against each column. Click a cell: show only teams of the row archetype.'), heatChartEl, heatEmptyEl);
     const heatChart = ctx.echarts.init(heatChartEl);
     new ResizeObserver(() => heatChart.resize()).observe(heatChartEl);
 

@@ -7,7 +7,7 @@ import {
   usage, itemUsage, itemsBySpecies, ladderMerge, ladderItemUsage,
   rankedSeason, rankedEntries,
 } from '../lib/aggregate.js';
-import { RANKED_NA, rankedSource } from '../ui/meta.js';
+import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 const TOP_ITEMS = 20;
 const TOP_MONS = 20;
@@ -63,7 +63,7 @@ export default {
     // --- (a) item usage chart ------------------------------------------------
     const A = panel('Item Usage');
     const chartEl = el('div', 'items-chart');
-    A.body.appendChild(chartEl);
+    A.body.append(clickHint('Most-used held items. Click a bar: show only Pokémon holding that item. Shift-click to exclude.'), chartEl);
     let showStones = false;
     const stoneSeg = segmented('Mega Stones', [[false, 'Hide Mega Stones'], [true, 'Show']], (v) => { showStones = v; stoneSeg.sync(v); render(); });
     stoneSeg.sync(showStones);
@@ -85,7 +85,7 @@ export default {
     B.controls.append(search, allSeg.el);
     const note = el('div', 'items-note');
     const tableWrap = el('div', 'table-wrap table-wrap--scroll');
-    B.body.append(note, tableWrap);
+    B.body.append(clickHint('Click a row: show only that Pokémon and its teams. Click an item: Pokémon holding it. Sprite: details.'), note, tableWrap);
     let searchTimer = null;
     search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderTable, 120); });
 
