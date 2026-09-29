@@ -56,11 +56,18 @@ export function deriveSeasonMeta(dailyDataFolders) {
   for (const [season, snapshot] of ordered) {
     const startDate = prevSnapshot ? addDaysISO(prevSnapshot, 1) : snapshot;
     const reg = regForDate(startDate);
-    if (!reg) throw new Error(`ranked.js: season ${season} (starts ~${startDate}) falls outside every regulation window`);
-    seasons.push({ season, snapshot, reg });
     prevSnapshot = snapshot;
+    // A new season past the last known regulation (scripts/lib/regs.js) must not break the scheduled
+    // refresh: keep it with reg: null so it still counts as the current season but matches no regulation.
+    if (!reg) console.warn(`ranked.js: season ${season} (starts ~${startDate}) falls outside every regulation window; add the new regulation to scripts/lib/regs.js`);
+    seasons.push({ season, snapshot, reg: reg || null });
   }
   return seasons;
+}
+
+/** The season with the latest snapshot (including reg: null ones), or null. Pure, exported for testing. */
+export function currentSeasonOf(seasons) {
+  return seasons.length ? seasons.reduce((a, b) => (a.snapshot > b.snapshot ? a : b)).season : null;
 }
 
 function pct(row) {
@@ -140,7 +147,7 @@ export async function fetchRanked(reg, dex, opts = {}) {
 
   const index = await fetchJSON(`${API_BASE}/api`, { ttl: INDEX_TTL });
   const allSeasons = deriveSeasonMeta(index.dailyDataFolders);
-  const currentSeason = allSeasons.reduce((a, b) => (a.snapshot > b.snapshot ? a : b)).season;
+  const currentSeason = currentSeasonOf(allSeasons);
   const regSeasons = allSeasons.filter((s) => s.reg === reg).sort((a, b) => a.snapshot.localeCompare(b.snapshot));
 
   let ranking = null;
