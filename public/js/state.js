@@ -1,9 +1,14 @@
 // Central state store. Round-trips through location.hash via js/lib/state-core.js.
 // See CLAUDE.md "State" contract.
 
-import { DEFAULT_STATE, toHash, fromHash } from './lib/state-core.js';
+import { DEFAULT_STATE, toHash, fromHash, sanitizeState } from './lib/state-core.js';
 
-let state = fromHash(location.hash.slice(1), DEFAULT_STATE);
+// Known regulation ids, once the manifest has loaded (store.setRegs).
+let regs = null;
+// Every state (hand-edited hash, back/forward, UI) goes through sanitizeState,
+// so sections only ever see valid values.
+const clean = (s) => sanitizeState(s, { regs });
+let state = clean(fromHash(location.hash.slice(1), DEFAULT_STATE));
 const subs = new Set();
 
 function applyDom(s) {
@@ -14,8 +19,9 @@ function applyDom(s) {
 }
 
 function pushHash(replace) {
-  const hash = `#${toHash(state)}`;
-  if (hash === location.hash) return;
+  const h = toHash(state);
+  if (h === location.hash.replace(/^#/, '')) return;
+  const hash = h ? `#${h}` : location.pathname + location.search;
   if (replace) history.replaceState(null, '', hash);
   else history.pushState(null, '', hash);
 }
@@ -31,7 +37,7 @@ export const store = {
    *  opts.replace: use history.replaceState instead of pushState (for
    *  high-frequency changes, e.g. the min-sample slider). */
   set(patch, opts = {}) {
-    state = { ...state, ...patch };
+    state = clean({ ...state, ...patch });
     applyDom(state);
     pushHash(!!opts.replace);
     subs.forEach((fn) => fn(state));
@@ -58,12 +64,21 @@ export const store = {
   clearChips() { store.set({ chips: [] }); },
 
   subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
+
+  /** Called once the manifest is known: an unknown regulation in the URL falls back to a real one. */
+  setRegs(ids) {
+    regs = ids;
+    const next = clean(state);
+    if (next.reg !== state.reg) { state = next; pushHash(true); subs.forEach((fn) => fn(state)); }
+  },
 };
 
 window.addEventListener('hashchange', () => {
-  state = fromHash(location.hash.slice(1), DEFAULT_STATE);
+  state = clean(fromHash(location.hash.slice(1), DEFAULT_STATE));
   applyDom(state);
+  pushHash(true); // canonical form of a hand-edited hash
   subs.forEach((fn) => fn(state));
 });
 
 applyDom(state);
+pushHash(true);

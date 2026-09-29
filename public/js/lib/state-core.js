@@ -55,6 +55,63 @@ export function toHash(state, defaults = DEFAULT_STATE) {
   return parts.join('&');
 }
 
+export const CHIP_KINDS = ['species', 'mega', 'core', 'type', 'weak', 'item', 'move', 'movetype', 'archetype', 'team'];
+const ENUMS = {
+  source: ['tournaments', 'ladder', 'ranked'],
+  place: ['all', 'topcut', 'top8', 'winner'],
+  skin: ['pro', 'retro'],
+  theme: ['dark', 'light', 'auto'],
+};
+const TIER_IDS = DEFAULT_STATE.tiers;
+export const MIN_N_MAX = 200;
+
+function validDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
+/**
+ * Coerces a (possibly hand-edited) state into a valid one: unknown enum values
+ * fall back to the default, dates must be real YYYY-MM-DD days (a reversed
+ * range is swapped), minN is an integer in [0, MIN_N_MAX], tiers are known ids,
+ * and chips have a known kind, a non-empty value (an array of 2+ keys only for
+ * "core") and are unique. `regs` (optional): the regulation ids that exist.
+ */
+export function sanitizeState(state, { regs } = {}, defaults = DEFAULT_STATE) {
+  const s = { ...state };
+  for (const [key, allowed] of Object.entries(ENUMS)) if (!allowed.includes(s[key])) s[key] = defaults[key];
+  if (regs?.length && !regs.includes(s.reg)) s.reg = regs.includes(defaults.reg) ? defaults.reg : regs[regs.length - 1];
+  if (typeof s.reg !== 'string') s.reg = defaults.reg;
+  s.tiers = TIER_IDS.filter((t) => Array.isArray(state.tiers) && state.tiers.includes(t));
+  s.from = validDate(s.from) ? s.from : '';
+  s.to = validDate(s.to) ? s.to : '';
+  if (s.from && s.to && s.from > s.to) [s.from, s.to] = [s.to, s.from];
+  const n = Math.round(Number(s.minN));
+  s.minN = Number.isFinite(n) ? Math.max(0, Math.min(MIN_N_MAX, n)) : defaults.minN;
+  s.anim = s.anim === true;
+  const seen = new Set();
+  s.chips = (Array.isArray(state.chips) ? state.chips : []).flatMap((c) => {
+    if (!c || !CHIP_KINDS.includes(c.kind)) return [];
+    let value = c.value;
+    if (c.kind === 'core') {
+      value = [...new Set([].concat(value).filter((v) => typeof v === 'string' && v))];
+      if (value.length < 2) return value.length === 1 ? [{ kind: 'species', value: value[0], neg: !!c.neg }] : [];
+    } else if (Array.isArray(value)) {
+      return [];
+    } else if (typeof value !== 'string' || !value) {
+      return [];
+    }
+    return [{ kind: c.kind, value, neg: !!c.neg }];
+  }).filter((c) => {
+    const id = `${c.kind}:${[].concat(c.value).join('+')}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  return s;
+}
+
 export function fromHash(hash, defaults = DEFAULT_STATE) {
   const state = { ...defaults, chips: [] };
   const str = (hash || '').replace(/^#/, '');
