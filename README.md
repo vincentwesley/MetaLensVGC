@@ -202,16 +202,6 @@ See `docs/TESTING.md` for what is covered, what has been verified by hand, and w
    Optional: environment variable `SKIP_DEPENDENCY_INSTALL` = `1` skips the unneeded `npm ci`.
 6. **Save and Deploy.** Every push to the production branch redeploys, including the weekly data commits.
 
-### Moving from the old name (VGC MetaScope → MetaLens VGC)
-
-The site used to be "VGC MetaScope" at `vgcmetascope.pages.dev`. To move:
-1. GitHub: repo **Settings → General → Repository name** → `MetaLensVGC`. GitHub redirects the
-   old URL, so existing clones and the Cloudflare connection keep working.
-2. Create the new Pages project `metalensvgc` with the steps above.
-3. Leave the old `vgcmetascope` project running for a while: `public/js/moved.js` forwards visitors
-   on `vgcmetascope.pages.dev` to `metalensvgc.pages.dev`, keeping their filters. Delete the old
-   project once traffic has moved (after that the old address stops working).
-
 `public/_headers` sets the cache and security headers (a CSP that allows only this site, Google
 Fonts and Pokémon Showdown sprites).
 
