@@ -17,8 +17,11 @@
 /vendor/*
   Cache-Control: public, max-age=31536000, immutable
 
+# No build step means no hashed filenames, so scripts and styles must be
+# revalidated on every load (cheap 304s via ETag) or a deploy can leave
+# visitors running yesterday's code for up to a day.
 /css/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: no-cache
 
 /js/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: no-cache

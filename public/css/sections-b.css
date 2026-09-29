@@ -74,7 +74,7 @@ main.grid .section[data-section="trends"] {
 /* "My Pokémon" benchmark form. */
 .sb-bench { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--grid); margin-top: var(--space-3); }
 .sb-bench input[type="text"], .sb-bench select {
-  background: var(--surface-2); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--ink); border: 2px solid var(--frame); border-radius: var(--radius);
   padding: 4px 6px; font-family: var(--font-body); font-size: var(--fs-small);
 }
 [data-skin="pro"] .sb-bench input[type="text"], [data-skin="pro"] .sb-bench select { border: 1px solid var(--border); }
