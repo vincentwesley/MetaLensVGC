@@ -77,8 +77,8 @@ function applyMods(v, mods) {
 // Species list: top 20 by in-game rank under source=ranked (when the season publishes a ranking),
 // else top 20 tournament species. Mega-stone holders are shown as their Mega form.
 function speciesList(view, dex, season) {
-  if (view.state.source !== 'ranked' || !season?.ranking) return speedTiers(view.teams, dex, 20);
-  const byKey = new Map(speedTiers(view.teams, dex, 99999).map((t) => [t.key, t]));
+  if (view.state.source !== 'ranked' || !season?.ranking) return speedTiers(view.monTeams, dex, 20);
+  const byKey = new Map(speedTiers(view.monTeams, dex, 99999).map((t) => [t.key, t]));
   return season.ranking.filter((name) => season.mons[name]).slice(0, 20).map((name) => {
     const key = rankedMegaKey(name, season.mons[name], dex) || name;
     return { ...(byKey.get(key) || { key, spe: null }), key, n: null, rank: season.mons[name].rank };
@@ -234,7 +234,7 @@ export default {
         ctx.meta(main.meta, { source: `${rankedSource(season)} · top 20 by in-game rank · speeds: sheets > ranked > Smogon > bounds` });
       } else {
         const rankedTxt = season ? ` + ranked ladder ${season.season} (Pokémon Champions Battle Data)` : '';
-        ctx.meta(main.meta, { source: `Team sheets${rankedTxt} + Smogon ladder + bounds (per species)`, n: view.teams.length, unit: 'teams' });
+        ctx.meta(main.meta, { source: `Team sheets${rankedTxt} + Smogon ladder + bounds (per species)`, n: view.monTeams.length, unit: 'teams' });
       }
       main.body.querySelector('.empty-state')?.remove();
 
@@ -289,7 +289,10 @@ export default {
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           formatter: (p) => {
+            // The "You" benchmark markLine has its own tooltip (no row behind it).
+            if (p.componentType === 'markLine') return `You (${bench0?.key}): ${p.value}`;
             const r = rowsRev[p.dataIndex];
+            if (!r) return '';
             const rangeTxt = r.modMin === r.modMax ? `${r.modMin}` : `${r.modMin}–${r.modMax}`;
             return `<b>${r.key}</b><br/>Speed: ${rangeTxt}<br/>${SOURCE_LABEL[r.source]} — ${r.detail}<br/>${r.rank ? `in-game rank #${r.rank}` : `n=${ctx.fmt.n(r.n)}`}`;
           },

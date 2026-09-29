@@ -56,8 +56,10 @@ export default {
     const weakChart = initChart(ctx, weakPanel.chartEl);
 
     usageChart.on('click', (p) => p.data && ctx.chip('type', p.data.type, p.event?.event));
-    atkChart.on('click', (p) => p.data && ctx.chip('type', p.data.type, p.event?.event));
-    weakChart.on('click', (p) => p.data && ctx.chip('type', p.data.type, p.event?.event));
+    // Each chart adds the chip that matches what it plots: the Pokémon's own type,
+    // Pokémon carrying a move of that type, Pokémon weak to that type.
+    atkChart.on('click', (p) => p.data && ctx.chip('movetype', p.data.type, p.event?.event));
+    weakChart.on('click', (p) => p.data && ctx.chip('weak', p.data.type, p.event?.event));
 
     let lastView = null;
 
@@ -96,7 +98,7 @@ export default {
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink },
-          formatter: (p) => `${p.data.type}<br/>mean effectiveness: ${p.data.score.toFixed(2)}×<br/>hits ${(p.data.se * 100).toFixed(0)}% of field super-effectively`,
+          formatter: (p) => `${p.data.type}<br/>mean effectiveness: ${Number(p.value).toFixed(2)}×<br/>hits ${(p.data.se * 100).toFixed(0)}% of field super-effectively<br/><i>click: Pokémon with ${p.data.type} moves</i>`,
         },
         xAxis: { type: 'value', min: 0, ...baseAxis(theme) },
         yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
@@ -116,9 +118,10 @@ export default {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink },
           formatter: (params) => {
-            const type = params[0].data.type;
+            // item tooltips pass one object; axis tooltips pass an array
+            const type = (Array.isArray(params) ? params[0] : params).data.type;
             const w = rows.find((r) => r.type === type);
-            return `${type}<br/>weak: ${(w.weak * 100).toFixed(0)}%<br/>resist: ${(w.resist * 100).toFixed(0)}%<br/>immune: ${(w.immune * 100).toFixed(0)}%`;
+            return `${type}<br/>weak: ${(w.weak * 100).toFixed(0)}%<br/>resist: ${(w.resist * 100).toFixed(0)}%<br/>immune: ${(w.immune * 100).toFixed(0)}%<br/><i>click: Pokémon weak to ${type}</i>`;
           },
         },
         legend: { data: ['Weak to', 'Resists/immune'], textStyle: { color: theme.inkSecondary }, top: 4, left: 'center', itemGap: 20 },
@@ -160,7 +163,7 @@ export default {
         return;
       }
 
-      const teams = view.teams;
+      const teams = view.monTeams;
       const n = teams.length;
       for (const p of [usagePanel, atkPanel, weakPanel]) {
         ctx.meta(p.meta, { source: 'Tournaments', n, unit: 'teams' });
