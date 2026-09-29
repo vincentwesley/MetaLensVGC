@@ -322,7 +322,7 @@ export default {
         sprites.className = 'sb-sprites';
         for (const k of r.keys) sprites.appendChild(ctx.sprite(k, { size: 28, animated: view.state.anim }));
         const names = document.createElement('div');
-        names.className = 'sb-names';
+        names.className = 'sb-names sb-names--wrap';
         names.textContent = r.keys.join(' + ');
         const n = document.createElement('div');
         n.className = 'sb-stat sb-stat--muted';

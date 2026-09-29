@@ -51,6 +51,9 @@ main.grid .section[data-section="trends"] {
 .sb-sprites img:last-child { margin-right: 0; }
 
 .sb-names { flex: 1; min-width: 0; font-size: var(--fs-small); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Top cores: full core names ("Rillaboom + Incineroar + ...") wrap onto two
+   lines on narrow screens instead of truncating to "Rilla...". */
+.sb-names--wrap { white-space: normal; overflow: visible; text-overflow: unset; word-break: break-word; }
 .sb-stat { font-variant-numeric: tabular-nums; font-size: var(--fs-small); color: var(--ink); min-width: 56px; text-align: right; flex: none; }
 .sb-stat--muted { color: var(--muted); }
 .sb-stat--up { color: var(--status-good); }

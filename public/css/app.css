@@ -63,7 +63,7 @@
   --font-label: var(--font-retro-label);
   --font-body: var(--font-retro-body);
   --fs-head: 11px; --fs-head-lg: 13px;
-  --fs-label: 13px; --fs-body: 20px; --fs-small: 17px;
+  --fs-label: 13px; --fs-body: 20px; --fs-small: 18px;
   --ls-head: .06em;
   --radius: 0px;
   --accent: #cc3333;      /* poké-red */
@@ -329,12 +329,22 @@ main.grid .section.span-4 { grid-column: span 4; }
 .card:hover { transform: translateY(-1px); }
 .card__head {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);
+  flex-wrap: wrap;
   padding: var(--space-3) var(--space-4);
   border-bottom: 2px solid var(--ink);
 }
 [data-skin="pro"] .card__head { border-bottom: 1px solid var(--border); }
-.card__head h2, .card__head h3 { font-size: var(--fs-head); text-transform: uppercase; }
+/* Title never shrinks below its own single-line width; when the meta line
+   can't fit beside it on the same row, flex-wrap drops the whole meta line
+   to its own row instead of squeezing the title into 2-3 lines. */
+/* Cap the "don't shrink below single line" floor at 65% of the header's
+   width: short titles still hold their full line (pushing the meta line
+   below instead of squeezing into 2-3 lines), but a genuinely long title
+   ("Most Common Weaknesses in the Field") still wraps within its own box
+   instead of overflowing the card. */
+.card__head h2, .card__head h3 { font-size: var(--fs-head); text-transform: uppercase; flex: 1 1 auto; min-width: min(max-content, 65%); }
 .card__meta, .meta-line { color: var(--muted); font-size: var(--fs-small); font-family: var(--font-body); }
+.meta-line__part { white-space: nowrap; }
 .card__body { padding: var(--space-4); }
 
 /* ---------- KPI tile ---------- */
@@ -348,6 +358,11 @@ main.grid .section.span-4 { grid-column: span 4; }
 
 /* ---------- table ---------- */
 .table-wrap { overflow-x: auto; max-width: 100%; }
+/* Cap very long tables (usage leaderboard, regulation shift) instead of
+   letting the page grow thousands of pixels tall; header stays visible
+   while scrolling the body. */
+.table-wrap--scroll { max-height: 720px; overflow-y: auto; }
+.table-wrap--scroll thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-1); }
 table.data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-family: var(--font-body); }
 table.data-table th, table.data-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 table.data-table th { font-family: var(--font-label); text-transform: uppercase; color: var(--muted); font-size: var(--fs-small); }

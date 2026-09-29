@@ -312,22 +312,26 @@ export default {
             data: rowsRev.map((r) => {
               const opacity = r.source === 'bounds' ? 0.55 : 1;
               const fill = colorOf(r.source);
+              const style = labelStyleFor(fill, opacity, theme.surface);
+              // Per-item static label color/halo, NOT a series-level label.color
+              // callback: this vendored ECharts computes the function correctly
+              // (verified via getOption()) but never paints its result — same
+              // defect as the heatmap series elsewhere in this file's siblings.
+              // A plain per-item override renders reliably.
               return {
                 value: r.source === 'bounds' ? r.modMax - r.modMin : r.modAvg,
                 itemStyle: { color: fill, opacity, borderRadius: [0, 3, 3, 0] },
-                _labelStyle: labelStyleFor(fill, opacity, theme.surface),
+                label: { color: style.fill, textBorderColor: style.halo },
               };
             }),
             label: {
-              show: true, position: 'insideLeft', align: 'left', fontFamily: theme.fontFamily, fontSize: 11, fontWeight: 600,
+              show: true, position: 'insideLeft', align: 'left', fontFamily: theme.fontFamily, fontSize: 12, fontWeight: 600,
               formatter: (p) => {
                 const r = rowsRev[p.dataIndex];
                 const val = r.modMin === r.modMax ? `${r.modMin}` : `${r.modMin}–${r.modMax}`;
                 return `${r.key}  ${val}`;
               },
-              color: (p) => p.data._labelStyle.fill,
-              textBorderColor: (p) => p.data._labelStyle.halo,
-              textBorderWidth: 1.2,
+              textBorderWidth: 1.5,
             },
             markLine,
           },

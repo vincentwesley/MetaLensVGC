@@ -7,7 +7,7 @@ import { toPaste } from '../lib/paste.js';
 import { toast } from '../ui/toast.js';
 import { RANKED_NA, rankedSource } from '../ui/meta.js';
 
-const PAGE = 60;
+const PAGE = 12;
 const MAJOR_TIERS = new Set(['worlds', 'international', 'regional']);
 
 function elm(tag, className, text) {
@@ -111,9 +111,10 @@ export default {
     const grid = elm('div', 'lib-grid');
     body.appendChild(grid);
     const moreWrap = elm('div', 'lib-loadmore-wrap');
-    const moreBtn = elm('button', 'lib-btn', 'Load more');
+    const countEl = elm('span', 'lib-count');
+    const moreBtn = elm('button', 'lib-btn', 'Show more');
     moreBtn.type = 'button';
-    moreWrap.appendChild(moreBtn);
+    moreWrap.append(countEl, moreBtn);
     body.appendChild(moreWrap);
 
     let lastView = null;
@@ -159,14 +160,18 @@ export default {
       c.appendChild(archPill);
 
       const actions = elm('div', 'lib-card__actions');
-      const copyBtn = elm('button', 'lib-btn', 'Copy paste');
+      const copyBtn = elm('button', 'lib-btn', 'Copy');
       copyBtn.type = 'button';
+      copyBtn.title = 'Copy paste';
+      copyBtn.setAttribute('aria-label', 'Copy paste');
       copyBtn.addEventListener('click', async () => {
         const ok = await copyText(toPaste(t, dex));
         toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
       });
-      const filterBtn = elm('button', 'lib-btn', 'Filter to this team');
+      const filterBtn = elm('button', 'lib-btn', 'Filter');
       filterBtn.type = 'button';
+      filterBtn.title = 'Filter to this team';
+      filterBtn.setAttribute('aria-label', 'Filter to this team');
       filterBtn.addEventListener('click', (e) => ctx.chip('team', t.id, e));
       actions.append(copyBtn, filterBtn);
       c.appendChild(actions);
@@ -193,7 +198,10 @@ export default {
         return;
       }
       for (const t of currentTeams.slice(0, shown)) grid.appendChild(buildCard(t, view.dex, view.state.anim));
-      moreWrap.style.display = shown < currentTeams.length ? '' : 'none';
+      moreWrap.style.display = '';
+      const visible = Math.min(shown, currentTeams.length);
+      countEl.textContent = `Showing ${visible} of ${currentTeams.length}`;
+      moreBtn.style.display = shown < currentTeams.length ? '' : 'none';
     }
 
     search.addEventListener('input', () => { shown = PAGE; render(); });

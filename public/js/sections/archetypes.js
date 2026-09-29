@@ -177,8 +177,12 @@ export default {
         series: [{
           type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: true,
           itemStyle: { borderColor: theme.surface, borderWidth: 2 },
-          label: { color: theme.ink, fontFamily: theme.fontFamily, formatter: '{b}: {d}%' },
-          labelLine: { lineStyle: { color: theme.axis } },
+          // Outer slice labels truncate on narrow slices ("San...", "0...");
+          // the legend table beside the donut already lists every archetype
+          // with its full name, n, share and win rate, so drop the labels
+          // here and keep only the tooltip.
+          label: { show: false },
+          labelLine: { show: false },
           data: lastSplit.map((r) => ({ name: labelOf(r.id), value: r.n, archId: r.id })),
         }],
       }, true);
