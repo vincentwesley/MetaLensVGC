@@ -43,7 +43,7 @@ export function mountFilterbar(root, ctx, manifest) {
   // Collapse: hides the filter controls and the header settings, leaving a
   // one-line summary. The choice is a per-viewer preference kept in
   // localStorage (not in the shareable URL). Small screens start collapsed.
-  const PREF = 'vgcms.filtersCollapsed';
+  const PREF = 'metalens.filtersCollapsed';
   let collapsed;
   try { collapsed = localStorage.getItem(PREF); } catch { collapsed = null; }
   collapsed = collapsed == null ? matchMedia('(max-width: 700px)').matches : collapsed === '1';

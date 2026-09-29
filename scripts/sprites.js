@@ -9,7 +9,7 @@ import path from 'node:path';
 
 const PS = 'https://play.pokemonshowdown.com/sprites';
 const CACHE_DIR = path.join(process.cwd(), 'data-raw', 'cache', 'sprites');
-const USER_AGENT = 'VGCMetaScope/1.0 (+https://github.com/vincentwesley/VGCMetaScope)';
+const USER_AGENT = 'MetaLensVGC/1.0 (+https://github.com/vincentwesley/MetaLensVGC)';
 const SPACING_MS = 300; // play.pokemonshowdown.com
 
 let lastRequestAt = 0;

@@ -1,8 +1,8 @@
-# VGC MetaScope
+# MetaLens VGC
 
 An interactive, cross-filtering metagame dashboard for **Pokémon Champions, the VGC 2026 format**
 (regulations M-A, M-B and M-C). It's a free static site built for Cloudflare Pages at
-**https://vgcmetascope.pages.dev**.
+**https://metalensvgc.pages.dev**.
 
 Every number on the site is aggregated in your browser from real tournament team sheets and ladder
 statistics fetched by the data pipeline in `scripts/`. Nothing is invented or "calibrated". When a
@@ -75,7 +75,7 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
 | [Pokémon Showdown sprites](https://play.pokemonshowdown.com/sprites/) | gen5 sprites, plus gen5ani/ani animated sprites | Availability is resolved at build time, so the browser never requests missing sprites |
 
 The data belongs to its sources and the sprites belong to Pokémon Showdown and their artists. This
-repository's code is MIT-licensed. VGC MetaScope is a fan project and is not affiliated with
+repository's code is MIT-licensed. MetaLens VGC is a fan project and is not affiliated with
 Nintendo, Game Freak, Creatures or The Pokémon Company.
 
 ## Decisions and known gaps
@@ -194,11 +194,21 @@ See `docs/TESTING.md` for what is covered, what has been verified by hand, and w
 ## Deploying on Cloudflare Pages
 
 1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-2. Pick the GitHub repo **`vincentwesley/VGCMetaScope`**.
-3. Project name: **`vgcmetascope`**, which gives the site `https://vgcmetascope.pages.dev`.
+2. Pick the GitHub repo **`vincentwesley/MetaLensVGC`**.
+3. Project name: **`metalensvgc`**, which gives the site `https://metalensvgc.pages.dev`.
 4. Production branch: the branch you deploy from (merge this branch into `main`, or pick this branch).
 5. Framework preset: **None**. Build command: **leave empty**. Build output directory: **`public`**.
 6. **Save and Deploy.** Every push to the production branch redeploys, including the weekly data commits.
+
+### Moving from the old name (VGC MetaScope → MetaLens VGC)
+
+The site used to be "VGC MetaScope" at `vgcmetascope.pages.dev`. To move:
+1. GitHub: repo **Settings → General → Repository name** → `MetaLensVGC`. GitHub redirects the
+   old URL, so existing clones and the Cloudflare connection keep working.
+2. Create the new Pages project `metalensvgc` with the steps above.
+3. Leave the old `vgcmetascope` project running for a while: `public/js/moved.js` forwards visitors
+   on `vgcmetascope.pages.dev` to `metalensvgc.pages.dev`, keeping their filters. Delete the old
+   project once traffic has moved (after that the old address stops working).
 
 `public/_headers` sets the cache and security headers (a CSP that allows only this site, Google
 Fonts and Pokémon Showdown sprites).

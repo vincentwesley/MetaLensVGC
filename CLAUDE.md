@@ -1,4 +1,4 @@
-# VGC MetaScope — project conventions
+# MetaLens VGC — project conventions
 
 Static metagame dashboard for Pokémon Champions (VGC 2026, regulations M-A / M-B / M-C).
 Cloudflare Pages serves `public/` as-is: no framework, no bundler, plain ES modules.
@@ -94,6 +94,10 @@ Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 Plain modern JS, no TypeScript, no frameworks, no new runtime deps. Small modules. CSS custom properties for all colours;
 type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback exact form → base species → type-coloured placeholder.
 
+## Name
+The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It was "VGC MetaScope"
+(`vgcmetascope.pages.dev`) until 2026-09-29; `public/js/moved.js` forwards the old address. Use the new name everywhere.
+
 ## Project status (handover, 2026-09-29, updated after the performance/filter/UX rounds)
 - Live on Cloudflare Pages from branch `claude/pokemon-vgc-metagame-dashboard-9whe1a` (no `main` branch yet). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
@@ -121,7 +125,7 @@ type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback
 - **Hand-typed sheet strings** go through `normalizeTerm` (decode + pipeline); ladder names through `ladderMerge(..., dex)`.
 - **Hot aggregations** are memoized per filtered array (`usage`, `itemsBySpecies`); results are shared, so treat them as read-only.
 - **UI chrome**: the filter bar and active-filter chips share one sticky wrapper (`.stickybar`); collapse state is a
-  per-browser localStorage pref (`vgcms.filtersCollapsed`), not part of the URL. `F` toggles it.
+  per-browser localStorage pref (`metalens.filtersCollapsed`), not part of the URL. `F` toggles it.
 - **Caching**: no hashed filenames, so `_headers` serves `/js/*` and `/css/*` with `no-cache` (ETag revalidation).
   Don't lengthen it or visitors run stale code after a deploy.
 - **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the

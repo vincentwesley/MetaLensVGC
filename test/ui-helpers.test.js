@@ -34,3 +34,13 @@ test('clampTip keeps the tip inside the viewport', () => {
   p = clampTip({ left: 100, top: 30, width: 40, bottom: 840 }, { width: 300, height: 800 }, vw, vh);
   assert.ok(p.top >= 8 && p.top + 800 <= vh);
 });
+
+import { movedUrl } from '../public/js/moved.js';
+
+test('old vgcmetascope.pages.dev address forwards to MetaLens VGC with the filters kept', () => {
+  assert.equal(movedUrl({ hostname: 'vgcmetascope.pages.dev', pathname: '/', search: '', hash: '#reg=M-B&chips=species:Garchomp' }),
+    'https://metalensvgc.pages.dev/#reg=M-B&chips=species:Garchomp');
+  assert.equal(movedUrl({ hostname: 'metalensvgc.pages.dev', pathname: '/', search: '', hash: '' }), null);
+  assert.equal(movedUrl({ hostname: 'abc123.vgcmetascope.pages.dev', pathname: '/', search: '', hash: '' }), null);
+  assert.equal(movedUrl({ hostname: 'localhost', pathname: '/', search: '', hash: '' }), null);
+});

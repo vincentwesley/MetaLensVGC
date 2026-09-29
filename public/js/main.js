@@ -1,5 +1,6 @@
 // Boot, ctx, view computation, section mounting. See CLAUDE.md "Sections" contract.
 
+import './moved.js'; // first: old address -> new one before anything else runs
 import { store } from './state.js';
 import * as data from './data.js';
 import { sprite, spriteUrl } from './ui/sprites.js';

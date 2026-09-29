@@ -39,8 +39,8 @@ jobs:
         # public/data, so on a conflict there the freshly built data wins (-X theirs
         # = the commit being replayed).
         run: |
-          git config user.name 'vgcmetascope-bot'
-          git config user.email 'vgcmetascope-bot@users.noreply.github.com'
+          git config user.name 'metalensvgc-bot'
+          git config user.email 'metalensvgc-bot@users.noreply.github.com'
           git add public/data
           if git diff --cached --quiet; then
             echo "No data changes."

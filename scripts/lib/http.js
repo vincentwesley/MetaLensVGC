@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const CACHE_DIR = path.join(process.cwd(), 'data-raw', 'cache');
-const USER_AGENT = 'VGCMetaScope/1.0 (+https://github.com/vincentwesley/VGCMetaScope)';
+const USER_AGENT = 'MetaLensVGC/1.0 (+https://github.com/vincentwesley/MetaLensVGC)';
 
 // Minimum ms between requests to the same host. Anything not listed uses DEFAULT_SPACING.
 const HOST_SPACING = {

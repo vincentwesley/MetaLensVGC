@@ -1,4 +1,4 @@
-Full smoke test + edge-case pass on VGC MetaScope (branch `claude/pokemon-vgc-metagame-dashboard-9whe1a`).
+Full smoke test + edge-case pass on MetaLens VGC (branch `claude/pokemon-vgc-metagame-dashboard-9whe1a`).
 
 Before anything else, read `CLAUDE.md` (especially "Chip semantics" and "Working in a cloud session") and `docs/TESTING.md`. The **Coverage ledger** there lists what is already verified. Don't re-test those items unless the code they cover has changed since. Work from the **"Not yet tested"** list and add anything you find along the way.
 
