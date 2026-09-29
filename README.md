@@ -26,23 +26,28 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
 - **Sections**
   - Meta Snapshot
   - Usage leaderboard with 95% Wilson intervals
-  - Type landscape: usage, best attacking types against the current field, and common weaknesses
+  - Type landscape: type usage, and which move types the field is weak to, by real multiplier (4×, 2×, ½×, ¼×, 0×)
   - Item usage: which held items the field runs (share of teams, win rate, who holds them; Mega Stones
     optional) and the most common items for every Pokémon, searchable. The leaderboard also shows each
     Pokémon's top item under its name. Hand-typed sheet spellings ("focus sash", "U-Turn", "None") are
     normalized to dex names when the data loads.
   - Archetypes: classification, split, and a matchup heatmap built from real pairings
   - Usage vs. win-rate quadrant
-  - Teammate co-usage (raw % / lift) and top cores
+  - Teammate co-usage (raw % / lift), top cores, and teammate rate for any Pokémon
   - Speed tier matrix with Tailwind, Scarf, ±1, paralysis and Trick Room toggles, plus a
     "my Pokémon" benchmark
   - Weekly trends with a brush that drives the date filter, risers and fallers, and the regulation shift
   - Team Sheet Library with one-click Showdown paste copy
-  - My Team Scanner
+  - My Team Scanner: paste a team to see its weaknesses, unanswered threats and speed position, plus
+    evidence from real matches of similar teams: best and worst matchups (Pokémon and archetypes),
+    an item check (with item clause), common teammate picks and the weakest link
   - Pokémon deep-dive drawer
+  - Credits (made by Vin: vwesley.dev, Instagram @vinnql, X @Vin_Koe)
   - Data & methodology, with JSON/CSV download
-- **Two skins:** Pro (default: JetBrains Mono and Inter) and Retro (Press Start 2P, Silkscreen,
-  VT323, CRT scanlines, pixel borders; warm charcoal with antique gold in dark, soft parchment in light). Each comes in light and dark; dark is the default.
+- **Two skins, green palettes:** Pro (default: JetBrains Mono and Inter, the palette of vwesley.dev) and Retro
+  (Press Start 2P, Silkscreen, VT323, CRT scanlines, pixel borders, Game Boy greens). Each comes in light and dark;
+  dark is the default. A faint animated pixel field sits behind the page (still under reduced motion).
+- **Every chart says what a click does** in a one-line hint under it.
   The layout is responsive down to 390px.
 - **Active filters always visible.** Chips sit in a highlighted bar pinned under the filter bar, with a count and
   a Clear all button, so you always know what the page is filtered by.
