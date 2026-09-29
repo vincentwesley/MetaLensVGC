@@ -11,6 +11,7 @@ import { fmt } from './ui/fmt.js';
 import { chartTheme, onTheme, notifyThemeSubs, withChartDefaults } from './ui/echarts-theme.js';
 import { toast } from './ui/toast.js';
 import { installTips } from './ui/tip.js';
+import { installKeyActivation } from './ui/keys.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
@@ -110,6 +111,23 @@ async function loadLib() {
 
 async function boot() {
   installTips();
+  installKeyActivation();
+  // Keyboard focus and anchor jumps scroll things below the sticky header +
+  // filter bar instead of behind them (html scroll-padding-top uses this).
+  // The header wraps to two rows on narrow screens, so its real height is
+  // measured too (the filter bar sticks right under it).
+  const stickybar = document.querySelector('.stickybar');
+  const header = document.querySelector('.site-header');
+  if (stickybar && header) {
+    const rootStyle = document.documentElement.style;
+    const ro = new ResizeObserver(() => {
+      rootStyle.setProperty('--header-real', `${header.offsetHeight}px`);
+      const h = getComputedStyle(stickybar).position === 'sticky' ? stickybar.offsetHeight : 0;
+      rootStyle.setProperty('--stickybar-h', `${h}px`);
+    });
+    ro.observe(stickybar);
+    ro.observe(header);
+  }
   buildHeaderControls();
 
   let manifest, dex;

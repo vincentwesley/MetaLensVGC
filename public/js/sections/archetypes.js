@@ -205,6 +205,7 @@ export default {
         tdWin.className = 'num';
         tdWin.textContent = r.winPct != null ? ctx.fmt.pct(r.winPct) : '—';
         tr.append(tdName, tdN, tdPct, tdWin);
+        tr.tabIndex = 0;
         tr.addEventListener('click', (e) => ctx.chip('archetype', r.id, e));
         tbody.appendChild(tr);
       }

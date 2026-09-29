@@ -176,6 +176,9 @@ export default {
         pill.style.background = TYPE_COLORS[t] || 'var(--muted)';
         pill.addEventListener('click', (e) => ctx.chip('type', t, e));
         pill.style.cursor = 'pointer';
+        pill.tabIndex = 0;
+        pill.setAttribute('role', 'button');
+        pill.setAttribute('aria-label', `Filter by ${t} type`);
         types.appendChild(pill);
       }
       info.appendChild(types);
