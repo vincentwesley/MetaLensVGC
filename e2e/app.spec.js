@@ -349,13 +349,16 @@ test('chart tooltips and [data-tip] tips stay inside the viewport on a phone', a
         await page.waitForTimeout(120);
         const out = await page.evaluate(() => [...document.querySelectorAll('[_echarts_instance_] > div:last-child')]
           .filter((d) => d.style.display !== 'none' && getComputedStyle(d).opacity !== '0' && d.textContent.trim())
-          .map((d) => d.getBoundingClientRect())
-          .filter((r) => r.width > 0)
-          .map((r) => ({ l: r.left, r: r.right })));
+          .map((d) => [d.getBoundingClientRect(), d.parentElement.getBoundingClientRect()])
+          .filter(([r]) => r.width > 0)
+          .map(([r, c]) => ({ l: r.left, r: r.right, t: r.top - c.top, b: c.bottom - r.bottom })));
         shown += out.length;
         for (const r of out) {
           expect(r.l).toBeGreaterThanOrEqual(-1);
           expect(r.r).toBeLessThanOrEqual(391);
+          // confined: never spills out of the top or bottom of its chart either
+          expect(r.t).toBeGreaterThanOrEqual(-1);
+          expect(r.b).toBeGreaterThanOrEqual(-1);
         }
       }
     }
