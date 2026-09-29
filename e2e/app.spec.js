@@ -411,3 +411,22 @@ test('regulation shift table has no NaN at min-n 0', async ({ page }) => {
   await waitForAllSections(page);
   expect(await shift.innerText()).not.toMatch(/NaN/);
 });
+
+test('Back closes the deep-dive drawer and stays on the page; closing with X leaves history as it was', async ({ page }) => {
+  await page.goto('/#reg=M-B');
+  await waitForUsageRendered(page);
+  const len0 = await page.evaluate(() => history.length);
+  const open = () => page.locator('[data-section="usage"] tbody tr .sprite-btn').first().click();
+  await open();
+  await expect(page.locator('#deepdive')).toHaveClass(/is-open/);
+  await page.goBack();
+  await expect(page.locator('#deepdive')).not.toHaveClass(/is-open/);
+  expect(page.url()).toContain('#reg=M-B');
+  await open();
+  await page.locator('#deepdive [data-drawer-close]').click();
+  await expect(page.locator('#deepdive')).not.toHaveClass(/is-open/);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => history.state)).toBeNull();
+  expect(page.url()).toContain('#reg=M-B');
+  expect(await page.evaluate(() => history.length)).toBeGreaterThanOrEqual(len0);
+});
