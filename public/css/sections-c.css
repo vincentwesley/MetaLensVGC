@@ -162,7 +162,7 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 .scn-threat__reason { color: var(--muted); font-size: var(--fs-small); }
 
 .scn-speedrows { display: flex; flex-direction: column; gap: var(--space-2); }
-.scn-speedrow { display: grid; grid-template-columns: 120px 130px 1fr 120px; align-items: center; gap: var(--space-2); font-size: var(--fs-small); }
+.scn-speedrow { display: grid; grid-template-columns: 120px minmax(130px, 320px) 1fr 120px; align-items: center; gap: var(--space-2); font-size: var(--fs-small); }
 .scn-speedrow__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scn-speedrow__val { font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .scn-speedrow__track { position: relative; height: 6px; background: var(--surface-2); border-radius: 3px; }
@@ -177,6 +177,46 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 @media (max-width: 480px) {
   .scn-speedrow { grid-template-columns: 1fr; row-gap: 2px; }
   .lib-mons { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* scanner evidence cards */
+.scn-arch { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
+.scn-arch__label { font-family: var(--font-label); font-size: var(--fs-h3, 1.1rem); color: var(--ink); }
+.scn-sub { margin: 0 0 var(--space-1); font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase; color: var(--muted); }
+.scn-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.scn-col { display: flex; flex-direction: column; min-width: 0; }
+.scn-mrow, .scn-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--grid); min-width: 0; }
+.scn-mrow:last-child, .scn-item:last-child { border-bottom: 0; }
+.scn-item { align-items: flex-start; }
+.scn-ml { display: inline-flex; align-items: center; gap: var(--space-1); flex: none; min-width: 0; }
+.scn-mrow .scn-ml { flex: 0 1 170px; }
+.scn-item .scn-ml { flex: 0 0 170px; }
+.scn-mrow__stat { font-size: var(--fs-small); color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 0; }
+.scn-mrow__stat strong { color: var(--ink); }
+.scn-link { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: var(--ink); cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; text-align: left; }
+.scn-link:hover, .scn-link:focus-visible { color: var(--accent); }
+.scn-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-family: var(--font-label); border: 1px solid var(--border); color: var(--ink-2); background: var(--surface-2); max-width: 100%; overflow-wrap: anywhere; }
+.scn-tag--good { border-color: var(--status-good); color: var(--ink); }
+.scn-tag--bad { border-color: var(--status-critical); color: var(--ink); }
+.scn-tag--unclear, .scn-tag--none { color: var(--muted); }
+.scn-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.scn-arch-table th, .scn-arch-table td { white-space: normal; }
+.scn-arch-table tbody tr { cursor: default; }
+.scn-row--good { box-shadow: inset 3px 0 0 var(--status-good); }
+.scn-row--bad { box-shadow: inset 3px 0 0 var(--status-critical); }
+.scn-warn { border: 1px solid var(--status-critical); border-radius: var(--radius); padding: var(--space-2); font-size: var(--fs-small); color: var(--ink); background: color-mix(in srgb, var(--status-critical) 12%, var(--surface-2)); }
+.scn-items { display: flex; flex-direction: column; }
+.scn-item__info { flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-small); color: var(--ink-2); }
+.scn-ok { color: var(--status-good); }
+.scn-note { color: var(--status-warning); }
+.scn-sug { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.scn-sug__item--blocked { color: var(--muted); }
+.scn-sug__item--blocked .scn-link { text-decoration-style: line-through; }
+@media (max-width: 720px) {
+  .scn-cols { grid-template-columns: 1fr; }
+  .scn-item { flex-direction: column; gap: var(--space-1); }
+  .scn-item .scn-ml, .scn-mrow .scn-ml { flex: none; }
+  .scn-mrow { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 }
 
 /* ================= methodology ================= */

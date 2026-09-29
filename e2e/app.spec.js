@@ -430,3 +430,21 @@ test('Back closes the deep-dive drawer and stays on the page; closing with X lea
   expect(page.url()).toContain('#reg=M-B');
   expect(await page.evaluate(() => history.length)).toBeGreaterThanOrEqual(len0);
 });
+
+test('Scanner (M-C): speed position has data, evidence cards render, item clause is flagged', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sc = page.locator('main [data-section="scanner"]');
+  await sc.scrollIntoViewIfNeeded();
+  await sc.locator('textarea').fill(['Rillaboom @ Miracle Seed\n- Fake Out', 'Incineroar @ Sitrus Berry\n- Fake Out',
+    'Sneasler @ Focus Sash\n- Fake Out', 'Salamence @ Salamencite\n- Tailwind', 'Kingambit @ Black Glasses\n- Sucker Punch',
+    'Basculegion @ Focus Sash\n- Last Respects'].join('\n\n'));
+  await sc.getByRole('button', { name: 'Scan', exact: true }).click();
+  for (const t of ['Speed position', "Your team's archetype", 'Matchups: Pokémon', 'Matchups: archetypes', 'Item check', 'Common teammate picks', 'Weakest link']) {
+    await expect(sc.getByText(t, { exact: true })).toBeVisible();
+  }
+  const text = await sc.innerText();
+  expect(text).not.toContain('No speed data available');
+  expect(text).toMatch(/Item clause: Focus Sash/);
+  expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+});
