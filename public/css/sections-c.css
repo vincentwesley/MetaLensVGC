@@ -137,7 +137,26 @@ main.grid .section[data-section="methodology"] {
 [data-skin="pro"] .scn-textarea { border: 1px solid var(--border); }
 .scn-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
-.scn-results { display: flex; flex-direction: column; gap: var(--space-4); }
+.scn-results { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+/* Wide screens: pair related cards (one column below 1200px, where grid-area is ignored). */
+@media (min-width: 1200px) {
+  .scn-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "parsed  arch"
+      "weak    weak"
+      "threats speed"
+      "mpoke   items"
+      "march   picks"
+      "link    closest";
+  }
+  /* Half-width cards: the best/worst matchup lists stack. */
+  .scn-results .scn-cols { grid-template-columns: 1fr; }
+}
+/* weakest link: the 'Instead' cell wraps instead of running off a half-width card */
+.scn-arch-table td:last-child { white-space: normal; min-width: 12ch; }
+@media (max-width: 1199px) { .scn-results > .scn-block { grid-area: auto !important; } }
+.scn-results > .empty-state { grid-column: 1 / -1; }
 .scn-block .card__body { display: flex; flex-direction: column; gap: var(--space-2); }
 
 .scn-parsed { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: var(--space-2); }
