@@ -151,6 +151,7 @@ export function mountFilterbar(root, ctx, manifest) {
   slider.min = '0';
   slider.max = '200';
   slider.step = '5';
+  slider.setAttribute('aria-label', 'Minimum sample size (n)');
   const sliderVal = document.createElement('span');
   sliderVal.className = 'filterbar__label';
   // Dragging fires dozens of input events; only re-render once the value settles.
