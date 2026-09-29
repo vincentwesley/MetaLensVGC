@@ -4,9 +4,9 @@
 // (4) a labelled theoretical [min,max] range from base stats when none exists. Toggles apply stage/field speed modifiers (combinable,
 // floored after each step); a benchmark form compares a hypothetical mon
 // against the field.
-import { usage, speedTiers, ladderMerge, rankedSeason, rankedMon, rankedSpeed, rankedMegaKey } from '../lib/aggregate.js';
+import { usage, speedTiers, ladderMerge, rankedSeason, rankedMegaKey, metaSpeed } from '../lib/aggregate.js';
 import { rankedSource } from '../ui/meta.js';
-import { calcStat, parseSP } from '../lib/stats.js';
+import { calcStat } from '../lib/stats.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -91,35 +91,21 @@ function buildRows(view, dex) {
   const tiers = speciesList(view, dex, season);
   const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
   const rows = [];
+  const sheetByKey = new Map(tiers.map((t) => [t.key, t]));
   for (const t of tiers) {
-    const bs = dex.species[t.key]?.bs;
-    if (!bs) continue;
-    if (t.spe != null) {
-      rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'sheet', detail: `${t.nature}, ${t.sp} SP (${Math.round(t.share * 100)}% of open sheets)`, min: t.spe, max: t.spe });
-      continue;
+    const m = metaSpeed(t.key, { sheetByKey, season, merged }, dex);
+    if (!m) continue;
+    const base = { key: t.key, n: t.n, rank: t.rank, source: m.source, min: m.min, max: m.max };
+    if (m.source === 'sheet') {
+      rows.push({ ...base, detail: `${m.nature}, ${m.sp} SP (${Math.round(m.pct * 100)}% of open sheets)` });
+    } else if (m.source === 'ranked') {
+      const of = m.of ? ` (${m.of} data, all sets)` : '';
+      rows.push({ ...base, detail: `${season.season}: top nature ${m.nature} (${Math.round(m.naturePct * 100)}%), top spread ${m.sp} Spe SP (${Math.round(m.pct * 100)}%)${of}` });
+    } else if (m.source === 'ladder') {
+      rows.push({ ...base, detail: `${m.nature}, ${m.sp} SP (${Math.round(m.pct * 100)}% of ladder sets)` });
+    } else {
+      rows.push({ ...base, detail: 'no open-sheet, ranked or ladder spread — theoretical range' });
     }
-    const rm = rankedMon(season, t.key, dex);
-    const rs = rm && rankedSpeed(rm.mon, bs);
-    if (rs) {
-      const of = rm.name === t.key ? '' : ` (${rm.name} data, all sets)`;
-      rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'ranked',
-        detail: `${season.season}: top nature ${rs.nature} (${Math.round(rs.naturePct * 100)}%), top spread ${rs.sp} Spe SP (${Math.round(rs.spreadPct * 100)}%)${of}`,
-        min: rs.spe, max: rs.spe });
-      continue;
-    }
-    const mon = merged?.mons.find((m) => m.key === t.key);
-    const spread = mon?.spreads?.[0];
-    const ci = spread ? spread.name.indexOf(':') : -1;
-    const sp = ci > 0 ? parseSP(spread.name.slice(ci + 1)) : null;
-    if (spread && sp) {
-      const nature = spread.name.slice(0, ci);
-      const spe = calcStat(bs[5], sp[5], 5, nature);
-      rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'ladder', detail: `${nature}, ${sp[5]} SP (${Math.round(spread.pct * 100)}% of ladder sets)`, min: spe, max: spe });
-      continue;
-    }
-    const max = calcStat(bs[5], 32, 5, 'Timid');
-    const min = calcStat(bs[5], 0, 5, 'Sassy');
-    rows.push({ key: t.key, n: t.n, rank: t.rank, source: 'bounds', detail: 'no open-sheet, ranked or ladder spread — theoretical range', min, max });
   }
   return rows;
 }

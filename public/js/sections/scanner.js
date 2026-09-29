@@ -2,7 +2,7 @@
 // the current filtered meta view. No prefilled team (real data only); the
 // "load random" helper fills the textarea from a real team via toPaste so the
 // demo path never fabricates a spread.
-import { usage, ladderMerge, closestTeams, speedTiers } from '../lib/aggregate.js';
+import { usage, ladderMerge, closestTeams, speedTiers, metaSpeed, rankedSeason } from '../lib/aggregate.js';
 import { parsePaste, toPaste } from '../lib/paste.js';
 import { calcStat } from '../lib/stats.js';
 import { TYPES, TYPE_COLORS, effectiveness } from '../lib/types.js';
@@ -63,6 +63,22 @@ function baseStatsOf(mon, dex) {
   return sp ? sp.bs : null;
 }
 
+// Speed of a pasted Pokémon. Without an SP line, use that species' most common
+// real spread (same sources as the meta list) rather than assuming 0 SP.
+function mySpeedOf(m, dex, src) {
+  const bs = baseStatsOf(m, dex);
+  if (!bs) return null;
+  if (m.sp) {
+    return { spe: calcStat(bs[5], m.sp[5], 5, m.nature || 'Hardy'), note: m.nature ? '' : ' (neutral nature assumed)' };
+  }
+  const meta = metaSpeed(dex.species[m.k] ? m.k : m.s, src, dex);
+  if (meta && meta.spe != null) {
+    const nature = m.nature || meta.nature;
+    return { spe: calcStat(bs[5], meta.sp, 5, nature), note: ` (${nature}, ${meta.sp} SP: most common ${SPEED_SOURCE[meta.source]} spread)` };
+  }
+  return { spe: calcStat(bs[5], 0, 5, m.nature || 'Hardy'), note: ' (assumed 0 SP)' };
+}
+
 // Frequency of damaging (bp > 0) move types across the current view — the
 // "meta's actual attacking-move distribution" the spec asks weaknesses to be
 // weighted by, as opposed to a purely defensive type-usage profile.
@@ -109,46 +125,36 @@ function bucketColor(mult, theme) {
   return d.pos1; // 2x
 }
 
-// Ladder-derived per-species speed from its single most-common spread.
-function ladderSpeedOf(merged, key, dex) {
-  const mon = merged?.mons.find((m) => m.key === key);
-  const top = mon?.spreads[0];
-  if (!top) return null;
-  const [nature, spStr] = top.name.split(':');
-  const spe5 = Number(spStr.split('/')[5]);
-  const bs = dex.species[key]?.bs;
-  if (!bs) return null;
-  return { spe: calcStat(bs[5], spe5, 5, nature), nature };
+const SPEED_SOURCE = { sheet: 'sheet', ranked: 'in-game ranked', ladder: 'Smogon ladder' };
+
+// Speed of a meta species from the same sources, in the same order, as the
+// Speed Tiers section: sheets -> in-game ranked -> Smogon ladder -> bounds.
+function metaSpeedOf(key, view, src) {
+  const m = metaSpeed(key, src, view.dex);
+  if (!m) return null;
+  if (m.source === 'bounds') return { lo: m.min, hi: m.max, label: 'range, no SP data' };
+  return { spe: m.spe, label: `${m.nature} (${SPEED_SOURCE[m.source]}${m.source === 'ladder' && src.merged?.cutoff ? ` ${src.merged.cutoff}` : ''})`, source: m.source };
 }
 
-// Speed of a meta species, in priority order sheets -> ladder -> theoretical bounds.
-function metaSpeedOf(key, view, merged, sheetTiersByKey) {
-  const sheet = sheetTiersByKey.get(key);
-  if (sheet && sheet.spe != null) return { spe: sheet.spe, label: `${sheet.nature} (sheet)` };
-  const lad = ladderSpeedOf(merged, key, view.dex);
-  if (lad) return { spe: lad.spe, label: `${lad.nature} (ladder${merged.cutoff ? ` ${merged.cutoff}` : ''})` };
-  const bs = view.dex.species[key]?.bs;
-  if (!bs) return null;
-  const lo = calcStat(bs[5], 0, 5, 'Brave');
-  const hi = calcStat(bs[5], 32, 5, 'Jolly');
-  return { lo, hi, label: 'range, no SP data' };
-}
-
-// Meta-wide speed list for the "speed position" panel: same source-priority,
-// but as a full ranked list rather than per-species lookups.
-function metaSpeedList(view, merged) {
-  const sheetTiers = speedTiers(view.teams, view.dex, 99999).filter((r) => r.spe != null);
-  if (sheetTiers.length) return { list: sheetTiers.map((r) => ({ key: r.key, spe: r.spe })), label: 'Tournament sheets' };
-  if (merged) {
-    const list = merged.mons
-      .map((m) => ({ key: m.key, ...ladderSpeedOf(merged, m.key, view.dex) }))
-      .filter((r) => r.spe != null);
-    if (list.length) return { list, label: `Ladder (Smogon ${merged.cutoff})` };
+// Meta-wide speed list for the "speed position" panel: the view's species
+// (n >= minN) that have a real most-common spread in any source.
+function metaSpeedList(view, src) {
+  const list = [];
+  const used = new Set();
+  for (const r of usage(view.teams)) {
+    if (r.n < view.state.minN) continue;
+    const sp = metaSpeedOf(r.key, view, src);
+    if (sp?.spe == null) continue;
+    list.push({ key: r.key, spe: sp.spe });
+    used.add(sp.source);
   }
-  return { list: [], label: 'No speed data available' };
+  const label = ['sheet', 'ranked', 'ladder'].filter((x) => used.has(x))
+    .map((x) => (x === 'ranked' && src.season ? `in-game ranked ${src.season.season} spreads` : x === 'ladder' ? `Smogon ladder ${src.merged?.cutoff || ''}`.trim() : 'tournament sheets'))
+    .join(' + ');
+  return { list, label: list.length ? `${label} (${list.length} Pokémon)` : 'No speed data available' };
 }
 
-function topThreatsNoAnswer(view, merged, myTypesList, myMaxSpe, sheetTiersByKey, minN) {
+function topThreatsNoAnswer(view, src, myTypesList, myMaxSpe, minN) {
   const threats = usage(view.teams).filter((r) => r.n >= minN).slice(0, 20);
   const out = [];
   for (const r of threats) {
@@ -159,7 +165,7 @@ function topThreatsNoAnswer(view, merged, myTypesList, myMaxSpe, sheetTiersByKey
     const resistsBoth = myTypesList.some((mt) => stabs.every((t) => effectiveness(t, mt) < 1));
     const reasonA = hitsSE >= 2 && !resistsBoth;
 
-    const sp = metaSpeedOf(r.key, view, merged, sheetTiersByKey);
+    const sp = metaSpeedOf(r.key, view, src);
     let reasonB = false;
     let speedNote = null;
     if (sp && myMaxSpe != null) {
@@ -312,17 +318,12 @@ export default {
       const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       const sheetTiers = speedTiers(view.teams, dex, 99999);
       const sheetTiersByKey = new Map(sheetTiers.map((r) => [r.key, r]));
-      const mySpeeds = mons.map((m) => {
-        const bs = baseStatsOf(m, dex);
-        if (!bs) return null;
-        const spSpe = m.sp ? m.sp[5] : 0;
-        const nature = m.nature || 'Hardy';
-        return calcStat(bs[5], spSpe, 5, nature);
-      }).filter((v) => v != null);
+      const speedSrc = { sheetByKey: sheetTiersByKey, season: rankedSeason(view.ranked, view.state.from, view.state.to), merged };
+      const mySpeeds = mons.map((m) => mySpeedOf(m, dex, speedSrc)?.spe).filter((v) => v != null);
       const myMaxSpe = mySpeeds.length ? Math.max(...mySpeeds) : null;
 
       const { card: tCard, body: tBody } = sectionCard('Top meta threats with no answer');
-      const threats = topThreatsNoAnswer(view, merged, myTypesKnown, myMaxSpe, sheetTiersByKey, view.state.minN);
+      const threats = topThreatsNoAnswer(view, speedSrc, myTypesKnown, myMaxSpe, view.state.minN);
       if (!threats.length) {
         emptyState(tBody, 'No unanswered top-20 threats found in the current view');
       } else {
@@ -342,7 +343,7 @@ export default {
 
       // --- speed position ---
       const { card: sCard, body: sBody } = sectionCard('Speed position');
-      const { list: metaList, label: speedSource } = metaSpeedList(view, merged);
+      const { list: metaList, label: speedSource } = metaSpeedList(view, speedSrc);
       if (!metaList.length) {
         emptyState(sBody, 'No speed data available for this regulation yet');
       } else {
@@ -350,17 +351,14 @@ export default {
         const sorted = metaList.slice().sort((a, b) => b.spe - a.spe);
         const speedRows = elm('div', 'scn-speedrows');
         mons.forEach((m) => {
-          const bs = baseStatsOf(m, dex);
-          if (!bs) return;
-          const hadSp = !!m.sp;
-          const spSpe = hadSp ? m.sp[5] : 0;
-          const nature = m.nature || 'Hardy';
-          const mySpe = calcStat(bs[5], spSpe, 5, nature);
+          const my = mySpeedOf(m, dex, speedSrc);
+          if (!my) return;
+          const mySpe = my.spe;
           const faster = sorted.filter((r) => r.spe < mySpe).length;
           const pct = sorted.length ? faster / sorted.length : null;
           const row = elm('div', 'scn-speedrow');
           row.appendChild(elm('span', 'scn-speedrow__name', m.k));
-          row.appendChild(elm('span', 'scn-speedrow__val', `${mySpe} Spe${hadSp ? '' : ' (assumed 0 SP)'}`));
+          row.appendChild(elm('span', 'scn-speedrow__val', `${mySpe} Spe${my.note}`));
           const track = elm('div', 'scn-speedrow__track');
           const dot = elm('div', 'scn-speedrow__dot');
           dot.style.left = `${pct == null ? 0 : pct * 100}%`;
