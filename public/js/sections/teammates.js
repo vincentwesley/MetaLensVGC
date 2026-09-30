@@ -126,7 +126,7 @@ export default {
       row.setAttribute('aria-label', `Filter by ${name}`);
       const head = document.createElement('div');
       head.className = 'sb-sprites';
-      head.appendChild(ctx.sprite(name, { size: 28, animated: anim }));
+      head.appendChild(ctx.sprite(name, { size: 'sm', animated: anim }));
       const label = document.createElement('div');
       label.className = 'sb-stat';
       label.style.textAlign = 'left';
@@ -134,7 +134,7 @@ export default {
       const mates = document.createElement('div');
       mates.className = 'sb-sprites';
       for (const t of mon.teammates.slice(0, 6)) {
-        const img = ctx.sprite(t, { size: 24, animated: anim });
+        const img = ctx.sprite(t, { size: 'xs', animated: anim });
         img.title = t;
         mates.appendChild(img);
       }
@@ -324,7 +324,7 @@ export default {
         row.setAttribute('role', 'button');
         const sprites = document.createElement('div');
         sprites.className = 'sb-sprites';
-        for (const k of r.keys) sprites.appendChild(ctx.sprite(k, { size: 28, animated: view.state.anim }));
+        for (const k of r.keys) sprites.appendChild(ctx.sprite(k, { size: 'sm', animated: view.state.anim }));
         const names = document.createElement('div');
         names.className = 'sb-names sb-names--wrap';
         names.textContent = r.keys.join(' + ');
@@ -392,7 +392,7 @@ export default {
         row.tabIndex = 0;
         row.setAttribute('role', 'button');
         row.dataset.tip = `Show only teams with ${key} and ${t.name}`;
-        row.appendChild(ctx.sprite(t.name, { size: 24 }));
+        row.appendChild(ctx.sprite(t.name, { size: 'xs' }));
         const name = document.createElement('div');
         name.className = 'sb-names';
         name.textContent = t.name;

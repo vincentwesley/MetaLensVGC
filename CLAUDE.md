@@ -103,6 +103,9 @@ Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 ## Style
 Plain modern JS, no TypeScript, no frameworks, no new runtime deps. Small modules. CSS custom properties for all colours;
 type colours from `TYPE_COLORS`. Sprites: `image-rendering: pixelated`; fallback exact form → base species → type-coloured placeholder.
+Sprite sizes are named, never pixels: `ctx.sprite(key, { size: 'xs'|'sm'|'md'|'lg' })` = 24/32/48/96, exact fractions of
+the 96 px gen5 sprites (xs inline, sm rows, md scanner grid, lg snapshot hero + deep dive; hero is 48 under 600px).
+Percentages via `fmt.pct` (one decimal; a nonzero share shows "<0.1%", never 0). Owner calls 2026-09-30.
 
 ## Name
 The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It was "VGC MetaScope" until

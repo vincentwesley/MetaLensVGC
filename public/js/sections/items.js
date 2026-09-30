@@ -120,7 +120,7 @@ export default {
               lines.push(`${ctx.fmt.n(r.n)} teams · ${ctx.fmt.n(r.slots)} Pokémon`);
               if (r.winPct != null) lines.push(`win ${ctx.fmt.pct(r.winPct)} (${ctx.fmt.pct(r.ci[0])}–${ctx.fmt.pct(r.ci[1])})`);
             }
-            if (r.holders.length) lines.push(`held by: ${r.holders.slice(0, 4).map((h) => `${h.key} ${ctx.fmt.pct(h.pct, 0)}`).join(', ')}`);
+            if (r.holders.length) lines.push(`held by: ${r.holders.slice(0, 4).map((h) => `${h.key} ${ctx.fmt.pct(h.pct)}`).join(', ')}`);
             return lines.join('<br/>');
           },
         },
@@ -206,7 +206,7 @@ export default {
       const btn = el('button', 'item-link');
       btn.type = 'button';
       btn.title = `Filter to teams with ${item.name} (shift-click to exclude)`;
-      btn.append(el('span', 'item-link__name', item.name), el('span', 'item-link__pct', ctx.fmt.pct(item.pct, 0)));
+      btn.append(el('span', 'item-link__name', item.name), el('span', 'item-link__pct', ctx.fmt.pct(item.pct)));
       btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.chip('item', item.name, e); });
       btn.addEventListener('keydown', (e) => e.stopPropagation());
       const bar = el('div', 'items-share');
@@ -250,7 +250,7 @@ export default {
         sb.type = 'button';
         sb.title = `Details: ${r.key}`;
         sb.setAttribute('aria-label', `Open details for ${r.key}`);
-        sb.appendChild(ctx.sprite(r.key, { size: 32, animated: view.state.anim }));
+        sb.appendChild(ctx.sprite(r.key, { size: 'sm', animated: view.state.anim }));
         sb.addEventListener('click', (e) => { e.stopPropagation(); ctx.openDrawer(r.key); });
         sb.addEventListener('keydown', (e) => e.stopPropagation());
         tdS.appendChild(sb);

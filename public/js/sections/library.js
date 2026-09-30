@@ -147,7 +147,7 @@ export default {
         cell.type = 'button';
         cell.title = `${m.k}${m.item ? ` @ ${m.item}` : ''}`;
         cell.setAttribute('aria-label', `Open ${m.k} deep dive`);
-        cell.appendChild(ctx.sprite(m.k, { size: 36, animated: anim }));
+        cell.appendChild(ctx.sprite(m.k, { size: 'sm', animated: anim }));
         cell.appendChild(elm('span', 'lib-mon__item', m.item || '—'));
         cell.addEventListener('click', () => ctx.openDrawer(m.k));
         mons.appendChild(cell);

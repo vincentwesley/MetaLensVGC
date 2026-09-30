@@ -154,7 +154,7 @@ export default {
       row.className = 'sb-row sb-row--clickable';
       row.tabIndex = 0;
       row.setAttribute('role', 'button');
-      row.appendChild(ctx.sprite(r.key, { size: 24 }));
+      row.appendChild(ctx.sprite(r.key, { size: 'xs' }));
       const name = document.createElement('div');
       name.className = 'sb-names';
       name.textContent = r.key;
@@ -259,7 +259,7 @@ export default {
         const tr = document.createElement('tr');
         tr.tabIndex = 0;
         const tdRank = document.createElement('td'); tdRank.className = 'num'; tdRank.textContent = r.rank ?? '—';
-        const tdSprite = document.createElement('td'); tdSprite.appendChild(ctx.sprite(r.key, { size: 22 }));
+        const tdSprite = document.createElement('td'); tdSprite.appendChild(ctx.sprite(r.key, { size: 'xs' }));
         const tdName = document.createElement('td'); tdName.textContent = r.key;
         const nNow = currNMap.get(r.key) || 0;
         const nPrev = prevRowMap.get(r.key)?.n || 0;

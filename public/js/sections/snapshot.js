@@ -48,7 +48,7 @@ function monCard(ctx, key, pct, winPct, change, label, anim, prevN, minN) {
   card.addEventListener('focus', () => ctx.hover(key));
   card.addEventListener('blur', () => ctx.hover(null));
 
-  const img = ctx.sprite(key, { size: 56, animated: anim });
+  const img = ctx.sprite(key, { size: 'lg', animated: anim });
   img.className += ' snapshot__mon-sprite';
   card.appendChild(img);
 
@@ -163,7 +163,7 @@ export default {
         kpiRow.appendChild(kpiTile('Season', season.season));
         kpiRow.appendChild(kpiTile('Snapshot', season.snapshot));
         kpiRow.appendChild(kpiTile('Pokémon with data', ctx.fmt.n(count)));
-        kpiRow.appendChild(kpiTile('#1 ranked', ranking[0] || notPub, ranking[0] ? { sprite: ctx.sprite(ranking[0], { size: 20, animated: anim }) } : {}));
+        kpiRow.appendChild(kpiTile('#1 ranked', ranking[0] || notPub, ranking[0] ? { sprite: ctx.sprite(ranking[0], { size: 'xs', animated: anim }) } : {}));
         const megaTile = kpiTile('Top-ranked Mega Stone holder', megas.length ? `#${season.mons[megas[0]].rank} ${megas[0]}` : notPub,
           { tip: 'Highest-ranked Pokémon whose most common held item is their own Mega Stone (50%+ of ranked sets).' });
         if (megas.length > 1) {
@@ -201,7 +201,7 @@ export default {
         kpiRow.appendChild(kpiTile('Meta diversity', effectiveSpecies(merged.mons.map((m) => m.raw)).toFixed(1),
           { tip: 'Effective number of species: exp(Shannon entropy) of usage share. Higher = more balanced meta.' }));
         kpiRow.appendChild(kpiTile('Mega share', ctx.fmt.pct(megaShare)));
-        kpiRow.appendChild(kpiTile('Most-used Mega', topMega ? topMega.key : '—', topMega ? { sprite: ctx.sprite(topMega.key, { size: 20, animated: anim }) } : {}));
+        kpiRow.appendChild(kpiTile('Most-used Mega', topMega ? topMega.key : '—', topMega ? { sprite: ctx.sprite(topMega.key, { size: 'xs', animated: anim }) } : {}));
         return;
       }
 
@@ -241,7 +241,7 @@ export default {
         { tip: 'Effective number of species: exp(Shannon entropy) of usage counts. Higher = more balanced meta.' }));
       kpiRow.appendChild(kpiTile('Mega share', ctx.fmt.pct(k.megaShare)));
       kpiRow.appendChild(kpiTile('Most-used Mega', k.topMega ? k.topMega.key : '—',
-        k.topMega ? { sprite: ctx.sprite(k.topMega.key, { size: 20, animated: anim }) } : {}));
+        k.topMega ? { sprite: ctx.sprite(k.topMega.key, { size: 'xs', animated: anim }) } : {}));
     }
 
     return {

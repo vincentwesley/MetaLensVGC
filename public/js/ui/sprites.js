@@ -14,12 +14,14 @@ try {
   // lib/types.js not built yet; placeholders fall back to a neutral grey.
 }
 
+// Drawn like a gen5 sprite: a 96 px canvas with the figure in the middle ~half, so a
+// placeholder takes the same visual space as a real sprite at every SPRITE_SIZES step.
 function placeholderDataUri(key, type) {
   const color = TYPE_COLORS[type] || '#6b6b6b';
   const letter = (key || '?').charAt(0).toUpperCase();
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">`
-    + `<rect width="32" height="32" rx="4" fill="${color}"/>`
-    + `<text x="16" y="22" font-size="16" text-anchor="middle" font-family="monospace" fill="#fff">${letter}</text>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">`
+    + `<rect x="22" y="22" width="52" height="52" rx="7" fill="${color}"/>`
+    + `<text x="48" y="58" font-size="28" text-anchor="middle" font-family="monospace" fill="#fff">${letter}</text>`
     + `</svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
@@ -33,13 +35,20 @@ function candidates(key, dex, { animated = false } = {}) {
   return chain;
 }
 
-/** Build an <img> for `key` with the fallback chain wired via onerror. */
-export function sprite(key, dex, { size = 32, animated = false } = {}) {
+// The one sprite scale: exact fractions of the 96 px gen5 sprites, so pixel art never
+// shows uneven, doubled pixels. xs inline (chips, KPIs, small lists), sm rows,
+// md the scanner's parsed-team grid, lg 1:1 (snapshot hero, deep dive).
+export const SPRITE_SIZES = { xs: 24, sm: 32, md: 48, lg: 96 };
+
+/** Build an <img> for `key` with the fallback chain wired via onerror. size: a SPRITE_SIZES name. */
+export function sprite(key, dex, { size = 'sm', animated = false } = {}) {
   const chain = candidates(key, dex, { animated });
   const img = document.createElement('img');
-  img.className = 'sprite';
-  img.width = size;
-  img.height = size;
+  const px = SPRITE_SIZES[size];
+  if (!px) throw new Error(`sprite size must be one of ${Object.keys(SPRITE_SIZES)}, got ${size}`);
+  img.className = `sprite sprite--${size}`;
+  img.width = px;
+  img.height = px;
   img.loading = 'lazy';
   img.decoding = 'async';
   img.alt = key || '';

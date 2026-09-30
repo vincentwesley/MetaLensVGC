@@ -75,7 +75,7 @@ export function mountChips(el, ctx) {
       }
 
       if (chip.kind === 'species' || chip.kind === 'mega') {
-        pill.appendChild(ctx.sprite(chip.value, { size: 20 }));
+        pill.appendChild(ctx.sprite(chip.value, { size: 'xs' }));
       } else if (chip.kind === 'type' || chip.kind === 'weak' || chip.kind === 'movetype') {
         const sw = document.createElement('span');
         sw.className = 'chip__swatch';

@@ -41,7 +41,8 @@ main.grid .section[data-section="quadrant"] {
   border-color: var(--accent);
   box-shadow: 0 4px 10px rgba(0, 0, 0, .15);
 }
-.snapshot__mon-sprite { width: 56px; height: 56px; margin-bottom: 2px; }
+.snapshot__mon-sprite { width: 96px; height: 96px; } /* 1:1 with the gen5 sprite */
+@media (max-width: 600px) { .snapshot__mon-sprite { width: 48px; height: 48px; } } /* half: still a clean fraction */
 .snapshot__mon-name {
   font-family: var(--font-label); font-size: var(--fs-small); text-transform: uppercase;
   color: var(--ink); overflow-wrap: anywhere;
@@ -71,7 +72,7 @@ main.grid .section[data-section="quadrant"] {
 [data-skin="pro"] .snapshot__kpis { border-top: 1px solid var(--border); }
 .snapshot__kpis .kpi { padding: var(--space-2) var(--space-2); }
 .snapshot__kpis .kpi__value { display: flex; align-items: center; gap: 6px; }
-.snapshot__kpis .kpi__value img.sprite { width: 20px; height: 20px; }
+.snapshot__kpis .kpi__value img.sprite { width: 24px; height: 24px; }
 
 /* ---------- usage leaderboard ---------- */
 [data-section="usage"] .card__head { flex-wrap: wrap; row-gap: var(--space-2); }
