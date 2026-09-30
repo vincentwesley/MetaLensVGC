@@ -37,6 +37,9 @@
 
   --dur-fast: 120ms; --dur-med: 200ms;
   --ease: cubic-bezier(.2,.7,.3,1);
+  /* motion block (end of file): entrances decelerate, exits accelerate and are shorter */
+  --ease-out: cubic-bezier(.16,1,.3,1); --ease-in: cubic-bezier(.4,0,1,1);
+  --dur-open: 320ms; --dur-close: 180ms; --dur-reveal: 420ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -488,25 +491,25 @@ button[data-tip] { cursor: pointer; }
 .section-placeholder { padding: var(--space-5); text-align: center; color: var(--muted); font-family: var(--font-label); }
 
 /* ---------- drawer / deep-dive aside ---------- */
-.drawer { position: fixed; inset: 0; z-index: 600; visibility: hidden; overflow: hidden; }
-.drawer.is-open { visibility: visible; }
+.drawer { position: fixed; inset: 0; z-index: 600; visibility: hidden; overflow: hidden; transition: visibility 0s linear var(--dur-close); }
+.drawer.is-open { visibility: visible; transition-delay: 0s; }
 .drawer__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.5); opacity: 0; transition: opacity var(--dur-med) var(--ease); }
 .drawer.is-open .drawer__backdrop { opacity: 1; }
 .drawer__panel {
   position: absolute; top: 0; right: 0; height: 100%; width: min(480px, 100vw);
   background: var(--surface-1); border-left: 2px solid var(--frame);
   display: flex; flex-direction: column;
-  transform: translateX(100%); transition: transform var(--dur-med) var(--ease);
+  transform: translateX(100%); transition: transform var(--dur-close) var(--ease-in);
 }
 [data-skin="pro"] .drawer__panel { border-left: 1px solid var(--border); }
-.drawer.is-open .drawer__panel { transform: translateX(0); }
+.drawer.is-open .drawer__panel { transform: translateX(0); transition: transform var(--dur-open) var(--ease-out); }
 .drawer__head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 2px solid var(--frame); }
 [data-skin="pro"] .drawer__head { border-bottom: 1px solid var(--border); }
 .drawer__head h2 { font-size: var(--fs-head); text-transform: uppercase; }
 .drawer__close { border: 2px solid var(--frame); background: var(--surface-2); width: 28px; height: 28px; cursor: pointer; font-size: 16px; border-radius: var(--radius); }
 [data-skin="pro"] .drawer__close { border: 1px solid var(--border); }
 .drawer__body { padding: var(--space-4); overflow-y: auto; flex: 1; }
-@media (prefers-reduced-motion: reduce) { .drawer__panel, .drawer__backdrop { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .drawer, .drawer__panel, .drawer__backdrop { transition: none !important; } }
 
 /* ---------- footer ---------- */
 .site-footer { padding: var(--space-4); text-align: center; color: var(--muted); font-size: var(--fs-small); font-family: var(--font-body); border-top: 2px solid var(--frame); background: var(--surface-1); }
@@ -668,4 +671,46 @@ main.grid .section { position: relative; }
 @keyframes busy-sweep { from { background-position: -50% 0; } to { background-position: 150% 0; } }
 @media (prefers-reduced-motion: reduce) {
   .section[aria-busy="true"]::before { animation: none; background: var(--accent); opacity: .45; }
+}
+
+/* ---------- motion (ui/motion.js) ----------
+   Opacity/transform only; content is in the DOM before any of it runs; the global
+   reduced-motion rule near the top of this file turns all of it off. */
+
+/* Sections below the fold fade + rise the first time they scroll into view.
+   The children move, not the section, so its box (scroll targets, observers) stays put. */
+.section[data-reveal] > * { transition: opacity var(--dur-reveal) var(--ease-out), transform var(--dur-reveal) var(--ease-out); }
+.section[data-reveal="pending"] > * { opacity: 0; transform: translateY(14px); }
+@media print { .section[data-reveal] > * { opacity: 1 !important; transform: none !important; } }
+
+/* Bar fills grow in from the left whenever they are (re)drawn. */
+.usage-bar__fill, .items-share__fill, .ddv-stat-fill, .bar-row__fill {
+  transform-origin: left center; animation: bar-grow 480ms var(--ease-out) both;
+}
+@keyframes bar-grow { from { transform: scaleX(0); } }
+/* "Show all" lists hundreds of rows: only the first screenful animates. */
+tr:nth-child(n+31) .usage-bar__fill { animation: none; }
+
+/* A KPI whose value changed after a filter click ticks up into place. */
+.kpi--changed { animation: kpi-tick 380ms var(--ease-out) both; }
+@keyframes kpi-tick { from { opacity: 0; transform: translateY(6px); } }
+
+/* Deep-dive content fades in just behind the sliding panel (once per open). */
+.drawer.is-open .drawer__body { animation: drawer-content 360ms var(--ease-out) 80ms both; }
+@keyframes drawer-content { from { opacity: 0; transform: translateX(12px); } }
+
+/* Skin / theme switch: a short cross-fade (View Transitions, where supported). */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 220ms; animation-timing-function: var(--ease); }
+
+/* Clickable rows show an accent edge on hover / keyboard focus. */
+table.data-table tbody tr:hover > :first-child,
+table.data-table tbody tr:focus-visible > :first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* Section titles carry a small accent marker: a bar in Pro, a pixel square in Retro. */
+.card__head h2::before, .card__head h3::before {
+  content: ""; display: inline-block; vertical-align: middle; margin: -2px 8px 0 0;
+  width: 3px; height: .95em; background: var(--accent); border-radius: 1px;
+}
+[data-skin="retro"] .card__head h2::before, [data-skin="retro"] .card__head h3::before {
+  width: 6px; height: 6px; border-radius: 0; margin-top: -3px; box-shadow: 2px 2px 0 var(--frame);
 }

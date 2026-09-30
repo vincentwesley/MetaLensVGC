@@ -13,7 +13,7 @@ sessions don't re-test it.
 | `npm run e2e` | Playwright checks + screenshots (`e2e/`) with Playwright's own browser | machines with internet (`npx playwright install chromium` first) |
 | `npm run e2e:cloud` | the functional checks (`e2e/app.spec.js`) with the preinstalled Chromium (`/opt/pw-browsers/chromium`, override with `PW_CHROMIUM`) and third-party hosts stubbed (`E2E_OFFLINE=1`) | Claude Code cloud sessions / offline sandboxes |
 | `npm run shot` | regenerates the committed `screenshots/*.png` | only with internet (sprites + Google Fonts must load, or the shots are wrong; never commit shots taken offline) |
-| `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` | viewport-sized slices of a long page into `screenshots/tmp/` (gitignored) for visual review | with `npm run serve` running |
+| `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` | viewport-sized slices of a long page into `screenshots/tmp/` (gitignored) for visual review; waits for rendering to settle | with `npm run serve` running; cloud: prefix `PW_CHROMIUM=/opt/pw-browsers/chromium E2E_OFFLINE=1` |
 
 Cloud-session notes:
 - The container can't reach play.pokemonshowdown.com or Google Fonts. Sprites show their
@@ -53,7 +53,7 @@ Cloud-session notes:
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 41 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 43 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -78,6 +78,9 @@ Cloud-session notes:
 - Smogon M-C month arriving (simulated by serving the M-B file as M-C): Ladder mode, Teammate rate ("Ladder (Smogon)")
   and the Spread explorer's Smogon toggle light up; the M-C explorer check expects the toggle only when M-C has months.
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
+- Motion layer: below-the-fold sections start `data-reveal=pending` and reveal on scroll, the fold is never hidden, reduced
+  motion adds no reveal state; a changed KPI gets `kpi--changed`, leaderboard bars run `bar-grow`, the drawer stays visible
+  for its slide-out then hides. The section-nav check also guards the reveal (a jump must not land under the sticky bar).
 
 ### Verified once, by hand or ad-hoc script (not in the suite)
 - The weekly refresh Action end to end (run 36573240204: failure alert opened with correct step and log;
@@ -175,6 +178,16 @@ once (top 3), SP column header, per-row share bar, `* Nature` assumption marker,
 wording. e2e updated (bar segments, natures line, cover line); screenshots reviewed at 1440 (M-C Rillaboom) and 390
 (M-B Incineroar, Smogon).
 
+Motion layer (2026-09-30, cloud): section reveal, bar grow, KPI tick, drawer easing + slide-out, row accent edge,
+title markers, skin/theme cross-fade (`ui/motion.js`, "motion" block in app.css). Filmstrips reviewed at 1440 in Pro dark
+and Retro light (frames taken by pausing `document.getAnimations()` at fixed times, composited in a page and
+screenshotted: no image tools needed). 4x CPU throttle, placement clicks: longest task 161-234 ms after vs 202-267 ms
+before (noise); all 43 e2e green. Found while reviewing: the section-nav jump landed 14 px under the sticky bar while the
+target was mid-reveal (fixed: only the section's children move); the drawer snapped shut instead of sliding (visibility
+flipped instantly; fixed); the Retro archetype legend table pushed n/share/win % out of view (names now wrap).
+Old slice-shots taken before rendering settled showed empty quadrant / clipped tables: the script now waits.
+The quadrant's points are sprite images, so offline they are invisible (expected in the sandbox).
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
@@ -184,3 +197,5 @@ wording. e2e updated (bar segments, natures line, cover line); screenshots revie
   (tap tooltips, `[data-tip]`, Android back gesture on the drawer).
 - Browser zoom via the real zoom control (only DPR emulation was used).
 - Retro type sizes with the real VT323 font at 390 (the UX probe had fonts stubbed).
+- Motion with real network (sprites loading mid-animation), View Transitions cross-fade in Firefox/Safari (no API: instant
+  switch expected), and the reveal on a real phone scroll.

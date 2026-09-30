@@ -28,6 +28,8 @@ main.grid .section[data-section="trends"] {
    stack on narrow screens instead of leaving a blank grid track. */
 .sb-split { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: flex-start; }
 .sb-split > * { flex: 1 1 280px; min-width: 0; }
+/* The legend table beside a chart: long names wrap so the numbers stay in view. */
+.sb-split .data-table td:first-child { white-space: normal; }
 
 /* Classification / methodology disclosure list. */
 .sb-disclosure { display: flex; flex-direction: column; gap: 2px; }
