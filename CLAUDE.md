@@ -188,3 +188,23 @@ Background: pixel field canvas.
   and fallback fonts are expected. See `docs/TESTING.md` for probe-script tips.
 - `npm run data` needs outbound access to play.limitlesstcg.com, limitlessvgc.com, standings.limitlessvgc.com, smogon.com, championsbattledata.com and play.pokemonshowdown.com. The raw cache (`data-raw/`) is gitignored, so it starts empty. It still runs incrementally from the committed `public/data` (completed tournaments and finished ranked seasons are reused), so a refresh is minutes, not hours. The weekly GitHub Action does this anyway, so only run it if you need fresh data now.
 - Visual review: `npm run serve`, then `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` writes viewport-sized slices into `screenshots/tmp/` (gitignored). The committed full-page shots come from `npm run shot`.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Skill triggers
+
+These skills are available in every session. The user never types slash commands, so invoke them yourself via the Skill tool when the moment comes:
+
+- Finished a non-trivial code change (multi-file or new logic), before saying it's done → `simplify`, then `code-review` (low). Skip during a light revision phase if the user says so.
+- Before committing or pushing changes that touch auth, secrets, tokens, user input, network calls, or CSP/headers → `security-review`.
+- Need to see a change working in the real app, not just tests → `run`.
+- User asks for recurring or scheduled work → `loop` (in-session) or `schedule` (cloud).
+- Repo feels bloated or user asks to clean up → `ponytail-audit`; before wrapping up a long project phase → `ponytail-debt`.
