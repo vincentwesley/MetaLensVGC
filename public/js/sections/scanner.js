@@ -451,7 +451,7 @@ export default {
       const nSim = r.sim ? r.sim.teams.length : 0;
       const gamesN = r.games ? r.games.w + r.games.l : 0;
       {
-        const { card, body: b } = withMeta('Matchups: Pokémon', nSim, 'teams like yours', r.species.relaxed || (gamesN > 0 && gamesN < LIMITS.totalGames) ? LIMITS.matchGames : 0);
+        const { card, body: b } = withMeta('Matchups: Pokémon', nSim, 'teams like yours', r.species.relaxed ? LIMITS.matchGames : 0);
         if (!r.sim) emptyState(b, `Needs at least ${LIMITS.simFallback} different Pokémon`);
         else {
           const th = elm('div', 'ddv-note', `Teams like yours: tournament teams sharing at least ${r.sim.threshold} of your ${new Set(mons.map((m) => m.k)).size} Pokémon${r.sim.fellBack ? ` (fewer than ${LIMITS.simTeams} teams share ${LIMITS.simMin}, so the threshold was lowered to ${LIMITS.simFallback})` : ''}. ${nSim.toLocaleString('en-US')} teams matched, ${gamesN.toLocaleString('en-US')} games with a result${r.games && gamesN ? ` (${r.games.w}-${r.games.l}, ${pct(r.games.w / gamesN)} overall)` : ''}. Mirror games are excluded.`);
@@ -459,7 +459,8 @@ export default {
           if (!r.species.rows.length) {
             emptyState(b, nSim ? 'No match results for teams like yours in the current view' : `No tournament teams in view share ${r.sim.threshold}+ of your Pokémon`);
           } else {
-            if (r.species.relaxed || gamesN < LIMITS.totalGames) b.appendChild(elm('div', 'ddv-note scn-note', `Teams like yours have ${gamesN} games in this view (${LIMITS.totalGames}+ for a solid read, ${LIMITS.matchGames}+ per opponent Pokémon); smaller samples are shown and flagged. Read with care.`));
+            if (r.species.relaxed) b.appendChild(elm('div', 'ddv-note scn-note', `No opponent Pokémon reaches ${LIMITS.matchGames}+ games with these filters; smaller samples are shown and flagged. Read with care.`));
+            else if (gamesN < LIMITS.totalGames) b.appendChild(elm('div', 'ddv-note scn-note', `Teams like yours have only ${gamesN} games in this view (${LIMITS.totalGames}+ for a solid read); rows under ${LIMITS.matchGames} games are left out. Read with care.`));
             b.appendChild(elm('div', 'ddv-note', `Win rate of teams like yours against opponents that bring the Pokémon. Best = highest 95% Wilson lower bound, worst = lowest upper bound. "Favourable/unfavourable" only when the interval excludes 50%.`));
             const cols = elm('div', 'scn-cols');
             for (const [title, rows] of [['Best matchups', r.species.best], ['Worst matchups', r.species.worst]]) {
@@ -490,6 +491,7 @@ export default {
         if (!am.rows.length) emptyState(b, 'No match results against any opponent archetype in the current view');
         else {
           if (am.relaxed) b.appendChild(elm('div', 'ddv-note scn-note', `No opponent archetype reaches ${LIMITS.matchGames}+ games with these filters; smaller samples are shown and flagged. Read with care.`));
+          else if (am.source === 'similar' && r.games.w + r.games.l < LIMITS.totalGames) b.appendChild(elm('div', 'ddv-note scn-note', `Teams like yours have only ${r.games.w + r.games.l} games in this view (${LIMITS.totalGames}+ for a solid read); rows under ${LIMITS.matchGames} games are flagged. Read with care.`));
           b.appendChild(elm('div', 'ddv-note', am.source === 'similar'
             ? `Teams like yours (see above) against each opponent's primary archetype, rows under ${LIMITS.matchGames} games flagged.`
             : `Teams like yours are too few for this, so this is the ${r.arch.label} row of the archetype matrix over every team in view (not your exact team), rows under ${LIMITS.matchGames} games flagged.`));
@@ -598,7 +600,7 @@ export default {
         const { rows, relaxed, threshold } = r.link;
         const { card, body: b } = withMeta('Weakest link', base.length, 'teams in view', relaxed ? LIMITS.linkGames : 0);
         if (new Set(mons.map((m) => m.k)).size < 4) emptyState(b, 'Needs at least 4 different Pokémon');
-        else if (!rows.length) emptyState(b, `No tournament teams in view share ${LIMITS.simFallback - 1}+ of your other Pokémon`);
+        else if (!rows.length) emptyState(b, r.link.reason === 'one-sided' ? 'Every similar team in view runs all of your Pokémon (or none have recorded games), so there is nothing to compare' : `No tournament teams in view share ${LIMITS.simFallback - 1}+ of your other Pokémon`);
         else {
           if (relaxed) b.appendChild(elm('div', 'ddv-note scn-note', `No member reaches ${LIMITS.linkGames}+ games on both sides with these filters; smaller samples shown — read with care.`));
           b.appendChild(elm('div', 'ddv-note', `For each member: tournament record of teams that share ${threshold}+ of your OTHER Pokémon and run it, vs. those that do not${threshold < LIMITS.simFallback ? ` (no member has games on both sides at ${LIMITS.simFallback}+, so the threshold was lowered to ${threshold})` : ''}. Rows under ${LIMITS.linkGames} games on a side are flagged. Correlation from real teams, not proof the Pokémon is the cause. "Clear" = the 95% intervals do not overlap.`));

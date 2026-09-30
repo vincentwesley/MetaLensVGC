@@ -127,8 +127,8 @@ export function speciesMatchups(games, base, minN = 20) {
   const meta = new Set(usage(base).filter((r) => r.n >= minN).map((r) => r.key));
   const all = [...games.bySpecies].map(([key, c]) => ({ key, w: c.w, l: c.l, low: c.w + c.l < LIMITS.matchGames, ...verdict(c.w, c.l) }));
   let rows = all.filter((r) => meta.has(r.key) && !r.low);
-  const relaxed = !rows.length && all.length > 0;
-  if (relaxed) rows = all;
+  if (!rows.length) rows = all;
+  const relaxed = rows.length > 0 && rows.every((r) => r.low); // true only when no row reaches matchGames
   const best = rows.slice().sort((a, b) => b.ci[0] - a.ci[0]).slice(0, LIMITS.listSize);
   const seen = new Set(best.map((r) => r.key));
   const worst = rows.filter((r) => !seen.has(r.key)).sort((a, b) => a.ci[1] - b.ci[1]).slice(0, LIMITS.listSize);
@@ -170,7 +170,7 @@ export function archetypeMatchups(games, base, matches, myArch) {
   if (mRows.length) return { source: 'matrix', rows: mRows, relaxed: false };
   // nothing reaches matchGames: the real smaller samples, teams-like-yours first
   const sRows = games ? toRows([...games.byArch], 1) : [];
-  if (sRows.length) return { source: 'similar', rows: sRows, relaxed: true };
+  if (sRows.length) return { source: 'similar', rows: sRows, relaxed: sRows.every((r) => r.low) };
   const xRows = toRows(mEntries, 1);
   return xRows.length ? { source: 'matrix', rows: xRows, relaxed: true } : { source: null, rows: [], relaxed: false };
 }
@@ -301,12 +301,14 @@ export function teammatePicks(keys, base, dex, counts = sharedCounts(base, keys)
  * not (team W-L records). Every member with >= 1 game on both sides gets a row; `low` marks a
  * side under `linkGames`, and such a row is never `clear`. `clear` = the Wilson intervals do not
  * overlap. `replacement` is the most common outside species on the "without X" teams.
- * @returns {{rows: object[], relaxed: boolean, threshold: number}}  rows that clear `linkGames`
+ * @returns {{rows: object[], relaxed: boolean, threshold: number, reason: null|'few-members'|'no-teams'|'one-sided'}}  rows that clear `linkGames`
  *  first, then low ones, each by (without - with) win % desc; `relaxed` = no row cleared it.
  */
 export function weakestLink(keys, base, counts = sharedCounts(base, keys)) {
+  let pool = 0; // teams with >= min shared species (for some member), last build
   const build = (min) => {
     const rows = [];
+    pool = 0;
     for (const x of keys) {
       const withR = { w: 0, l: 0, n: 0 };
       const withoutR = { w: 0, l: 0, n: 0 };
@@ -315,6 +317,7 @@ export function weakestLink(keys, base, counts = sharedCounts(base, keys)) {
         const t = base[i];
         const has = t.species.has(x);
         if (counts[i] - (has ? 1 : 0) < min) continue;
+        pool++;
         const r = has ? withR : withoutR;
         r.w += t.w; r.l += t.l; r.n++;
         if (!has) {
@@ -350,11 +353,11 @@ export function weakestLink(keys, base, counts = sharedCounts(base, keys)) {
     }
     return rows.sort((x, y) => (x.low - y.low) || (y.diff - x.diff));
   };
-  if (keys.size < 4) return { rows: [], relaxed: false, threshold: LIMITS.simFallback };
+  if (keys.size < 4) return { rows: [], relaxed: false, threshold: LIMITS.simFallback, reason: 'few-members' };
   let threshold = LIMITS.simFallback;
   let rows = build(threshold);
   if (!rows.length) { threshold = LIMITS.simFallback - 1; rows = build(threshold); }
-  return { rows, relaxed: rows.length > 0 && rows.every((r) => r.low), threshold };
+  return { rows, relaxed: rows.length > 0 && rows.every((r) => r.low), threshold, reason: rows.length ? null : pool ? 'one-sided' : 'no-teams' };
 }
 
 /**
