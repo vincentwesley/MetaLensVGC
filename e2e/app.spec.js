@@ -594,7 +594,7 @@ test('section nav: a link scrolls to its section and aria-current follows the sc
   await page.goto('/');
   await waitForAllSections(page);
   const nav = page.locator('#secnav');
-  await expect(nav.locator('a')).toHaveCount(11);
+  await expect(nav.locator('a')).toHaveCount(12);
   await nav.locator('a[data-jump="speed"]').click();
   await expect(nav.locator('[aria-current="true"]')).toHaveText('Speed');
   const top = await page.locator('main [data-section="speed"]').evaluate((e) => e.getBoundingClientRect().top);
@@ -893,4 +893,23 @@ test('archetype trend: weekly lines for the top archetypes; colours follow the a
   await page.mouse.click(box.x + pt[0], box.y + pt[1]);
   await expect(page.locator('#chips .chip')).toHaveCount(1);
   await expect(page.locator('#chips .chip__label')).toHaveText(/^Archetype: /);
+});
+
+test('meta by country: rows per country; a row click adds a Country chip that filters the dashboard and survives reload', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const rows = page.locator('main [data-section="countries"] tbody tr');
+  expect(await rows.count()).toBeGreaterThan(5);
+  await expect(rows.first().locator('.cty-name')).toContainText('United States');
+  const before = await teamsSampledValue(page).textContent();
+  await rows.nth(1).scrollIntoViewIfNeeded();
+  await rows.nth(1).click();
+  await waitForAllSections(page);
+  await expect(page.locator('#chips .chip__label')).toHaveText('Country: Brazil');
+  expect(await teamsSampledValue(page).textContent()).not.toBe(before);
+  expect(await page.evaluate(() => location.hash)).toContain('country:BR');
+  await page.reload();
+  await waitForAllSections(page);
+  await expect(page.locator('#chips .chip__label')).toHaveText('Country: Brazil');
+  await expect(page.locator('main [data-section="countries"] tbody tr')).toHaveCount(1);
 });

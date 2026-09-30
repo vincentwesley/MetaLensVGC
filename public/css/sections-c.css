@@ -280,3 +280,30 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 .spx-row__bench { margin: 0; }
 .scn-muted { font-style: italic; }
 .spx-row__assume { color: var(--muted); margin-left: calc(-1 * var(--space-2)); }
+
+/* ---------- meta by country (sections/countries.js) ---------- */
+.cty-table td { vertical-align: middle; }
+.cty-table tbody tr { cursor: pointer; }
+.cty-name { font-weight: 600; }
+.cty-code { margin-left: 6px; color: var(--muted); font-weight: 400; font-size: .85em; }
+.cty-mons { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.cty-mon { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; font-size: var(--fs-small); }
+.cty-table .usage-bar { min-width: 150px; }
+/* phones: each country becomes a card (name + win %, the teams bar, then its two Pokémon lists) */
+@media (max-width: 700px) {
+  .cty-table thead { display: none; }
+  .cty-table, .cty-table tbody { display: block; }
+  .cty-table tbody tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-2);
+    padding: var(--space-3) 0; border-bottom: 1px solid var(--grid);
+  }
+  table.cty-table td { border: 0; padding: 2px 0; white-space: normal; }
+  .cty-table .cty-name { grid-row: 1; grid-column: 1; }
+  .cty-table .cty-win { grid-row: 1; grid-column: 2; font-size: var(--fs-small); color: var(--ink-2); }
+  .cty-table .cty-win::before { content: "Win "; color: var(--muted); }
+  .cty-table .col-usage, .cty-table .cty-top, .cty-table .cty-over { grid-column: 1 / -1; }
+  .cty-table .cty-top::before, .cty-table .cty-over::before {
+    content: attr(data-label); display: block; color: var(--muted); font-size: var(--fs-small); margin-top: 4px;
+  }
+  .cty-table .usage-bar { min-width: 0; }
+}

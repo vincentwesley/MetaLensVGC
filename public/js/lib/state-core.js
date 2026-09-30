@@ -55,7 +55,7 @@ export function toHash(state, defaults = DEFAULT_STATE) {
   return parts.join('&');
 }
 
-export const CHIP_KINDS = ['species', 'mega', 'core', 'type', 'weak', 'item', 'move', 'movetype', 'archetype', 'team'];
+export const CHIP_KINDS = ['species', 'mega', 'core', 'type', 'weak', 'item', 'move', 'movetype', 'archetype', 'team', 'country'];
 const ENUMS = {
   source: ['tournaments', 'ladder', 'ranked'],
   place: ['all', 'topcut', 'top8', 'winner'],
@@ -101,6 +101,9 @@ export function sanitizeState(state, { regs } = {}, defaults = DEFAULT_STATE) {
       return [];
     } else if (typeof value !== 'string' || !value) {
       return [];
+    } else if (c.kind === 'country') {
+      value = value.toUpperCase();
+      if (!/^[A-Z]{2}$/.test(value)) return []; // ISO-2, as on the team sheets
     }
     return [{ kind: c.kind, value, neg: !!c.neg }];
   }).filter((c) => {

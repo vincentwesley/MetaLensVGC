@@ -47,7 +47,8 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   Orb" = a Rillaboom holding Life Orb). Teams are kept when they have every species/core chip's Pokémon and a Pokémon passing
   the slot test; `projectTeams(teams, chips, dex)` keeps only the passing Pokémon for Pokémon-level views
   (`{keys:false}` = attribute chips only, for the deep dive). Negative Pokémon chips drop teams with any matching Pokémon.
-  Team chips: archetype (PRIMARY archetype `arch[0]`, same as the donut), team. Ladder / ranked rows are per species:
+  Team chips: archetype (PRIMARY archetype `arch[0]`, same as the donut), team, country (ISO-2 from the sheet; `sanitizeState`
+  keeps only 2-letter codes, uppercased; labelled via `fmt.country`). Ladder / ranked rows are per species:
   `speciesChipFilter(chips, dex)` applies species/mega/core/type/weak there (main filters `view.ladder` / `view.ranked`) and
   reports the rest as unsupported (shown under the chips). `archetypeMatrix(teams, matches, opponents)` counts the view's
   teams against `opponents` (main passes `view.base`). Every chart's click must add the chip kind that matches what it plots.
@@ -62,6 +63,7 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
 - `spreads.js`: SP spread archetypes (`SPREAD_ARCHETYPES`: No Speed, Max Speed, Bulk-heavy, Offense, Other; first match wins),
   `rankedSpreadRows` / `smogonSpreadRows` (Lv50 stats via stats.js), `archetypeShares`, `speedBenchmarks`, `nearestSpread`, `metaSpeedField`.
   `aggregate.js#speedSpecies` is the one species list for the Speed section and the explorer's benchmark field.
+- `aggregate.js#countrySplit(teams)` (one pass; `COUNTRY_LIMITS`: top 3, over 2, minMon 5, minLift 1.25) feeds the country section.
 - `scan.js`: the Team Scanner's evidence (`scanTeam` → archetype, matchups vs Pokémon/archetypes from real
   match results of "teams like yours", item check with item clause, teammate picks, weakest link; `spCheck` compares a pasted SP line to ranked spreads). Thresholds in `LIMITS`, `RARE_NATURE`.
 
@@ -72,7 +74,7 @@ state = {
   tiers: ["worlds","international","regional","online"],   // enabled tiers
   place: "all" | "topcut" | "top8" | "winner",
   from: "" | "YYYY-MM-DD", to: "" | "YYYY-MM-DD", minN: 20,
-  chips: [ { kind: "species"|"mega"|"core"|"type"|"weak"|"item"|"move"|"movetype"|"archetype"|"team", value: string | string[], neg: false } ],
+  chips: [ { kind: "species"|"mega"|"core"|"type"|"weak"|"item"|"move"|"movetype"|"archetype"|"team"|"country", value: string | string[], neg: false } ],
   skin: "pro" | "retro", theme: "dark" | "light" | "auto", anim: false,   // defaults: pro, dark
 }
 store.get(), store.set(patch), store.addChip(chip), store.removeChip(i), store.clearChips(), store.subscribe(fn)
@@ -89,7 +91,7 @@ export default {
 `view` is computed once per state change in `main.js`:
 `{ state, reg, manifest, dex, teams /*bar filters + chips, whole teams*/, monTeams /*projected to Pokémon passing the Pokémon chips*/, ddTeams /*projected by attribute chips only*/, speciesFilter, base /*bar filters, no chips*/, prev /*previous period, same chips + projection*/, matches, ladder /*ladder-<reg>.json*/, ranked /*ranked-<reg>.json*/ }`.
 Pokémon-level sections (snapshot, usage, quadrant, types, items, speed, trends, deepdive) read `monTeams`; team-level ones
-(archetypes, teammates, library, scanner, methodology) read `teams`.
+(archetypes, teammates, countries, library, scanner, methodology) read `teams`.
 `ctx` gives `{ store, dex, echarts, sprite(key, opts) → HTMLImageElement, spriteUrl(key), openDrawer(key), chip(kind, value, event) /* shift/alt = neg */, hover(key|null), meta(el, {source, n, unit}) /* source/sample/updated line */, cssVar(name), fmt }`.
 Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 
@@ -119,7 +121,8 @@ Usage leaderboard (Wilson CI, top item) | Usage x Win-rate quadrant -> Type land
 is weak to, by real multiplier) -> Item usage | Most common items by Pokémon -> Archetype split + matchup heatmap |
 Archetype share by week |
 Teammate co-usage heatmap + top cores + Teammate rate -> Speed tiers (modifiers, benchmark) -> Weekly trends + risers /
-fallers + regulation shift -> Team Sheet Library -> My Team Scanner (weaknesses, threats, speed position, closest teams,
+fallers + regulation shift -> Meta by country (share, win % CI, most used, "plays more than the field"; row click =
+Country chip; stacked cards under 700px) -> Team Sheet Library -> My Team Scanner (weaknesses, threats, speed position, closest teams,
 archetype, matchups vs Pokémon/archetypes, item check, teammate picks, weakest link) -> Data & methodology (downloads,
 sources) -> Credits. Deep dive drawer (any Pokémon: items, abilities, moves, sets, spreads, teammates, win rate).
 Background: pixel field canvas.
