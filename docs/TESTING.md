@@ -170,6 +170,11 @@ Flaky phone-tooltip e2e (2026-09-30, cloud): root cause was real, not timing. `u
 scroll event in the page, including the section nav's own horizontal re-centring, which lands a moment after
 Playwright's hover scroll. Reproduced 6/6 fails in the cloud sandbox; after the fix 6/6 + 6/6 passes (with the new check).
 
+Spread explorer polish (2026-09-30, cloud): stacked spread-type bar + legend (tips per segment), ranked natures shown
+once (top 3), SP column header, per-row share bar, `* Nature` assumption marker, "Change from M-B to M-C" / "NEW in M-C"
+wording. e2e updated (bar segments, natures line, cover line); screenshots reviewed at 1440 (M-C Rillaboom) and 390
+(M-B Incineroar, Smogon).
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

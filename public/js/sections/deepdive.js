@@ -80,6 +80,31 @@ function shareStrip({ byArch }) {
     .map((a) => `${a.label} ${pctText(byArch[a.id])}`).join(' · ');
 }
 
+/** Stacked bar of spread types (share of the listed spreads) with a legend; colours by type, fixed order. */
+function shareBar(shares) {
+  const wrap = elm('div', 'spx-strip');
+  const listed = SPREAD_ARCHETYPES.filter((a) => shares.byArch[a.id]);
+  const total = listed.reduce((t, a) => t + shares.byArch[a.id], 0) || 1;
+  const bar = elm('div', 'spx-bar');
+  bar.setAttribute('role', 'img');
+  bar.setAttribute('aria-label', `Spread types: ${shareStrip(shares)}`);
+  const legend = elm('div', 'spx-legend');
+  for (const a of listed) {
+    const i = SPREAD_ARCHETYPES.indexOf(a) + 1;
+    const seg = elm('span', 'spx-bar__seg');
+    seg.style.width = `${(shares.byArch[a.id] / total) * 100}%`;
+    seg.style.background = `var(--series-${i})`;
+    seg.dataset.tip = `${a.label}: ${pctText(shares.byArch[a.id])} (${a.desc})`;
+    bar.appendChild(seg);
+    const item = elm('span', 'spx-legend__item', `${a.label} ${pctText(shares.byArch[a.id])}`);
+    item.style.setProperty('--sw', `var(--series-${i})`);
+    item.dataset.tip = a.desc;
+    legend.appendChild(item);
+  }
+  wrap.append(bar, legend);
+  return wrap;
+}
+
 /** "outspeeds 18 of 29 · next faster: Garchomp 169" */
 function benchText(spe, field) {
   const b = speedBenchmarks(spe, field);
@@ -93,18 +118,18 @@ function benchText(spe, field) {
 
 /** Previous reg's last ranked season vs this one: archetype shares of the species' listed spreads. */
 function shiftText(key, dex, bs, cur, prevReg, prevRanked, curReg) {
-  if (!prevReg) return 'Shift vs previous regulation: none (first regulation).';
-  const head = `Shift ${prevReg} -> ${curReg}`;
+  if (!prevReg) return 'Change from the previous regulation: none (first regulation).';
+  const head = `Change from ${prevReg} to ${curReg}`;
   const last = (prevRanked?.seasons || []).reduce((b, s) => (!b || s.snapshot > b.snapshot ? s : b), null);
   if (!last) return `${head}: Insufficient data (no ranked data for ${prevReg}).`;
   const rm = rankedMon(last, key, dex);
-  if (!rm) return `${head}: NEW in ${curReg} (not in ${prevReg}'s ${last.season} ranked data).`;
+  if (!rm) return `NEW in ${curReg}: not in ${prevReg}'s ${last.season} ranked data.`;
   const prevRows = rankedSpreadRows(rm.mon, bs);
   if (!prevRows.length) return `${head}: Insufficient data (no ${last.season} spreads).`;
   const a = archetypeShares(prevRows), b = archetypeShares(cur);
   const parts = SPREAD_ARCHETYPES.filter((x) => a.byArch[x.id] || b.byArch[x.id])
-    .map((x) => `${x.label} ${Math.round((a.byArch[x.id] || 0) * 100)}% -> ${Math.round((b.byArch[x.id] || 0) * 100)}%`);
-  return `${head} (${last.season} vs current): ${parts.join(' · ')}; top spreads cover ${pctText(a.covered)} -> ${pctText(b.covered)}.`;
+    .map((x) => `${x.label} ${Math.round((a.byArch[x.id] || 0) * 100)}% → ${Math.round((b.byArch[x.id] || 0) * 100)}%`);
+  return `${head} (${prevReg} ${last.season} ranked → now): ${parts.join(' · ')}. Top spreads cover ${pctText(a.covered)} → ${pctText(b.covered)} of players.`;
 }
 
 export default {
@@ -220,34 +245,50 @@ export default {
           ctx.meta(metaEl, { source: `Smogon ${ladMerged.cutoff} ladder · ${lad.month} · ${ladMon.raw.toLocaleString('en-US')} ${key} entries`, n: ladMerged.battles, unit: 'battles' });
         }
         const shares = archetypeShares(rows);
-        panel.appendChild(elm('div', 'spx-strip', `${shareStrip(shares)} — top spreads cover ${pctText(shares.covered)}${isRanked ? " of this Pokémon's ranked players" : ' of its Smogon sets'}`));
+        panel.appendChild(shareBar(shares));
+        panel.appendChild(elm('div', 'ddv-note spx-cover', `The spreads below cover ${pctText(shares.covered)}${isRanked ? " of this Pokémon's ranked players" : ' of its Smogon sets'}; the bar splits them by type.`));
+        if (isRanked && rm.mon.natures) {
+          const nats = rankedEntries(rm.mon.natures).slice(0, 3).map((n) => `${n.name} ${pctText(n.pct)}`).join(' · ');
+          if (nats) panel.appendChild(elm('div', 'spx-natures', `Natures: ${nats}`));
+        }
         if (isRanked) {
           const shift = elm('div', 'ddv-note spx-shift');
           panel.appendChild(shift);
           const pReg = ctx.prevReg?.(view.reg);
           if (!pReg) shift.textContent = shiftText(key, dex, bs, rows, null, null, view.reg);
           else {
-            shift.textContent = `Shift ${pReg} -> ${view.reg}: loading…`;
+            shift.textContent = `Change from ${pReg} to ${view.reg}: loading…`;
             prevRankedFor(pReg).then((pr) => { if (seq === shiftSeq) shift.textContent = shiftText(key, dex, bs, rows, pReg, pr, view.reg); })
-              .catch(() => { if (seq === shiftSeq) shift.textContent = `Shift ${pReg} -> ${view.reg}: Insufficient data.`; });
+              .catch(() => { if (seq === shiftSeq) shift.textContent = `Change from ${pReg} to ${view.reg}: Insufficient data.`; });
           }
         }
 
-        // One block per spread (the drawer is narrow): SP + share, then nature / Lv50 stats / type, then the speed benchmark.
+        // One compact block per spread (the drawer is narrow): SP line + type + share bar, then Lv50 stats and speed.
+        const head = elm('div', 'spx-head');
+        head.append(elm('span', '', 'SP: HP / Atk / Def / SpA / SpD / Spe'), elm('span', '', isRanked ? 'share of spreads' : 'share'));
+        panel.appendChild(head);
         const list = elm('ul', 'spx-rows');
         list.setAttribute('aria-label', 'Spreads, most common first');
+        const maxShare = Math.max(...rows.map((r) => r.share || 0)) || 1;
         for (const r of rows) {
           const li = elm('li', 'spx-row');
-          const nat = !r.nature ? 'no nature reported' : r.natureJoint ? r.nature : `${r.nature} ${pctText(r.natureShare)}*`;
           const top = elm('div', 'spx-row__top');
-          top.append(elm('span', 'spx-row__sp', `${fmtSpread(r.sp)} SP`), elm('span', 'spx-row__share', `${pctText(r.share)}${isRanked ? ' of spreads' : ''}`));
+          const share = elm('span', 'spx-row__share', pctText(r.share));
+          const bar = elm('span', 'spx-row__bar');
+          bar.style.setProperty('--w', `${(r.share / maxShare) * 100}%`);
+          share.prepend(bar);
+          top.append(elm('span', 'spx-row__sp', fmtSpread(r.sp)), elm('span', 'pill spx-row__arch', archetypeLabel(r.arch)), share);
           const mid = elm('div', 'spx-row__mid');
-          mid.append(elm('span', 'spx-row__nat', nat), elm('span', 'spx-row__stats', `Lv50 ${r.stats.join(' / ')}`), elm('span', 'pill spx-row__arch', archetypeLabel(r.arch)));
-          li.append(top, mid, elm('div', 'ddv-note spx-row__bench', field.length ? `Speed ${r.stats[5]}: ${benchText(r.stats[5], field)}` : `Speed ${r.stats[5]}`));
+          if (!isRanked) mid.append(elm('span', 'spx-row__nat', r.nature || 'no nature reported'));
+          else if (!r.nature) mid.append(elm('span', 'spx-row__nat', 'no nature reported'));
+          const stats = elm('span', 'spx-row__stats', `Lv50 ${r.stats.join(' / ')}`);
+          mid.append(stats);
+          if (isRanked && r.nature) stats.after(elm('span', 'spx-row__assume', `* ${r.nature}`));
+          li.append(top, mid, elm('div', 'ddv-note spx-row__bench', field.length ? `Spe ${r.stats[5]}: ${benchText(r.stats[5], field)}` : `Spe ${r.stats[5]}`));
           list.appendChild(li);
         }
         panel.appendChild(list);
-        if (isRanked) panel.appendChild(elm('div', 'ddv-note', "* Ranked natures are reported separately from spreads; stats use this Pokémon's most common ranked nature (its share of ranked players' natures)."));
+        if (isRanked) panel.appendChild(elm('div', 'ddv-note', `* Ranked data reports natures separately from spreads, so Lv50 stats assume the most common nature (${rows[0]?.nature ?? '—'}).`));
         panel.appendChild(elm('div', 'ddv-note', `Type describes the SP only (${SPREAD_ARCHETYPES.slice(0, 4).map((a) => `${a.label}: ${a.desc}`).join('; ')}; first match wins). Speed benchmark: the ${field.length} most-used Pokémon of this view with a known speed (Speed Tiers sources).`));
         if (isRanked) {
           const attr = elm('div', 'ddv-note');

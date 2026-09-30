@@ -711,8 +711,10 @@ test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype str
     expect(nums).toHaveLength(6);
     expect(nums.every((n) => Number.isInteger(n) && n > 0)).toBe(true);
   }
-  await expect(card.locator('.spx-strip')).toContainText('top spreads cover');
-  await expect(card.locator('.spx-shift')).toContainText('Shift M-B -> M-C', { timeout: 15000 });
+  await expect(card.locator('.spx-cover')).toContainText(/cover \d+%/);
+  expect(await card.locator('.spx-bar__seg').count()).toBeGreaterThanOrEqual(2);
+  await expect(card.locator('.spx-natures')).toContainText(/Natures: \w+ \d+%/);
+  await expect(card.locator('.spx-shift')).toContainText(/NEW in M-C|Change from M-B to M-C/, { timeout: 15000 });
   await expect(card.locator('.spx-shift')).not.toContainText('loading');
   await expect(card).toContainText('sample size not published');
   await expect(card).toContainText('Battle data provided by Pokémon Champions Battle Data');
