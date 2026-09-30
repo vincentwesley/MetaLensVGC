@@ -89,10 +89,11 @@ export default {
 }
 ```
 `view` is computed once per state change in `main.js`:
-`{ state, reg, manifest, dex, teams /*bar filters + chips, whole teams*/, monTeams /*projected to Pokémon passing the Pokémon chips*/, ddTeams /*projected by attribute chips only*/, speciesFilter, base /*bar filters, no chips*/, prev /*previous period, same chips + projection*/, matches, ladder /*ladder-<reg>.json*/, ranked /*ranked-<reg>.json*/ }`.
+`{ state, reg, manifest, dex, teams /*bar filters + chips, whole teams*/, field /*same filters minus team chips; the Scanner's reference field (a team chip would make it compare the team with itself)*/, monTeams /*projected to Pokémon passing the Pokémon chips*/, ddTeams /*projected by attribute chips only*/, speciesFilter, base /*bar filters, no chips*/, prev /*previous period, same chips + projection*/, matches, ladder /*ladder-<reg>.json*/, ranked /*ranked-<reg>.json*/ }`.
 Pokémon-level sections (snapshot, usage, quadrant, types, items, speed, trends, deepdive) read `monTeams`; team-level ones
 (archetypes, teammates, countries, library, scanner, methodology) read `teams`.
 `ctx` gives `{ store, dex, echarts, sprite(key, opts) → HTMLImageElement, spriteUrl(key), openDrawer(key), chip(kind, value, event) /* shift/alt = neg */, hover(key|null), meta(el, {source, n, unit}) /* source/sample/updated line */, cssVar(name), fmt }`.
+`ctx.scan(paste)` loads a team into the Scanner and scans it (Library "Filter"); `ctx.teamLabel(id)` names a team chip "Player · Event" from the loaded regulation (null until data is there).
 Sections never fetch and never mutate state except through `ctx.chip` / `store`.
 
 ## Commands
@@ -136,7 +137,7 @@ Background: pixel field canvas.
   teammates, checks/counters. M-A and M-B have 3 months; M-C has none until Smogon publishes (early October).
 - So any spread / stat analysis uses ranked (+ Smogon where present) and must say which, with its sample.
 
-## Project status (handover, 2026-09-30, after the Spread explorer and the motion layer)
+## Project status (handover, 2026-09-30, after the third batch: Library scan, leaderboard search + Change, Copy link)
 - Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
   `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
@@ -152,6 +153,7 @@ Background: pixel field canvas.
 - Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
 - Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
 - Team-level sections show an explicit "not available" state under the ranked source (no per-team ranked data).
+- Third batch (2026-09-30): Library Filter also scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column, Copy link. 149 unit, 50 e2e green.
 - Next-session prompt: `docs/prompts/next-session.md`. Testing ledger: `docs/TESTING.md`.
 
 ### Invariants learned the hard way (keep them)
@@ -179,11 +181,16 @@ Background: pixel field canvas.
   reduced motion). Cards are 88% opaque so the field shows through faintly.
 - **Hand-typed sheet strings** go through `normalizeTerm` (decode + pipeline); ladder names through `ladderMerge(..., dex)`.
 - **Hot aggregations** are memoized per filtered array (`usage`, `itemsBySpecies`); results are shared, so treat them as read-only.
+- **Copy link** (filter bar) copies `location.href` (the hash is the whole view); `ui/clipboard.js#copyText` is the one clipboard write
+  (async API, textarea fallback, resolves false, never throws) used by Library, Scanner and the filter bar. `/` focuses the leaderboard
+  search from anywhere except inputs and the open drawer; Escape in it clears only the search. Search matches with `toID` and keeps a row's real usage rank.
 - **UI chrome**: the filter bar and active-filter chips share one sticky wrapper (`.stickybar`); collapse state is a
   per-browser localStorage pref (`metalens.filtersCollapsed`), not part of the URL. `F` toggles it.
 - **Caching**: no hashed filenames, so `_headers` serves `/js/*` and `/css/*` with `no-cache` (ETag revalidation).
   Don't lengthen it or visitors run stale code after a deploy.
 - **Change vs previous period**: always `changeVsPrev()` (NEW when absent or under min-n before); never a delta from 0.
+  Arrows and colours come from `changeDir(change)` ('up'|'down'|'flat', judged at one decimal, NEW = up), so -0.04 reads "— 0.0pt", never "▼ -0.0pt".
+  The leaderboard's sortable Change column (tournaments only) appears only when `view.prev` has teams; `usage` is in main.js `PREV_USERS` with snapshot and trends.
 - **Click hints** hide themselves while their card shows an `.empty-state` (`clickHint(text, {auto})` in ui/meta.js).
 - **Idle cost**: decorative animations must pause off-screen and animate only opacity/transform; the pixel field is a
   timer loop (10 fps, 6 on weak devices), not rAF. Status colours use `--up/--down/--warn`, pills `--pill-*`.

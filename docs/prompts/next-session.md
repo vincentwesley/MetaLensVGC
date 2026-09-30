@@ -27,34 +27,16 @@ bug fix gets a regression test.
 
 State: 148 unit tests, 47 e2e checks, all green.
 
-## IN PROGRESS when the last session stopped (2026-09-30, third batch) — finish this first
-Branch `claude/ecstatic-babbage-wl3cor` holds a WIP commit on top of the live branch (NOT pushed live yet).
-Built (owner's asks + extras):
-- Library "Filter" now also loads that team into the Scanner and scans it (`ctx.scan` in main.js -> scanner `api.load`),
-  toast with a "View scan" action (`toast(msg, { action })`). Scanner compares against `view.field` = current filters
-  minus team chips (a team chip would otherwise make it compare the team with itself).
-- Leaderboard search box (`toID` matching, "/" focuses it, Escape clears, searches all rows, keeps the real usage rank);
-  Items search uses the same matcher.
-- Leaderboard "Change" column (tournaments, when a previous period exists; `changeVsPrev`, sortable); `usage` added to
-  main.js `PREV_USERS`; `prevLabel(view)` moved from snapshot.js to ui/meta.js.
-- "Copy link" button next to Hide (copies the URL = the whole view); `ui/clipboard.js#copyText` shared by library,
-  scanner, filterbar.
-- Team chips named "Player · Event" via `ctx.teamLabel` (was the raw id); `lastView` in main.js now declared before ctx.
-- Fix: `changeText` showed "▼ -0.0pt" for tiny drops; new `changeDir(change)` ('up'|'down'|'flat', as shown) drives
-  arrows and colours in changeText, the leaderboard column and the snapshot cards.
-State: `npm test` passed (148) before the last cleanup; e2e passed (49) before the simplify fixes (shared copyText in
-scanner, changeDir, usageRank Map, chips labelFor(chip, ctx.teamLabel), lastView move).
-To do, in order:
-1. Add the `changeDir` unit test to test/ui-helpers.test.js (import changeDir; NEW -> up, 0.3 -> up, -0.04 -> flat,
-   -2 -> down). Run `npm test` and `npm run e2e:cloud`; fix anything red.
-2. Run `code-review` (low). Update CLAUDE.md (view.field, ctx.scan, ctx.teamLabel, changeDir, Copy link, "/" shortcut,
-   PREV_USERS incl. usage, ui/clipboard.js) and docs/TESTING.md (e2e count 49, the two new checks).
-3. Push to the live branch: `git push origin HEAD:claude/pokemon-vgc-metagame-dashboard-9whe1a`.
-4. **Updater** (owner asked to make sure it works): the "Refresh data" workflow last ran 2026-09-29 (run 36573679607,
+## Done in the third batch (2026-09-30; finished from the WIP commit, see CLAUDE.md "Project status")
+Library Filter scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column,
+Copy link, `changeDir`. State: 149 unit tests, 50 e2e checks, all green.
+
+## Remaining check: the Updater
+Owner asked to make sure it works: the "Refresh data" workflow last ran 2026-09-29 (run 36573679607,
    success, 45 min, manual). It has never run on its cron yet (first: Mon 2026-10-05 06:00 UTC). Pipeline code
    (scripts/, lib/names.js) is unchanged since that success; ladder.js already maps M-C to `...regmc...`, so the Smogon
    M-C month is picked up when published. Remaining check: trigger it once manually (GitHub MCP
-   `actions_run_trigger` run_workflow, workflow `refresh-data.yml`, ref = live branch) after step 3, confirm success
+   `actions_run_trigger` run_workflow, workflow `refresh-data.yml`, ref = live branch) once this batch is on the live branch, confirm success
    (~45 min) and that its data commit rebased cleanly; after 2026-10-05 confirm the scheduled run fired.
    Note: GitHub issue search 422s on this repo name via MCP (repo renamed to MetaLensVGC); check issues by listing.
 
