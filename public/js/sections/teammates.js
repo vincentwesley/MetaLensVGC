@@ -2,7 +2,7 @@
 // sprite axis labels), top 3-Pokémon cores, and a "teammate rate" list for a
 // picked species: tournament team sheets by default, Smogon's ladder teammate %
 // when Source = Ladder and that period has ladder data.
-import { usage, coUsage, cores, ladderMerge, rankedSeason, speciesDetail } from '../lib/aggregate.js';
+import { usage, atMinN, coUsage, cores, ladderMerge, rankedSeason, speciesDetail } from '../lib/aggregate.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
@@ -194,8 +194,9 @@ export default {
         ctx.meta(heat.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
-      const rows = usage(view.teams).filter((r) => r.n >= view.state.minN);
-      ctx.meta(heat.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+      // A grid needs two Pokémon: below that, smaller samples come in (flagged in the meta line).
+      const { rows, relaxed } = atMinN(usage(view.teams), view.state.minN, 2);
+      ctx.meta(heat.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams', relaxed });
       if (rows.length < 2) {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';
@@ -312,9 +313,10 @@ export default {
         ctx.meta(coresCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
-      const rows = cores(view.teams, 3, 10, view.state.minN);
-      ctx.meta(coresCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
-      if (!rows.length) { coresWrap.appendChild(emptyState('Insufficient data')); return; }
+      // cores() filters before its top-10 cut, so min n applied afterwards is the same list.
+      const { rows, relaxed } = atMinN(cores(view.teams, 3, 10, 1), view.state.minN);
+      ctx.meta(coresCard.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams', relaxed });
+      if (!rows.length) { coresWrap.appendChild(emptyState('No team in view has three Pokémon listed.', 'No cores')); return; }
       for (const r of rows) {
         const row = document.createElement('div');
         row.className = 'sb-row sb-row--clickable';
@@ -376,7 +378,7 @@ export default {
         return;
       }
       const { n, rows } = teammatesFor(key);
-      if (rateSource.kind === 'sheets' && n < rateView.state.minN) {
+      if (rateSource.kind === 'sheets' && !rateSource.relaxed && n < rateView.state.minN) {
         ladderList.appendChild(emptyState(`${key} is on ${n} team${n === 1 ? '' : 's'} in view (minimum ${rateView.state.minN}).`));
         return;
       }
@@ -414,10 +416,12 @@ export default {
         ctx.meta(ladderCard.meta, { source: 'Ladder (Smogon)', n: merged.battles, unit: 'battles' });
       } else {
         rateSource = { kind: 'sheets' };
-        options = usage(view.teams).filter((r) => r.n >= view.state.minN).slice(0, 40).map((r) => r.key);
+        const picked = atMinN(usage(view.teams), view.state.minN);
+        rateSource.relaxed = picked.relaxed;
+        options = picked.rows.slice(0, 40).map((r) => r.key);
         const note = view.state.source === 'ladder' ? 'Tournaments (no Smogon ladder data for this period)'
           : view.state.source === 'ranked' ? 'Tournaments (in-game ranked data has teammate ranks only, see the deep dive)' : 'Tournaments';
-        ctx.meta(ladderCard.meta, { source: note, n: view.teams.length, unit: 'teams' });
+        ctx.meta(ladderCard.meta, { source: note, n: view.teams.length, unit: 'teams', relaxed: picked.relaxed });
       }
       const prevVal = ladderSelect.value;
       ladderSelect.textContent = '';

@@ -4,7 +4,7 @@
 // Ladder: ladderItemUsage()/ladderMerge() (share of Pokémon slots, no win %).
 // Ranked (in-game): only (b), from each Pokémon's published set shares, in rank order.
 import {
-  usage, itemUsage, itemsBySpecies, ladderMerge, ladderItemUsage,
+  usage, atMinN, itemUsage, itemsBySpecies, ladderMerge, ladderItemUsage,
   rankedSeason, rankedEntries,
 } from '../lib/aggregate.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
@@ -183,16 +183,18 @@ export default {
       }
       if (src === 'ladder') {
         const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
-        ctx.meta(B.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
         noLadderTable = !merged;
-        if (!merged) return [];
+        if (!merged) { ctx.meta(B.meta, { source: 'Ladder (Smogon)', n: 0, unit: 'battles' }); return []; }
         tableUnit = 'battles';
-        return merged.mons.filter((m) => m.raw >= minN).map((m) => ({ key: m.key, n: m.raw, items: m.items.filter((i) => i.name !== 'No item') }));
+        const { rows, relaxed } = atMinN(merged.mons.map((m) => ({ key: m.key, n: m.raw, items: m.items.filter((i) => i.name !== 'No item') })), minN);
+        ctx.meta(B.meta, { source: 'Ladder (Smogon)', n: merged.battles, unit: 'battles', relaxed });
+        return rows;
       }
-      ctx.meta(B.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       tableUnit = 'slots';
       const by = itemsBySpecies(view.monTeams);
-      return usage(view.monTeams).filter((r) => r.n >= minN).map((r) => {
+      const { rows, relaxed } = atMinN(usage(view.monTeams), minN);
+      ctx.meta(B.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams', relaxed });
+      return rows.map((r) => {
         const d = by.get(r.key);
         return { key: r.key, n: d?.n ?? 0, items: d?.items ?? [] };
       });

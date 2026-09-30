@@ -1,6 +1,6 @@
 // Archetypes section: primary-archetype split donut, archetype-vs-archetype
 // win-rate heatmap (real match results only), and a classification disclosure.
-import { archetypeSplit, archetypeMatrix } from '../lib/aggregate.js';
+import { archetypeSplit, archetypeMatrix, atMinN } from '../lib/aggregate.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
@@ -216,7 +216,7 @@ export default {
       if (!mat) {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';
-        heatEmptyEl.appendChild(emptyState('No head-to-head match results for the current filters.'));
+        heatEmptyEl.appendChild(emptyState('None of the teams in view has a recorded match result.', 'No match results'));
         lastIds = [];
         return;
       }
@@ -339,7 +339,8 @@ export default {
         }
         donut.el.style.display = '';
         listWrap.style.display = '';
-        lastSplit = archetypeSplit(view.teams).filter((r) => r.n >= view.state.minN);
+        const split = atMinN(archetypeSplit(view.teams), view.state.minN);
+        lastSplit = split.rows;
         if (!lastSplit.length) {
           donutChartEl.style.display = 'none';
           listWrap.style.display = 'none';
@@ -348,7 +349,7 @@ export default {
           listWrap.style.display = '';
         }
         rerender(view);
-        ctx.meta(donut.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams' });
+        ctx.meta(donut.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams', relaxed: split.relaxed });
         ctx.meta(heat.meta, { source: 'Tournaments', n: view.matches?.length || 0, unit: 'matches' });
       },
       highlight() {

@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 141 tests)
+### Automated: unit (`npm test`, 143 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -52,8 +52,9 @@ Cloud-session notes:
   item / species / archetype / core chip, the chart it came from shows that selection at 100%;
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
+- `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 43 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 44 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -78,6 +79,8 @@ Cloud-session notes:
 - Smogon M-C month arriving (simulated by serving the M-B file as M-C): Ladder mode, Teammate rate ("Ladder (Smogon)")
   and the Spread explorer's Smogon toggle light up; the M-C explorer check expects the toggle only when M-C has months.
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
+- Cross-filters never blank a chart: a species chip leaves exactly that Pokémon on the quadrant; a rare species (Pikachu,
+  9 teams) fills snapshot / usage / quadrant / items with the "includes n < 20" flag.
 - Motion layer: below-the-fold sections start `data-reveal=pending` and reveal on scroll, the fold is never hidden, reduced
   motion adds no reveal state; a changed KPI gets `kpi--changed`, leaderboard bars run `bar-grow`, the drawer stays visible
   for its slide-out then hides. The section-nav check also guards the reveal (a jump must not land under the sticky bar).
@@ -187,6 +190,13 @@ target was mid-reveal (fixed: only the section's children move); the drawer snap
 flipped instantly; fixed); the Retro archetype legend table pushed n/share/win % out of view (names now wrap).
 Old slice-shots taken before rendering settled showed empty quadrant / clipped tables: the script now waits.
 The quadrant's points are sprite images, so offline they are invisible (expected in the sandbox).
+
+No blank charts under cross-filters (2026-09-30, owner's ask): probed species Rillaboom, rare species, type Electric, item Life
+Orb, archetype Rain, core Rillaboom+Incineroar, Rillaboom + Winner (35 teams). Before: quadrant empty for any single
+Pokémon (it needed 2 points), and snapshot/usage/quadrant/items/teammates/cores/trend line empty whenever min n (or the
+100-team week floor) hid everything. After: every chart draws; the only empty states left are real absences (no
+movers when one Pokémon holds 100% both weeks, no previous period, no match results), each with a specific title.
+Screenshots reviewed (sprites stubbed): quadrant with Rillaboom, Electric, Pikachu.
 
 ## Not yet tested (candidates for the next pass)
 

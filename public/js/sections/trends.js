@@ -2,7 +2,7 @@
 // risers & fallers, and a regulation-shift table. All three need per-team
 // dates, which the ladder payload doesn't carry, so the whole section is
 // tournament-only (same "switch Source" rule as archetypes.js).
-import { usage, weekly, movers, changeVsPrev } from '../lib/aggregate.js';
+import { usage, atMinN, weekly, movers, changeVsPrev } from '../lib/aggregate.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
@@ -92,16 +92,17 @@ export default {
         lastWeeks = [];
         return;
       }
-      const topKeys = usage(view.monTeams).filter((r) => r.n >= view.state.minN).slice(0, 8).map((r) => r.key);
+      const { rows: topRows, relaxed } = atMinN(usage(view.monTeams), view.state.minN);
+      const topKeys = topRows.slice(0, 8).map((r) => r.key);
       const wk = weekly(view.monTeams, topKeys);
-      ctx.meta(linesCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
+      ctx.meta(linesCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams', relaxed });
       lastWeeks = wk.weeks;
       if (wk.weeks.length < 2) {
         lineChartEl.style.display = 'none';
         lineEmptyEl.textContent = '';
-        lineEmptyEl.appendChild(emptyState(wk.weeks.length === 1
-          ? 'Only one week of data in the current filters — weekly trends need at least two.'
-          : 'Insufficient data'));
+        lineEmptyEl.appendChild(wk.weeks.length === 1
+          ? emptyState('The current filters cover one full week; a trend line needs two.', 'One week of data')
+          : emptyState('No week in the current filters has enough teams to plot.', 'No full week'));
         return;
       }
       lineChartEl.style.display = '';
@@ -180,20 +181,24 @@ export default {
         ctx.meta(moversCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
-      const { risers, fallers, weekPrev, weekLast } = movers(view.monTeams, view.state.minN);
-      ctx.meta(moversCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
+      // Nothing moves at min n in a narrow view: compare whatever both weeks have (flagged).
+      const strict = movers(view.monTeams, view.state.minN);
+      const m = strict.risers.length || strict.fallers.length || !strict.weekPrev ? strict : movers(view.monTeams, 1);
+      const floor = m === strict ? view.state.minN : 1;
+      const { risers, fallers, weekPrev, weekLast } = m;
+      ctx.meta(moversCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams', relaxed: m !== strict && (risers.length || fallers.length) ? view.state.minN : false });
       if (weekPrev && weekLast) {
-        compareLabel.textContent = `Comparing week of ${weekPrev} vs week of ${weekLast} (partial/small weeks excluded; both weeks need n ≥ ${view.state.minN} per species)`;
+        compareLabel.textContent = `Comparing week of ${weekPrev} vs week of ${weekLast} (partial/small weeks excluded; both weeks need n ≥ ${floor} per species)`;
       }
       if (!risers.length && !fallers.length) {
-        risersList.appendChild(emptyState(weekPrev
-          ? 'No species cleared the minimum sample in both compared weeks.'
-          : 'Needs at least two full weeks of data in the current filters.'));
+        risersList.appendChild(weekPrev
+          ? emptyState('No Pokémon in view changed its share between these weeks.', 'No movers')
+          : emptyState('The current filters cover less than two full weeks.', 'One week of data'));
         return;
       }
-      if (!risers.length) risersList.appendChild(emptyState('No risers at this sample size.'));
+      if (!risers.length) risersList.appendChild(emptyState('Nothing in view gained share between these weeks.', 'No risers'));
       else for (const r of risers.slice(0, 10)) risersList.appendChild(moverRow(r, true));
-      if (!fallers.length) fallersList.appendChild(emptyState('No fallers at this sample size.'));
+      if (!fallers.length) fallersList.appendChild(emptyState('Nothing in view lost share between these weeks.', 'No fallers'));
       else for (const r of fallers.slice(0, 10)) fallersList.appendChild(moverRow(r, false));
     }
 
@@ -212,7 +217,7 @@ export default {
       ctx.meta(shiftCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
       const prev = view.prev || [];
       if (!prev.length) {
-        shiftWrap.appendChild(emptyState('No previous-period data available for comparison.'));
+        shiftWrap.appendChild(emptyState('The previous period has no teams matching these filters.', 'No previous period'));
         return;
       }
       const isRegShift = prev[0].reg !== view.reg;
@@ -229,7 +234,9 @@ export default {
       // sample" case worth flagging, not something to hide).
       const currNMap = new Map(usage(view.monTeams).map((r) => [r.key, r.n]));
       const prevRowMap = new Map(usage(prev).map((r) => [r.key, r]));
-      const currTop = usage(view.monTeams).filter((r) => r.n >= minN).slice(0, 20);
+      const cur = atMinN(usage(view.monTeams), minN);
+      const currTop = cur.rows.slice(0, 20);
+      ctx.meta(shiftCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams', relaxed: cur.relaxed });
       // Rank *every* previous-period species that cleared minN, not just its
       // top 20 — a mon can have existed last regulation with a real sample
       // (e.g. n=2,483) while sitting outside that period's top 20, which is

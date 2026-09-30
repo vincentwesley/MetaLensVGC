@@ -431,6 +431,7 @@ main.grid .section.span-4 { grid-column: span 4; }
 .card__head h2, .card__head h3 { font-size: var(--fs-head); text-transform: uppercase; flex: 1 1 auto; min-width: min(max-content, 65%); }
 .card__meta, .meta-line { color: var(--muted); font-size: var(--fs-small); font-family: var(--font-body); }
 .meta-line__part { white-space: nowrap; }
+.meta-line__relaxed { color: var(--warn); }
 .card__body { padding: var(--space-4); }
 
 /* ---------- KPI tile ---------- */
