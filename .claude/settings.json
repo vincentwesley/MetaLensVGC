@@ -1,9 +1,38 @@
 {
+  "extraKnownMarketplaces": {
+    "ponytail": { "source": { "source": "github", "repo": "DietrichGebert/ponytail" } }
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "modern-web-guidance@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "ponytail@ponytail": true
+  },
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "npm ci --no-audit --no-fund && npm test", "timeout": 600 }
+          { "type": "command", "command": "npm ci --no-audit --no-fund && npm test", "timeout": 600 },
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] || exit 0; npm i -g typescript-language-server typescript >/dev/null 2>&1; (uv tool install graphifyy || pip install -q graphifyy) >/dev/null 2>&1; export PATH=\"$HOME/.local/bin:$PATH\"; graphify install --platform claude >/dev/null 2>&1; graphify update . >/dev/null 2>&1; exit 0",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          { "type": "command", "command": "command -v graphify >/dev/null 2>&1 && graphify hook-guard search || true", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "Read|Glob",
+        "hooks": [
+          { "type": "command", "command": "command -v graphify >/dev/null 2>&1 && graphify hook-guard read || true", "timeout": 10 }
         ]
       }
     ]
