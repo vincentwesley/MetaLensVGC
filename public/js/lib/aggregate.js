@@ -721,14 +721,16 @@ function qualifyingWeeks(byWeek) {
   return weeks.filter((w, i) => counts[i] >= threshold);
 }
 
-export function weekly(teams, keys) {
+// Share of each qualifying week's teams that `has` each key. Default: the team uses that
+// Pokémon; the archetype trend passes (t, id) => t.arch[0] === id (primary archetype).
+export function weekly(teams, keys, has = (t, key) => t.keys.includes(key)) {
   const byWeek = groupByWeek(teams);
   const weeks = qualifyingWeeks(byWeek);
   const totals = weeks.map((w) => byWeek.get(w).length);
   const series = {};
   for (const key of keys) {
     series[key] = weeks.map((w, i) => {
-      const c = byWeek.get(w).filter((t) => t.keys.includes(key)).length;
+      const c = byWeek.get(w).filter((t) => has(t, key)).length;
       return totals[i] ? c / totals[i] : 0;
     });
   }

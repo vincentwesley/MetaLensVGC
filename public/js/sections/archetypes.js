@@ -1,6 +1,6 @@
-// Archetypes section: primary-archetype split donut, archetype-vs-archetype
-// win-rate heatmap (real match results only), and a classification disclosure.
-import { archetypeSplit, archetypeMatrix, atMinN } from '../lib/aggregate.js';
+// Archetypes section: primary-archetype split donut, weekly archetype-share trend,
+// archetype-vs-archetype win-rate heatmap (real match results only), and a classification disclosure.
+import { archetypeSplit, archetypeMatrix, atMinN, weekly } from '../lib/aggregate.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
@@ -30,6 +30,24 @@ function emptyState(msg, title = 'Insufficient data') {
   p.textContent = msg;
   div.append(t, p);
   return div;
+}
+
+// Colour follows the archetype, never its rank in the current view: the named archetypes
+// are ranked once per regulation (all its teams, no filters); the top 8 take the validated
+// series colours in order, the rest and "Other" a neutral grey. Donut, table swatches and
+// trend lines share this map, so a filter never repaints an archetype.
+const TREND_TOP = 6;
+const colorMaps = new WeakMap();
+function archetypeColors(regTeams, theme) {
+  let order = colorMaps.get(regTeams);
+  if (!order) {
+    order = archetypeSplit(regTeams).map((r) => r.id).filter((id) => id !== 'other');
+    colorMaps.set(regTeams, order);
+  }
+  return (id) => {
+    const i = order.indexOf(id);
+    return i >= 0 && i < theme.series.length ? theme.series[i] : theme.muted;
+  };
 }
 
 function labelOf(id) {
@@ -99,12 +117,21 @@ export default {
     el.classList.add('sb-grid');
 
     const donut = card('Archetype split');
+    const trend = card('Archetype share by week');
     const heat = card('Archetype matchup win rate');
     const disc = card('How archetypes are classified');
-    donut.el.classList.add('sb-full');
-    heat.el.classList.add('sb-full');
-    disc.el.classList.add('sb-full');
-    el.append(donut.el, heat.el, disc.el);
+    for (const c of [donut, trend, heat, disc]) c.el.classList.add('sb-full');
+    el.append(donut.el, trend.el, heat.el, disc.el);
+
+    // --- weekly share trend ------------------------------------------------
+    const trendChartEl = document.createElement('div');
+    trendChartEl.className = 'sb-chart';
+    const trendEmptyEl = document.createElement('div');
+    trend.body.append(clickHint(`Share of teams by main archetype, per week (top ${TREND_TOP}). Click a line: show only teams of that archetype. Shift-click to exclude.`), trendChartEl, trendEmptyEl);
+    const trendChart = ctx.echarts.init(trendChartEl);
+    new ResizeObserver(() => trendChart.resize()).observe(trendChartEl);
+    let trendIds = [];
+    trendChart.on('click', (p) => { const id = trendIds[p.seriesIndex]; if (id) ctx.chip('archetype', id, p.event?.event); });
 
     // --- static disclosure -------------------------------------------------
     const discWrap = document.createElement('div');
@@ -183,7 +210,7 @@ export default {
           // here and keep only the tooltip.
           label: { show: false },
           labelLine: { show: false },
-          data: lastSplit.map((r) => ({ name: labelOf(r.id), value: r.n, archId: r.id })),
+          data: lastSplit.map((r) => ({ name: labelOf(r.id), value: r.n, archId: r.id, itemStyle: { color: colorOf(r.id) } })),
         }],
       }, true);
     }
@@ -194,7 +221,10 @@ export default {
       for (const r of lastSplit) {
         const tr = document.createElement('tr');
         const tdName = document.createElement('td');
-        tdName.textContent = labelOf(r.id);
+        const sw = document.createElement('span');
+        sw.className = 'chip__swatch arch-swatch';
+        sw.style.background = colorOf(r.id);
+        tdName.append(sw, labelOf(r.id));
         const tdN = document.createElement('td');
         tdN.className = 'num';
         tdN.textContent = ctx.fmt.n(r.n);
@@ -301,10 +331,54 @@ export default {
       }, true);
     }
 
+    // With an archetype chip the view holds only that archetype (a flat 100% line), so the
+    // trend shows the whole field instead, always including the chosen archetype(s).
+    function renderTrend(view, theme) {
+      const picked = view.state.chips.filter((c) => c.kind === 'archetype' && !c.neg).map((c) => c.value);
+      const teams = picked.length ? view.base : view.teams;
+      const ranked = archetypeSplit(teams).map((r) => r.id);
+      trendIds = [...new Set([...picked, ...ranked])].slice(0, Math.max(TREND_TOP, picked.length));
+      const wk = weekly(teams, trendIds, (t, id) => t.arch[0] === id);
+      ctx.meta(trend.meta, { source: picked.length ? 'Tournaments · whole field, chosen archetype highlighted' : 'Tournaments', n: teams.length, unit: 'teams' });
+      trendEmptyEl.textContent = '';
+      if (wk.weeks.length < 2) {
+        trendChartEl.style.display = 'none';
+        trendEmptyEl.appendChild(wk.weeks.length === 1
+          ? emptyState('The current filters cover one full week; a trend line needs two.', 'One week of data')
+          : emptyState('No week in the current filters has enough teams to plot.', 'No full week'));
+        return;
+      }
+      trendChartEl.style.display = '';
+      const pct = (v) => `${(v * 100).toFixed(1)}%`;
+      trendChart.setOption({
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
+          valueFormatter: (v) => (typeof v === 'number' ? pct(v) : '—'),
+        },
+        // Six names wrap to 2-3 rows (paging would hide lines); the plot starts below them.
+        legend: { top: 0, itemGap: 14, textStyle: { color: theme.inkSecondary, fontFamily: theme.fontFamily } },
+        grid: { left: 46, right: 20, top: trendChartEl.clientWidth < 560 ? 92 : 58, bottom: 30 },
+        xAxis: { type: 'category', data: wk.weeks, axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily } },
+        yAxis: { type: 'value', axisLabel: { color: theme.muted, fontFamily: theme.fontFamily, formatter: (v) => `${Math.round(v * 100)}%` }, axisLine: { lineStyle: { color: theme.axis } }, splitLine: { lineStyle: { color: theme.grid } } },
+        series: trendIds.map((id) => ({
+          name: labelOf(id), type: 'line', data: wk.series[id], showSymbol: true, symbolSize: 8,
+          // Archetypes past the 8 series colours share the grey with Other: dashed tells them apart.
+          lineStyle: { width: picked.length && !picked.includes(id) ? 1.5 : 2, opacity: picked.length && !picked.includes(id) ? 0.45 : 1,
+            type: id !== 'other' && colorOf(id) === theme.muted ? 'dashed' : 'solid' },
+          itemStyle: { color: colorOf(id), borderColor: theme.surface, borderWidth: 2 },
+          emphasis: { focus: 'series' },
+        })),
+      }, true);
+    }
+
+    let colorOf = () => '';
     function rerender(view) {
       const theme = ctx.chartTheme();
+      colorOf = archetypeColors(view.regTeams, theme);
       renderDonut(theme);
       renderList();
+      renderTrend(view, theme);
       renderHeatmap(view, theme);
     }
 
@@ -328,6 +402,7 @@ export default {
           const ranked = view.state.source === 'ranked';
           lastSplit = [];
           donut.el.style.display = 'none'; // the matchup card below carries the explanation
+          trend.el.style.display = 'none';
           donutChartEl.style.display = 'none';
           listWrap.style.display = 'none';
           heatChartEl.style.display = 'none';
@@ -338,6 +413,7 @@ export default {
           return;
         }
         donut.el.style.display = '';
+        trend.el.style.display = '';
         listWrap.style.display = '';
         const split = atMinN(archetypeSplit(view.teams), view.state.minN);
         lastSplit = split.rows;

@@ -519,3 +519,12 @@ test('weekly: a narrowly filtered view (a few teams a week) still has weeks to p
   const wk = weekly([...mk('2026-01-05', 12), ...mk('2026-01-12', 9), ...mk('2026-01-19', 2)], ['Y']);
   assert.deepEqual(wk.weeks, ['2026-01-05', '2026-01-12']); // the 2-team week is still dropped (< 5)
 });
+
+test('weekly with a membership test: primary-archetype shares per week sum to 1', () => {
+  const mk = (date, arch, n) => Array.from({ length: n }, () => ({ ...fakeTeam(date, ['X']), arch: [arch] }));
+  const teams = [...mk('2026-01-05', 'rain', 30), ...mk('2026-01-05', 'sun', 10), ...mk('2026-01-12', 'rain', 10), ...mk('2026-01-12', 'sun', 30)];
+  const wk = weekly(teams, ['rain', 'sun'], (t, id) => t.arch[0] === id);
+  assert.deepEqual(wk.weeks, ['2026-01-05', '2026-01-12']);
+  assert.deepEqual(wk.series.rain, [0.75, 0.25]);
+  assert.deepEqual(wk.series.sun, [0.25, 0.75]);
+});
