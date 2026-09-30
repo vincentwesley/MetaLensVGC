@@ -699,6 +699,9 @@ test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype str
   await expect(card).toContainText('sample size not published');
   await expect(card).toContainText('Battle data provided by Pokémon Champions Battle Data');
   await expect(card.locator('.spx-toggle')).toHaveCount(0); // no Smogon month for M-C: no toggle at all
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(await card.evaluate((c) => c.scrollWidth <= c.clientWidth + 1)).toBe(true);
   const text = await card.innerText();
   expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
   // the old duplicate cards are gone
