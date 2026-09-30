@@ -8,6 +8,7 @@ import {
   rankedSeason, rankedEntries,
 } from '../lib/aggregate.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
+import { toID } from '../lib/names.js';
 
 const TOP_ITEMS = 20;
 const TOP_MONS = 20;
@@ -222,8 +223,8 @@ export default {
       if (!view) return;
       tableWrap.textContent = '';
       B.body.querySelector('.empty-state')?.remove();
-      const q = search.value.trim().toLowerCase();
-      let rows = q ? tableRows.filter((r) => r.key.toLowerCase().includes(q)) : tableRows;
+      const q = toID(search.value); // punctuation-insensitive, same as the leaderboard search
+      let rows = q ? tableRows.filter((r) => toID(r.key).includes(q)) : tableRows;
       if (!q && !showAll) rows = rows.slice(0, TOP_MONS);
       if (!rows.length) { emptyState(B.body, q ? `No Pokémon matching “${search.value.trim()}”` : noLadderTable ? LADDER_NA : 'Insufficient data'); return; }
 

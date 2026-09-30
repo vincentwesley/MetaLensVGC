@@ -2,6 +2,8 @@
 // `ctx.store.set`, and mirrors state on every store change (so back/forward and
 // hash edits stay in sync). Exposes update(view) to paint the live sample line.
 import { rankedSeason } from '../lib/aggregate.js';
+import { copyText } from './clipboard.js';
+import { toast } from './toast.js';
 
 const TIERS = [
   ['worlds', 'Worlds'],
@@ -59,6 +61,11 @@ export function mountFilterbar(root, ctx, manifest) {
   }
   setCollapsed(collapsed, false);
   toggleBtn.addEventListener('click', () => setCollapsed(!collapsed, true));
+  // The URL hash holds the whole dashboard state, so the address is a shareable view.
+  document.getElementById('copy-link')?.addEventListener('click', async () => {
+    const ok = await copyText(location.href);
+    toast(ok ? 'Link to this view copied' : 'Could not copy the link', { type: ok ? 'info' : 'error' });
+  });
   summary?.addEventListener('click', () => setCollapsed(false, true));
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'f' && e.key !== 'F') return;

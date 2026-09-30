@@ -1,8 +1,9 @@
 // usage.js — Usage leaderboard: sortable table, rank/sprite/name/usage bar/
 // usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
-import { usage, atMinN, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies } from '../lib/aggregate.js';
-import { rankedSource, clickHint } from '../ui/meta.js';
+import { usage, atMinN, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies, changeVsPrev, changeText, changeDir } from '../lib/aggregate.js';
+import { rankedSource, clickHint, prevLabel } from '../ui/meta.js';
+import { toID } from '../lib/names.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
 const COLS_TEAM = [
@@ -13,6 +14,8 @@ const COLS_TEAM = [
   { key: 'win', label: 'Win % (95% CI)', sortable: true, sortKey: 'winPct' },
   { key: 'n', label: 'N', sortable: true },
 ];
+// Added to COLS_TEAM when a previous period exists (same rule as the snapshot: changeVsPrev).
+const COL_CHANGE = { key: 'chg', label: 'Change', sortable: true, sortKey: 'chgPts' };
 const COLS_LADDER = [
   { key: 'rank', label: '#' },
   { key: 'sprite', label: '' },
@@ -58,8 +61,14 @@ export default {
     const btnAll = document.createElement('button');
     btnAll.type = 'button'; btnAll.textContent = 'Show all';
     controls.append(btnTop, btnAll);
+    // Search the whole list (not just the top 30); punctuation-insensitive ("raichu mega y").
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'items-search';
+    search.placeholder = 'Find a Pokémon…  ( / )';
+    search.setAttribute('aria-label', 'Find a Pokémon in the leaderboard');
     const meta = document.createElement('span');
-    head.append(h, controls, meta);
+    head.append(h, search, controls, meta);
     const body = document.createElement('div');
     body.className = 'card__body';
     card.append(head, body);
@@ -76,8 +85,21 @@ export default {
       showAll = v;
       btnTop.setAttribute('aria-pressed', String(!v));
       btnAll.setAttribute('aria-pressed', String(v));
-      render();
+      refresh();
     }
+    const query = () => toID(search.value);
+    let searchTimer = null;
+    search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(refresh, 120); });
+    search.addEventListener('keydown', (e) => { if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; refresh(); } });
+    // "/" from anywhere on the page (not while typing) jumps to this search.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('#deepdive[aria-hidden="false"]')) return;
+      e.preventDefault();
+      search.scrollIntoView({ block: 'center' });
+      search.focus();
+    });
     btnTop.addEventListener('click', () => setShowAll(false));
     btnAll.addEventListener('click', () => setShowAll(true));
     setShowAll(false);
@@ -119,7 +141,12 @@ export default {
         cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.monTeams.length;
         const byItem = itemsBySpecies(view.monTeams);
         ({ rows, relaxed } = atMinN(usage(view.monTeams), state.minN));
-        rows = rows.map((r) => ({ ...r, topItem: byItem.get(r.key)?.items[0] || null }));
+        const prevRows = view.prev?.length ? new Map(usage(view.prev).map((r) => [r.key, r])) : null;
+        if (prevRows) cols = [...COLS_TEAM, COL_CHANGE];
+        rows = rows.map((r) => {
+          const change = prevRows ? changeVsPrev(r.pct, prevRows.get(r.key), state.minN) : null;
+          return { ...r, topItem: byItem.get(r.key)?.items[0] || null, change, chgPts: change && !change.isNew ? change.pts : null };
+        });
       }
 
       ctx.meta(meta, { source, n, unit, relaxed });
@@ -129,12 +156,17 @@ export default {
         return;
       }
 
-      // 'win' isn't a column in ladder mode; fall back to sorting by N.
-      if (cols === COLS_LADDER && sortKey === 'win') sortKey = 'n';
+      // Sorted by a column this mode doesn't show (win in ladder mode, change without a
+      // previous period): fall back to N.
+      if (!cols.some((c) => (c.sortKey || c.key) === sortKey)) { sortKey = 'n'; sortDir = 'desc'; }
 
-      rows = sortRows(rows);
-      const shown = showAll ? rows : rows.slice(0, 30);
+      // Usage rank is fixed before sorting / searching, so a found row keeps its real place.
+      const usageRank = new Map([...rows].sort((a, b) => b.n - a.n).map((r, i) => [r.key, i + 1]));
       const maxPct = Math.max(...rows.map((r) => r.pct), 0.0001);
+      const q = query();
+      rows = sortRows(q ? rows.filter((r) => toID(r.key).includes(q)) : rows);
+      if (!rows.length) { emptyState(body, `No Pokémon matching “${search.value.trim()}”`); return; }
+      const shown = showAll || q ? rows : rows.slice(0, 30);
 
       let wrap = body.querySelector('.table-wrap');
       if (!wrap) {
@@ -160,7 +192,7 @@ export default {
             const k = c.sortKey || c.key;
             if (sortKey === k) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
             else { sortKey = k; sortDir = 'desc'; }
-            render();
+            refresh();
           };
           th.addEventListener('click', doSort);
           th.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doSort(); } });
@@ -187,7 +219,7 @@ export default {
 
         const tdRank = document.createElement('td');
         tdRank.className = 'num col-rank';
-        tdRank.textContent = String(i + 1);
+        tdRank.textContent = String(q ? usageRank.get(r.key) : i + 1);
         const tdSprite = document.createElement('td');
         tdSprite.className = 'col-sprite';
         tdSprite.appendChild(drawerButton(ctx, r.key, state.anim));
@@ -216,7 +248,7 @@ export default {
 
         tr.append(tdRank, tdSprite, tdName, tdUsage);
 
-        if (cols === COLS_TEAM) {
+        if (cols !== COLS_LADDER) {
           const tdWin = document.createElement('td');
           tdWin.className = 'num col-win';
           if (r.winPct != null && r.ci) {
@@ -243,6 +275,14 @@ export default {
           tdN.className = 'num col-n';
           tdN.textContent = ctx.fmt.n(r.n);
           tr.append(tdWin, tdN);
+          if (cols.includes(COL_CHANGE)) {
+            const tdChg = document.createElement('td');
+            const dir = changeDir(r.change);
+            tdChg.className = `num col-chg kpi__delta${dir === 'flat' ? '' : ` kpi__delta--${dir}`}`;
+            tdChg.textContent = changeText(r.change);
+            tdChg.dataset.tip = r.change.isNew ? `Not used (or under min n) ${prevLabel(view)}` : `Usage change ${prevLabel(view)}, in percentage points`;
+            tr.appendChild(tdChg);
+          }
         } else {
           const tdN = document.createElement('td');
           tdN.className = 'num col-n';
@@ -284,7 +324,10 @@ export default {
       }
       const tbody = table.createTBody();
       const top = (tbl) => { const e = rankedEntries(tbl)[0]; return e ? `${e.name} ${ctx.fmt.pct(e.pct)}` : '—'; };
-      for (const key of showAll ? names : names.slice(0, 30)) {
+      const q = query();
+      const found = q ? names.filter((k) => toID(k).includes(q)) : names;
+      if (!found.length) { emptyState(body, `No Pokémon matching “${search.value.trim()}”`); return; }
+      for (const key of showAll || q ? found : found.slice(0, 30)) {
         const mon = season.mons[key];
         const tr = tbody.insertRow();
         tr.tabIndex = 0;
@@ -309,13 +352,15 @@ export default {
       body.appendChild(wrap);
     }
 
+    // Empty states wipe the body; keep exactly one hint at the top, hidden when there are no rows.
+    function refresh() {
+      render();
+      if (body.firstChild !== hint) body.prepend(hint);
+      hint.hidden = !body.querySelector('tbody tr');
+    }
+
     return {
-      update(view) {
-        lastView = view; render();
-        // Empty states wipe the body; keep exactly one hint at the top, hidden when there are no rows.
-        if (body.firstChild !== hint) body.prepend(hint);
-        hint.hidden = !body.querySelector('tbody tr');
-      },
+      update(view) { lastView = view; refresh(); },
       highlight(key) {
         body.querySelectorAll('tbody tr').forEach((tr) => tr.classList.toggle('is-hovered', key && tr.dataset.key === key));
       },

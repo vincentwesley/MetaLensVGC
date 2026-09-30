@@ -174,6 +174,7 @@ async function boot() {
     return i > 0 ? ids[i - 1] : null;
   }
 
+  let lastView = null; // the last computed view (declared here: ctx.teamLabel reads it)
   const ctx = {
     store,
     dex,
@@ -181,6 +182,11 @@ async function boot() {
     sprite: (key, opts) => sprite(key, dex, opts),
     spriteUrl: (key, opts) => spriteUrl(key, dex, opts),
     openDrawer: (key) => drawerApi.open(key),
+    scan: (paste) => mounted.find((m) => m.id === 'scanner')?.api?.load?.(paste), // load + scan a team in the Scanner
+    teamLabel: (id) => { // "Player · Event" for a team chip, from the loaded regulation
+      const t = lastView?.regTeams.find((x) => x.id === id);
+      return t ? `${t.player || 'Unknown'} · ${t.ev?.name || t.date || ''}` : null;
+    },
     loadRanked: (reg) => getRanked(reg), // lazy: the deep dive's regulation shift loads the previous reg's ranked file
     prevReg: prevRegId,
     chip: (kind, value, event) => store.addChip({ kind, value, neg: !!(event && (event.shiftKey || event.altKey)) }),
@@ -193,7 +199,7 @@ async function boot() {
   };
 
   const drawerApi = mountDrawer(document.getElementById('deepdive'));
-  mountChips(document.getElementById('chips'), ctx);
+  const chipsApi = mountChips(document.getElementById('chips'), ctx);
   const filterbarApi = mountFilterbar(document.getElementById('filterbar'), ctx, manifest);
 
   // Mount grid sections (tolerant of missing modules) + the deepdive drawer module.
@@ -250,7 +256,6 @@ async function boot() {
   const ALWAYS = new Set(['deepdive']);
   const nearView = new Set();
   const dirty = new Set();
-  let lastView = null;
   let renderSeq = 0;
 
   const yieldToMain = () => (globalThis.scheduler?.yield
@@ -326,7 +331,7 @@ async function boot() {
   // The previous regulation's file (up to ~9 MB) is only needed for the
   // "change vs previous period" deltas, so it is fetched after first paint
   // instead of blocking it. Sections that use view.prev refresh when it lands.
-  const PREV_USERS = ['snapshot', 'trends'];
+  const PREV_USERS = ['snapshot', 'usage', 'trends'];
   const prevLoading = new Set();
   function prevRegTeamsFor(state) {
     const pReg = prevRegId(state.reg);
@@ -401,6 +406,10 @@ async function boot() {
       const ladder = await getLadder(state.reg);
       const ranked = await getRanked(state.reg);
       const teams = filterTeams(regData.teams, state, state.chips, dex);
+      // The Scanner compares one team with the rest of the field, so a team chip (one team)
+      // must not shrink its reference: same filters, minus team chips.
+      const noTeamChips = state.chips.filter((c) => c.kind !== 'team');
+      const field = noTeamChips.length === state.chips.length ? teams : filterTeams(regData.teams, state, noTeamChips, dex);
       const base = filterTeams(regData.teams, state, [], dex);
       const prev = computePrev(state, regData.teams);
 
@@ -412,11 +421,12 @@ async function boot() {
       // Ladder / in-game ranked rows are per species: which chips can apply there.
       const speciesFilter = speciesChipFilter(state.chips, dex);
       const view = {
-        state, reg: state.reg, manifest, dex, teams, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
+        state, reg: state.reg, manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
         ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams,
       };
       lastView = view;
       filterbarApi.update(view);
+      if (state.chips.some((c) => c.kind === 'team')) chipsApi.update(state); // team chips can be named now
       for (const s of mounted) dirty.add(s.id);
       syncPending();
       // Visible sections first (in page order), yielding between each; the

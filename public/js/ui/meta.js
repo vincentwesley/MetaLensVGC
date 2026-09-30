@@ -63,3 +63,18 @@ function watchEmpty() {
     for (const h of autoHints) if (h.parentElement) h.hidden = !!h.parentElement.querySelector('.empty-state');
   }).observe(document.body, { childList: true, subtree: true });
 }
+
+// previousPeriod() either returns the preceding window within the same reg,
+// or falls back to the previous regulation's teams. Label from whichever it
+// gave us: ponytail — approximates the window length from view.base's date
+// span rather than re-deriving previousPeriod's exact bounds; good enough for
+// a label, upgrade if the two ever visibly disagree.
+export function prevLabel(view) {
+  const prev = view.prev;
+  if (!prev || !prev.length) return null;
+  if (prev[0].reg !== view.reg) return `vs ${prev[0].reg}`;
+  const dates = view.base.map((t) => t.date).filter(Boolean).sort();
+  if (!dates.length) return 'vs prior period';
+  const days = Math.round((new Date(dates[dates.length - 1]) - new Date(dates[0])) / 86400000) + 1;
+  return `vs prior ${days} day${days === 1 ? '' : 's'}`;
+}

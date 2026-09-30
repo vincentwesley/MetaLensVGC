@@ -85,9 +85,10 @@ main.grid .section[data-section="quadrant"] {
 [data-section="usage"] .col-rank { width: 28px; }
 [data-section="usage"] .col-sprite { width: 44px; }
 [data-section="usage"] .col-name { width: auto; }
-[data-section="usage"] .col-usage { width: 190px; }
-[data-section="usage"] .col-win { width: 190px; }
-[data-section="usage"] .col-n { width: 60px; }
+[data-section="usage"] .col-usage { width: 150px; }
+[data-section="usage"] .col-win { width: 160px; }
+[data-section="usage"] .col-n { width: 56px; }
+[data-section="usage"] .col-chg { width: 84px; white-space: nowrap; }
 [data-section="usage"] .col-name__mon { line-height: 1.2; }
 .item-link--sub { font-size: 0.86em; color: var(--ink-2); padding: 0; }
 

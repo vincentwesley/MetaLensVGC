@@ -5,6 +5,8 @@
 import { ARCHETYPES } from '../lib/archetypes.js';
 import { toPaste } from '../lib/paste.js';
 import { toast } from '../ui/toast.js';
+import { jumpTo } from '../ui/secnav.js';
+import { copyText } from '../ui/clipboard.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 const PAGE = 12;
@@ -34,28 +36,6 @@ function isGold(t) {
 function archLabel(id) {
   if (id === 'other') return 'Other';
   return ARCHETYPES.find((a) => a.id === id)?.label || id;
-}
-
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      return ok;
-    } catch {
-      return false;
-    }
-  }
 }
 
 function matchesSearch(t, q) {
@@ -106,7 +86,7 @@ export default {
     const copyAllBtn = elm('button', 'lib-btn lib-btn--wide', 'Copy all visible');
     copyAllBtn.type = 'button';
     toolbar.append(searchLabel, sortLabel, copyAllBtn);
-    body.append(clickHint('Click a team’s archetype tag: show only that archetype. Filter: show only that team. Sprite: Pokémon details.'), toolbar);
+    body.append(clickHint('Click a team’s archetype tag: show only that archetype. Filter: show only that team and scan it in the Team Scanner. Sprite: Pokémon details.'), toolbar);
 
     const grid = elm('div', 'lib-grid');
     body.appendChild(grid);
@@ -170,9 +150,16 @@ export default {
       });
       const filterBtn = elm('button', 'lib-btn', 'Filter');
       filterBtn.type = 'button';
-      filterBtn.title = 'Filter to this team';
-      filterBtn.setAttribute('aria-label', 'Filter to this team');
-      filterBtn.addEventListener('click', (e) => ctx.chip('team', t.id, e));
+      filterBtn.title = 'Filter to this team and scan it in the Team Scanner';
+      filterBtn.setAttribute('aria-label', 'Filter to this team and scan it');
+      filterBtn.addEventListener('click', (e) => {
+        ctx.chip('team', t.id, e);
+        if (e.shiftKey || e.altKey) return; // excluding a team: nothing to scan
+        ctx.scan(toPaste(t, dex));
+        toast(`${t.player || 'This team'}'s team is loaded in the Team Scanner`, {
+          duration: 6000, action: { label: 'View scan', onClick: () => jumpTo('scanner') },
+        });
+      });
       actions.append(copyBtn, filterBtn);
       c.appendChild(actions);
       return c;
