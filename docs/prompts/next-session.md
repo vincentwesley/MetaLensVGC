@@ -29,7 +29,7 @@ State: 148 unit tests, 47 e2e checks, all green.
 
 ## Done in the third batch (2026-09-30; finished from the WIP commit, see CLAUDE.md "Project status")
 Library Filter scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column,
-Copy link, `changeDir`. State: 149 unit tests, 50 e2e checks, all green.
+Copy link, `changeDir`. State: 151 unit tests, 51 e2e checks, all green.
 
 ## Remaining check: the Updater
 Owner asked to make sure it works: the "Refresh data" workflow last ran 2026-09-29 (run 36573679607,

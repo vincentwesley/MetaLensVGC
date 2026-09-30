@@ -153,7 +153,7 @@ Background: pixel field canvas.
 - Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
 - Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
 - Team-level sections show an explicit "not available" state under the ranked source (no per-team ranked data).
-- Third batch (2026-09-30): Library Filter also scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column, Copy link. 149 unit, 50 e2e green.
+- Third batch (2026-09-30): Library Filter also scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column, Copy link. 151 unit, 51 e2e green.
 - Next-session prompt: `docs/prompts/next-session.md`. Testing ledger: `docs/TESTING.md`.
 
 ### Invariants learned the hard way (keep them)

@@ -4,7 +4,8 @@ import { withChartDefaults } from '../public/js/ui/echarts-theme.js';
 import { clampTip } from '../public/js/ui/tip.js';
 import { pickCurrent, isDismissed, dismiss } from '../public/js/ui/secnav.js';
 import { fmt } from '../public/js/ui/fmt.js';
-import { changeText, changeDir } from '../public/js/lib/aggregate.js';
+import { changeText, changeDir, fieldChips } from '../public/js/lib/aggregate.js';
+import { nameMatcher } from '../public/js/lib/names.js';
 
 test('withChartDefaults: every tooltip is confined and wraps, section options win', () => {
   const out = withChartDefaults({ tooltip: { trigger: 'item', extraCssText: 'color:red;' }, series: [] });
@@ -82,4 +83,17 @@ test('changeDir: direction as shown (one decimal); NEW counts as up', () => {
   assert.equal(changeDir({ isNew: false, pts: 0.3 }), 'up');
   assert.equal(changeDir({ isNew: false, pts: -0.04 }), 'flat');
   assert.equal(changeDir({ isNew: false, pts: -2 }), 'down');
+});
+
+test('nameMatcher: empty box = no filter; punctuation-only / non-ASCII matches nothing; otherwise punctuation-insensitive', () => {
+  assert.equal(nameMatcher('  '), null);
+  assert.equal(nameMatcher('-')('Raichu-Mega-Y'), false);
+  assert.equal(nameMatcher('é')('Rillaboom'), false);
+  assert.equal(nameMatcher('raichu mega')('Raichu-Mega-Y'), true);
+  assert.equal(nameMatcher('raichu mega')('Rillaboom'), false);
+});
+
+test('fieldChips: drops positive team chips only, a negated team chip stays', () => {
+  const chips = [{ kind: 'team', value: 'a', neg: false }, { kind: 'team', value: 'b', neg: true }, { kind: 'species', value: 'X', neg: false }];
+  assert.deepEqual(fieldChips(chips), chips.slice(1));
 });
