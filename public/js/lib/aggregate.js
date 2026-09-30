@@ -777,6 +777,10 @@ export function weekly(teams, keys, has = (t, key) => t.keys.includes(key)) {
 // The one rule for "change vs previous period": a Pokémon with no previous row,
 // or fewer than max(minN, 1) previous teams, is NEW (no meaningful delta from ~0).
 // Otherwise pts is the usage change in percentage points. curPct/prevRow.pct are fractions.
+// Chips for the Scanner's reference field: everything except positive team chips (one team would make it compare
+// the team with itself). A negated team chip stays: that team is excluded from the field too.
+export const fieldChips = (chips) => chips.filter((c) => !(c.kind === 'team' && !c.neg));
+
 export function changeVsPrev(curPct, prevRow, minN = 0) {
   if (!prevRow || !(prevRow.n >= Math.max(minN, 1))) return { isNew: true, pts: null };
   return { isNew: false, pts: (curPct - prevRow.pct) * 100 };

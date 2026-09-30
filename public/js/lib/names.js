@@ -2,6 +2,14 @@
 // Used by the data pipeline (Node) and the browser shell.
 
 /** Showdown-style id: lowercase, strip everything but a-z0-9. */
+// Search-box matcher: null for an empty box, else key => does the key contain the query (punctuation-insensitive).
+// A query with characters but no letters/digits ("-", "é") matches nothing, never everything.
+export function nameMatcher(raw) {
+  if (raw == null || !String(raw).trim()) return null;
+  const q = toID(raw);
+  return (key) => !!q && toID(key).includes(q);
+}
+
 export function toID(s) {
   if (s == null) return '';
   return String(s).toLowerCase().replace(/[^a-z0-9]/g, '');

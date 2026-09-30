@@ -163,7 +163,7 @@ async function boot() {
     return;
   }
 
-  const { decode, filterTeams, previousPeriod, projectTeams, speciesChipFilter } = lib.aggregate;
+  const { decode, filterTeams, previousPeriod, projectTeams, speciesChipFilter, fieldChips } = lib.aggregate;
 
   const ladderCache = new Map();
   const rankedCache = new Map();
@@ -408,7 +408,7 @@ async function boot() {
       const teams = filterTeams(regData.teams, state, state.chips, dex);
       // The Scanner compares one team with the rest of the field, so a team chip (one team)
       // must not shrink its reference: same filters, minus team chips.
-      const noTeamChips = state.chips.filter((c) => c.kind !== 'team');
+      const noTeamChips = fieldChips(state.chips);
       const field = noTeamChips.length === state.chips.length ? teams : filterTeams(regData.teams, state, noTeamChips, dex);
       const base = filterTeams(regData.teams, state, [], dex);
       const prev = computePrev(state, regData.teams);

@@ -3,7 +3,7 @@
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
 import { usage, atMinN, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies, changeVsPrev, changeText, changeDir } from '../lib/aggregate.js';
 import { rankedSource, clickHint, prevLabel } from '../ui/meta.js';
-import { toID } from '../lib/names.js';
+import { nameMatcher } from '../lib/names.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
 const COLS_TEAM = [
@@ -87,7 +87,7 @@ export default {
       btnAll.setAttribute('aria-pressed', String(v));
       refresh();
     }
-    const query = () => toID(search.value);
+    const query = () => nameMatcher(search.value);
     let searchTimer = null;
     search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(refresh, 120); });
     search.addEventListener('keydown', (e) => { if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; refresh(); } });
@@ -164,7 +164,7 @@ export default {
       const usageRank = new Map([...rows].sort((a, b) => b.n - a.n).map((r, i) => [r.key, i + 1]));
       const maxPct = Math.max(...rows.map((r) => r.pct), 0.0001);
       const q = query();
-      rows = sortRows(q ? rows.filter((r) => toID(r.key).includes(q)) : rows);
+      rows = sortRows(q ? rows.filter((r) => q(r.key)) : rows);
       if (!rows.length) { emptyState(body, `No Pokémon matching “${search.value.trim()}”`); return; }
       const shown = showAll || q ? rows : rows.slice(0, 30);
 
@@ -325,7 +325,7 @@ export default {
       const tbody = table.createTBody();
       const top = (tbl) => { const e = rankedEntries(tbl)[0]; return e ? `${e.name} ${ctx.fmt.pct(e.pct)}` : '—'; };
       const q = query();
-      const found = q ? names.filter((k) => toID(k).includes(q)) : names;
+      const found = q ? names.filter(q) : names;
       if (!found.length) { emptyState(body, `No Pokémon matching “${search.value.trim()}”`); return; }
       for (const key of showAll || q ? found : found.slice(0, 30)) {
         const mon = season.mons[key];

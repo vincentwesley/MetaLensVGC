@@ -963,3 +963,13 @@ test('leaderboard Change column is absent for M-A (no previous period), ladder a
   await expect(page.locator('.toast')).toBeVisible(); // copied via the textarea fallback, or an error toast; never a crash
   expect(errors).toEqual([]);
 });
+
+test('punctuation-only search ("-") matches nothing in both the leaderboard and Items searches', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  for (const id of ['usage', 'items']) {
+    const sec = page.locator(`main [data-section="${id}"]`);
+    await sec.locator('input[type=search]').fill('-');
+    await expect(sec.locator('.empty-state__title')).toHaveText('No Pokémon matching “-”');
+  }
+});
