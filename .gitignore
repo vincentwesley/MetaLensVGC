@@ -7,3 +7,5 @@ playwright-report/
 
 # Instagram / promo screenshots (generated locally)
 promo/
+graphify-out/
+.claude/settings.local.json
