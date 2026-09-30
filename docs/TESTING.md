@@ -58,7 +58,7 @@ Cloud-session notes:
 - Third batch (2026-09-30): Library Filter loads + scans the team against the whole field (team chip named "Player · Event",
   "View scan" toast action); leaderboard search ("/" focuses, real usage rank kept, Escape clears, no-match state), Change
   column present with a previous period and never "-0.0"; Change column absent for M-A, ladder and ranked with no NaN;
-  Copy link with the Clipboard API removed raises no uncaught error. Unit: `changeDir` (NEW/up/flat/down).
+  Copy link with the Clipboard API removed raises no uncaught error. Unit: `changeDir`, `nameMatcher` (punctuation-only query matches nothing), `fieldChips` (a negated team chip stays out of the Scanner field). e2e: "-" in the leaderboard and Items searches shows the no-match state.
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
