@@ -866,3 +866,31 @@ test('one sprite scale (24/32/48/96) everywhere; item shares carry one decimal, 
   for (const s of shares) expect(s).toMatch(/^\d+\.\d%$/);
   expect(shares).not.toContain('0.0%');
 });
+
+test('archetype trend: weekly lines for the top archetypes; colours follow the archetype, not its rank; a line click adds that chip', async ({ page }) => {
+  await page.goto('/#reg=M-B');
+  await waitForAllSections(page);
+  const trendEl = page.locator('main [data-section="archetypes"] .card').nth(1).locator('[_echarts_instance_]');
+  await trendEl.scrollIntoViewIfNeeded();
+  const opt = await trendEl.evaluate((e) => { const o = echarts.getInstanceByDom(e).getOption(); return { weeks: o.xAxis[0].data.length, series: o.series.map((s) => ({ name: s.name, color: s.itemStyle.color, n: s.data.length })) }; });
+  expect(opt.weeks).toBeGreaterThan(4);
+  expect(opt.series.length).toBe(6);
+  for (const s of opt.series) expect(s.n).toBe(opt.weeks);
+  const donutColor = (name) => page.locator('main [data-section="archetypes"] .card').first().locator('[_echarts_instance_]')
+    .evaluate((e, name) => echarts.getInstanceByDom(e).getOption().series[0].data.find((d) => d.name === name)?.itemStyle.color, name);
+  const tailwindBefore = await donutColor('Tailwind');
+  expect(tailwindBefore).toBe(opt.series.find((s) => s.name === 'Tailwind').color); // same colour in donut and trend
+
+  await page.goto('/#reg=M-B&chips=type:Electric'); // reorders the split
+  await waitForAllSections(page);
+  expect(await donutColor('Tailwind')).toBe(tailwindBefore);
+
+  await page.goto('/#reg=M-B');
+  await waitForAllSections(page);
+  await trendEl.scrollIntoViewIfNeeded();
+  const pt = await trendEl.evaluate((e) => { const i = echarts.getInstanceByDom(e); return i.convertToPixel({ seriesIndex: 0 }, [2, i.getOption().series[0].data[2]]); });
+  const box = await trendEl.boundingBox();
+  await page.mouse.click(box.x + pt[0], box.y + pt[1]);
+  await expect(page.locator('#chips .chip')).toHaveCount(1);
+  await expect(page.locator('#chips .chip__label')).toHaveText(/^Archetype: /);
+});

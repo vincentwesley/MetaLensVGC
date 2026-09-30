@@ -117,6 +117,7 @@ and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white
 Header (skin/theme/animated toggles) -> sticky filter bar + active-filter chips -> Meta Snapshot (top cards + KPIs) ->
 Usage leaderboard (Wilson CI, top item) | Usage x Win-rate quadrant -> Type landscape (type usage | move types the field
 is weak to, by real multiplier) -> Item usage | Most common items by Pokémon -> Archetype split + matchup heatmap |
+Archetype share by week |
 Teammate co-usage heatmap + top cores + Teammate rate -> Speed tiers (modifiers, benchmark) -> Weekly trends + risers /
 fallers + regulation shift -> Team Sheet Library -> My Team Scanner (weaknesses, threats, speed position, closest teams,
 archetype, matchups vs Pokémon/archetypes, item check, teammate picks, weakest link) -> Data & methodology (downloads,
@@ -196,6 +197,10 @@ Background: pixel field canvas.
 - **Fireflies** are the page's one decorative accent: Credits, the snapshot's leader card (`fireflies()` +
   `liveWhenVisible()` in ui/motion.js; loops run only while `.is-live`), a one-shot glow on a newly added chip, and a
   still dot on empty states. Colours via `--ff-core/--ff-glow`. Keep them there; don't scatter glows across cards.
+- **Archetype colours** follow the archetype, never its rank: `archetypeColors(regTeams, theme)` in archetypes.js ranks
+  the named archetypes once per regulation (unfiltered); top 8 take `--series-1..8`, the rest and Other `--muted`
+  (overflow ones dashed in the trend). Donut, table swatches and the weekly trend share it. `weekly(teams, keys, has)`
+  takes a membership test; the trend passes the primary archetype. With an archetype chip the trend shows `view.base`.
 - **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the
   branch during a run are fine.
 

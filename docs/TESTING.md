@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 144 tests)
+### Automated: unit (`npm test`, 145 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -54,7 +54,7 @@ Cloud-session notes:
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 - `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 45 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 46 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -81,6 +81,8 @@ Cloud-session notes:
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
 - Cross-filters never blank a chart: a species chip leaves exactly that Pokémon on the quadrant; a rare species (Pikachu,
   9 teams) fills snapshot / usage / quadrant / items with the "includes n < 20" flag.
+- Archetype trend (M-B): 6 weekly lines covering every week; Tailwind has the same colour in donut and trend, and keeps it
+  under a type chip that reorders the split; clicking a line adds an Archetype chip.
 - Sprite scale: every rendered sprite is 24/32/48/96 px; item shares in the items table have one decimal and none reads 0.
 - Fireflies: the snapshot's leader card carries 4 fireflies and the card is `is-live` only while on screen; only a newly
   added chip gets `chip--new` (earlier chips and non-chip changes animate nothing).
