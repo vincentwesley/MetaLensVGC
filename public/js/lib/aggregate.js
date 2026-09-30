@@ -783,9 +783,19 @@ export function changeVsPrev(curPct, prevRow, minN = 0) {
 }
 
 /** Short text for a changeVsPrev result: "NEW", "▲ +14.9pt", "▼ -14.6pt" or "— 0.0pt". */
-export function changeText({ isNew, pts }) {
-  if (isNew) return 'NEW';
-  return `${pts > 0 ? '▲' : pts < 0 ? '▼' : '—'} ${pts > 0 ? '+' : ''}${pts.toFixed(1)}pt`;
+// Direction of a changeVsPrev result as shown (one decimal): 'up' | 'down' | 'flat'. NEW counts as up.
+// Arrows and colours follow it, so -0.04 reads "— 0.0pt" in neutral, never "▼ -0.0pt" in red.
+export function changeDir({ isNew, pts }) {
+  if (isNew) return 'up';
+  const v = Number(pts.toFixed(1));
+  return v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+}
+
+export function changeText(change) {
+  if (change.isNew) return 'NEW';
+  const dir = changeDir(change);
+  const v = dir === 'flat' ? 0 : change.pts;
+  return `${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'} ${dir === 'up' ? '+' : ''}${v.toFixed(1)}pt`;
 }
 
 // Compares the last two *qualifying* ISO weeks present in the data (see

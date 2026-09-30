@@ -913,3 +913,37 @@ test('meta by country: rows per country; a row click adds a Country chip that fi
   await expect(page.locator('#chips .chip__label')).toHaveText('Country: Brazil');
   await expect(page.locator('main [data-section="countries"] tbody tr')).toHaveCount(1);
 });
+
+test('library Filter also loads that team into the Scanner and scans it against the whole field; the team chip is named', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const card = page.locator('[data-section="library"] .lib-card').first();
+  await card.scrollIntoViewIfNeeded();
+  await card.locator('.lib-btn', { hasText: 'Filter' }).click();
+  await expect(page.locator('#chips .chip__label')).toHaveText(/^Team: .+ · .+/); // "Player · Event", not the raw id
+  await expect(page.locator('.toast__action')).toHaveText('View scan');
+  await page.locator('.toast__action').click();
+  await waitForAllSections(page);
+  await expect(page.locator('#scn-textarea')).toHaveValue(/@/);
+  await expect(page.locator('[data-section="scanner"] .scn-parsed .scn-mon')).toHaveCount(6);
+  // Reference field = everything but the team chip, not the one filtered team.
+  const snapshotTeams = await teamsSampledValue(page).textContent();
+  expect(snapshotTeams.trim()).toBe('1');
+  await expect(page.locator('[data-section="scanner"]')).toContainText(/n=3,\d{3} teams in view/);
+});
+
+test('leaderboard search: "/" focuses it, finds any Pokémon with its real rank, Escape clears; change column when a previous period exists', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const lb = page.locator('main [data-section="usage"]');
+  await expect(lb.locator('th.col-chg')).toHaveText('Change');
+  await page.keyboard.press('/');
+  await page.keyboard.type('raichu mega');
+  await expect(lb.locator('tbody tr')).toHaveCount(2);
+  await expect(lb.locator('tbody tr').first().locator('.col-rank')).toHaveText('7');
+  await page.keyboard.press('Escape');
+  await expect(lb.locator('tbody tr')).toHaveCount(30);
+  await lb.locator('input[type=search]').fill('zzzz');
+  await expect(lb.locator('.empty-state__title')).toHaveText('No Pokémon matching “zzzz”');
+  for (const t of await lb.locator('td.col-chg').allTextContents()) expect(t).not.toContain('-0.0');
+});

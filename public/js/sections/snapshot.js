@@ -1,8 +1,8 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
 // Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
-import { usage, atMinN, kpis, changeVsPrev, changeText, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
-import { rankedSource, clickHint } from '../ui/meta.js';
+import { usage, atMinN, kpis, changeVsPrev, changeText, changeDir, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
+import { rankedSource, clickHint, prevLabel } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
 import { fireflies, liveWhenVisible } from '../ui/motion.js';
 
@@ -20,21 +20,6 @@ function emptyState(el, title, detail) {
     box.appendChild(p);
   }
   el.appendChild(box);
-}
-
-// previousPeriod() either returns the preceding window within the same reg,
-// or falls back to the previous regulation's teams. Label from whichever it
-// gave us: ponytail — approximates the window length from view.base's date
-// span rather than re-deriving previousPeriod's exact bounds; good enough for
-// a label, upgrade if the two ever visibly disagree.
-function deltaLabel(view) {
-  const prev = view.prev;
-  if (!prev || !prev.length) return null;
-  if (prev[0].reg !== view.reg) return `vs ${prev[0].reg}`;
-  const dates = view.base.map((t) => t.date).filter(Boolean).sort();
-  if (!dates.length) return 'vs prior period';
-  const days = Math.round((new Date(dates[dates.length - 1]) - new Date(dates[0])) / 86400000) + 1;
-  return `vs prior ${days} day${days === 1 ? '' : 's'}`;
 }
 
 function monCard(ctx, key, pct, winPct, change, label, anim, prevN, minN) {
@@ -72,7 +57,8 @@ function monCard(ctx, key, pct, winPct, change, label, anim, prevN, minN) {
 
   if (change) {
     const d = document.createElement('div');
-    const { isNew, pts: deltaPts } = change;
+    const { isNew } = change;
+    const dir = changeDir(change);
     // Low-sample previous period: the delta is still the real number, but a
     // handful of prior teams makes it noisy, so grey it out and say why
     // rather than hide it (still real data, just a shakier comparison).
@@ -82,7 +68,7 @@ function monCard(ctx, key, pct, winPct, change, label, anim, prevN, minN) {
       d.textContent = changeText(change);
       d.setAttribute('data-tip', `Not used (or under min n) in ${String(label).replace(/^vs /, '')}`);
     } else {
-      d.className = `kpi__delta ${deltaPts > 0 ? 'kpi__delta--up' : deltaPts < 0 ? 'kpi__delta--down' : ''}${lowSample ? ' kpi__delta--low' : ''}`;
+      d.className = `kpi__delta${dir === 'flat' ? '' : ` kpi__delta--${dir}`}${lowSample ? ' kpi__delta--low' : ''}`;
       d.textContent = changeText(change);
       d.setAttribute('data-tip', `Change in usage share ${label}, in percentage points`);
     }
@@ -221,7 +207,7 @@ export default {
         emptyState(hero, 'Insufficient data');
       } else {
         const prevRows = view.prev && view.prev.length ? new Map(usage(view.prev).map((r) => [r.key, r])) : null;
-        const label = deltaLabel(view);
+        const label = prevLabel(view);
         const prevN = view.prev ? view.prev.length : 0;
         if (label) {
           const low = prevN < Math.max(state.minN || 0, 50);

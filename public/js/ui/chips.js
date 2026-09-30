@@ -27,10 +27,12 @@ const KIND_LABEL = {
 };
 const MON_KINDS = new Set(['species', 'mega', 'core', 'type', 'weak', 'item', 'move', 'movetype']);
 
-function labelFor(chip) {
+// teamLabel(id): team ids are opaque ("lt:6ab47b…:player"); ctx.teamLabel names the team once data is loaded.
+function labelFor(chip, teamLabel = () => null) {
   const v = Array.isArray(chip.value) ? chip.value.join(' + ')
     : chip.kind === 'archetype' ? (ARCH_LABELS[chip.value] || chip.value)
     : chip.kind === 'country' ? fmt.country(chip.value)
+    : chip.kind === 'team' ? (teamLabel(chip.value) || chip.value)
     : String(chip.value);
   const kind = KIND_LABEL[chip.kind];
   return `${kind ? `${kind}: ` : ''}${v}`; // negation is shown by the chip style ("NOT")
@@ -87,13 +89,13 @@ export function mountChips(el, ctx) {
 
       const label = document.createElement('span');
       label.className = 'chip__label';
-      label.textContent = labelFor(chip);
+      label.textContent = labelFor(chip, ctx.teamLabel);
       pill.appendChild(label);
 
       const x = document.createElement('button');
       x.type = 'button';
       x.className = 'chip__x';
-      x.setAttribute('aria-label', `Remove ${chip.neg ? 'NOT ' : ''}${labelFor(chip)} filter`);
+      x.setAttribute('aria-label', `Remove ${chip.neg ? 'NOT ' : ''}${labelFor(chip, ctx.teamLabel)} filter`);
       x.title = 'Remove this filter';
       x.textContent = '×';
       x.addEventListener('click', () => ctx.store.removeChip(i));

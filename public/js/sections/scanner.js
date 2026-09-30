@@ -8,6 +8,7 @@ import { calcStat } from '../lib/stats.js';
 import { TYPES, TYPE_COLORS, effectiveness } from '../lib/types.js';
 import { inkOn } from '../lib/contrast.js';
 import { toast } from '../ui/toast.js';
+import { copyText } from '../ui/clipboard.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 import { scanTeam, spCheck, LIMITS, RARE_NATURE, archLabel } from '../lib/scan.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
@@ -47,27 +48,6 @@ function sectionCard(title) {
 
 const CALL_LABEL = { good: 'favourable', bad: 'unfavourable', unclear: 'low confidence' };
 
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      return ok;
-    } catch {
-      return false;
-    }
-  }
-}
 
 function typesOf(mon, dex) {
   const sp = dex.species[mon.k] || dex.species[mon.s];
@@ -159,7 +139,7 @@ function metaSpeedOf(key, view, src) {
 function metaSpeedList(view, src) {
   const list = [];
   const used = new Set();
-  for (const r of usage(view.teams)) {
+  for (const r of usage(view.field)) {
     if (r.n < view.state.minN) continue;
     const sp = metaSpeedOf(r.key, view, src);
     if (sp?.spe == null) continue;
@@ -173,7 +153,7 @@ function metaSpeedList(view, src) {
 }
 
 function topThreatsNoAnswer(view, src, myTypesList, myMaxSpe, minN) {
-  const threats = usage(view.teams).filter((r) => r.n >= minN).slice(0, 20);
+  const threats = usage(view.field).filter((r) => r.n >= minN).slice(0, 20);
   const out = [];
   for (const r of threats) {
     const types = view.dex.species[r.key]?.types;
@@ -282,7 +262,7 @@ export default {
       const myKeys = [...new Set(mons.map((m) => m.k))];
 
       // --- weaknesses weighted by the meta's real attacking-move distribution ---
-      const freq = moveTypeFreq(view.teams, dex);
+      const freq = moveTypeFreq(view.field, dex);
       const theme = ctx.chartTheme();
       const { card: wCard, body: wBody } = sectionCard('Weaknesses vs. the current meta');
       if (!freq.some((f) => f.freq > 0)) {
@@ -336,7 +316,7 @@ export default {
 
       // --- top meta threats with no answer ---
       const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
-      const sheetTiers = speedTiers(view.teams, dex, 99999);
+      const sheetTiers = speedTiers(view.field, dex, 99999);
       const sheetTiersByKey = new Map(sheetTiers.map((r) => [r.key, r]));
       const speedSrc = { sheetByKey: sheetTiersByKey, season: rankedSeason(view.ranked, view.state.from, view.state.to), merged };
       const mySpeeds = mons.map((m) => mySpeedOf(m, dex, speedSrc)?.spe).filter((v) => v != null);
@@ -393,7 +373,7 @@ export default {
 
       // --- closest tournament teams ---
       const { card: cCard, body: cBody } = sectionCard('Closest tournament teams');
-      const closest = closestTeams(myKeys, view.teams, 5);
+      const closest = closestTeams(myKeys, view.field, 5);
       if (!closest.length || closest[0].sim === 0) {
         emptyState(cBody, 'No similar teams in the current view');
       } else {
@@ -684,8 +664,14 @@ export default {
     }
 
     scanBtn.addEventListener('click', () => { scanned = true; renderResults(); });
+    textarea.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) scanBtn.click(); });
 
     return {
+      // Called through ctx.scan (e.g. the Library's Filter button): fill the paste box and scan.
+      load(paste) {
+        textarea.value = paste;
+        scanBtn.click();
+      },
       update(view) {
         const ranked = view.state.source === 'ranked';
         const was = lastView?.state.source === 'ranked';
