@@ -291,3 +291,27 @@ test('never blank: small samples are returned flagged (archetype matchups, picks
   assert.equal(it.mons[0].top[0].winPct, 2 / 3);
   assert.equal(it.mons[0].top[0].low, true);
 });
+
+test('relaxed is true only when no returned row reaches matchGames (total under totalGames is not relaxed)', () => {
+  const base = [team(0, ['A', 'B', 'C', 'X', 'G', 'H'], 3, 1)];
+  const g = { w: 40, l: 20, bySpecies: new Map([['X', { w: 15, l: 10 }], ['G', { w: 1, l: 1 }]]), byArch: new Map([['sun', { w: 15, l: 10 }], ['rain', { w: 1, l: 1 }]]) };
+  const am = archetypeMatchups(g, base, [], 'tailwind'); // total 60 < 100, no matrix rows
+  assert.equal(am.source, 'similar');
+  assert.equal(am.relaxed, false);
+  assert.equal(am.rows.find((r) => r.id === 'sun').low, false);
+  assert.equal(am.rows.find((r) => r.id === 'rain').low, true);
+  const sp = speciesMatchups(g, [team(0, ['X'], 1, 1), team(1, ['X'], 1, 1)], 1);
+  assert.equal(sp.relaxed, false);
+  assert.equal(sp.rows.find((r) => r.key === 'X').low, false);
+});
+
+test('weakestLink reason: no-teams vs one-sided', () => {
+  const k = new Set(['A', 'B', 'D', 'E']);
+  assert.equal(weakestLink(k, [team(0, ['X', 'G', 'H', 'A', 'F', 'C'], 1, 1)]).reason, 'no-teams');
+  // teams share 3+ of the others, but every one runs all of the members: nothing "without"
+  const all = [team(0, ['A', 'B', 'D', 'E', 'G', 'H'], 1, 1), team(1, ['A', 'B', 'D', 'E', 'G', 'X'], 1, 1)];
+  const r = weakestLink(k, all);
+  assert.deepEqual(r.rows, []);
+  assert.equal(r.reason, 'one-sided');
+  assert.equal(weakestLink(k, all.concat([team(2, ['A', 'B', 'D', 'X', 'G', 'H'], 1, 1)])).reason, null);
+});

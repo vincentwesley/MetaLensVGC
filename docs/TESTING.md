@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 153 tests)
+### Automated: unit (`npm test`, 155 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
