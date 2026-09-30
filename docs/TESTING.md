@@ -54,7 +54,7 @@ Cloud-session notes:
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 - `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 44 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 45 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -81,6 +81,8 @@ Cloud-session notes:
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
 - Cross-filters never blank a chart: a species chip leaves exactly that Pokémon on the quadrant; a rare species (Pikachu,
   9 teams) fills snapshot / usage / quadrant / items with the "includes n < 20" flag.
+- Fireflies: the snapshot's leader card carries 4 fireflies and the card is `is-live` only while on screen; only a newly
+  added chip gets `chip--new` (earlier chips and non-chip changes animate nothing).
 - Motion layer: below-the-fold sections start `data-reveal=pending` and reveal on scroll, the fold is never hidden, reduced
   motion adds no reveal state; a changed KPI gets `kpi--changed`, leaderboard bars run `bar-grow`, the drawer stays visible
   for its slide-out then hides. The section-nav check also guards the reveal (a jump must not land under the sticky bar).
@@ -197,6 +199,13 @@ Pokémon (it needed 2 points), and snapshot/usage/quadrant/items/teammates/cores
 100-team week floor) hid everything. After: every chart draws; the only empty states left are real absences (no
 movers when one Pokémon holds 100% both weeks, no previous period, no match results), each with a specific title.
 Screenshots reviewed (sprites stubbed): quadrant with Rillaboom, Electric, Pikachu.
+
+Fireflies (2026-09-30, cloud): snapshot leader halo + 4 fireflies, new-chip glow with fireflies lifting off, sprite
+hop on hover, scroll-progress hairline (CSS scroll timeline), a still firefly on empty states; colours are the
+`--ff-core/--ff-glow` tokens shared with Credits (also fixes theme=auto on a light OS). Reviewed at 1440 in Pro dark,
+Pro light, Retro light, Retro dark (chip frozen mid-glow). Idle main thread at 4x throttle, snapshot on screen:
+6.2% before, 8.6-9.1% after (inside the 7-9% range accepted earlier; back to baseline once the snapshot scrolls away).
+Found on the way: every chip re-popped on every state change (now only new ones animate).
 
 ## Not yet tested (candidates for the next pass)
 

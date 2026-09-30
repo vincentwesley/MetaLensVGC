@@ -817,8 +817,8 @@ test('motion: a changed KPI ticks, bars grow, the drawer slides out before it hi
   const drawer = page.locator('#deepdive');
   await expect(drawer).toHaveClass(/is-open/);
   await page.keyboard.press('Escape');
-  // Still visible for the slide-out, then hidden.
-  expect(await drawer.evaluate((e) => getComputedStyle(e).visibility)).toBe('visible');
+  // Closed, it hides only after the slide-out (a delayed visibility transition; timing it races on slow runners).
+  expect(await drawer.evaluate((e) => getComputedStyle(e).transitionDelay)).toBe('0.18s');
   await expect(drawer).toBeHidden();
 });
 
@@ -840,4 +840,29 @@ test('cross-filters: the quadrant plots a single selected Pokémon; a rare one f
     await expect(sec.locator('.meta-line__relaxed').first()).toHaveText('includes n < 20');
   }
   await expect(page.locator('main [data-section="usage"] tbody tr')).toHaveCount(1);
+});
+
+test('fireflies: the meta leader glows while on screen; only a newly added chip lights up', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const lead = page.locator('[data-section="snapshot"] .snapshot__mon--lead');
+  await expect(lead).toHaveCount(1);
+  await expect(lead.locator('.ff-layer i')).toHaveCount(4);
+  await expect(page.locator('.snapshot-card')).toHaveClass(/is-live/);
+  await page.locator('main [data-section="scanner"]').scrollIntoViewIfNeeded();
+  await expect(page.locator('.snapshot-card')).not.toHaveClass(/is-live/); // paused off-screen
+
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.locator('[data-section="usage"] tbody tr').nth(1).click();
+  await expect(page.locator('#chips .chip--new')).toHaveCount(1);
+  await waitForAllSections(page);
+  await page.locator('[data-section="usage"] tbody tr .item-link').first().click(); // + an Item chip
+  await waitForAllSections(page);
+  // Two chips now: only the second is new; the first no longer re-pops.
+  await expect(page.locator('#chips .chip')).toHaveCount(2);
+  await expect(page.locator('#chips .chip').first()).not.toHaveClass(/chip--new/);
+  await expect(page.locator('#chips .chip').nth(1)).toHaveClass(/chip--new/);
+  await page.getByRole('button', { name: 'Top 8' }).click();
+  await waitForAllSections(page);
+  await expect(page.locator('#chips .chip--new')).toHaveCount(0); // a non-chip change animates nothing
 });

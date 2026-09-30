@@ -188,6 +188,9 @@ Background: pixel field canvas.
   Animations, no forced reflow); bar fills `bar-grow` on (re)draw (first 30 leaderboard rows only); snapshot KPIs whose
   value changed get `.kpi--changed`; skin/theme go through `crossfade()` (View Transitions). No count-up numbers (the
   in-between values would be invented) and no exit animations that hold back a render.
+- **Fireflies** are the page's one decorative accent: Credits, the snapshot's leader card (`fireflies()` +
+  `liveWhenVisible()` in ui/motion.js; loops run only while `.is-live`), a one-shot glow on a newly added chip, and a
+  still dot on empty states. Colours via `--ff-core/--ff-glow`. Keep them there; don't scatter glows across cards.
 - **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the
   branch during a run are fine.
 

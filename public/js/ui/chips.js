@@ -1,5 +1,6 @@
 // Chip row: renders state.chips as pills with × remove + "Clear all".
 // Species chips get a sprite; type chips get a type-coloured swatch; everything else a plain label.
+import { fireflies } from './motion.js';
 
 let TYPE_COLORS = {};
 try {
@@ -45,9 +46,16 @@ function scopeNote(state, dex) {
   return 'Pokémon charts count only the matching Pokémon · team views (teammates, archetypes, library) show their whole teams.';
 }
 
+// Identity of a chip, to tell a newly added one from one that was already there.
+const chipSig = (c) => `${c.neg ? '!' : ''}${c.kind}:${[].concat(c.value).join('+')}`;
+
 export function mountChips(el, ctx) {
+  // Chips already present at load (from the URL) don't animate; later additions do.
+  let seen = new Set(ctx.store.get().chips.map(chipSig));
   function render(state) {
     el.textContent = '';
+    const before = seen;
+    seen = new Set(state.chips.map(chipSig));
     if (!state.chips.length) return;
     const title = document.createElement('span');
     title.className = 'chips__title';
@@ -60,6 +68,11 @@ export function mountChips(el, ctx) {
       const chip = state.chips[i];
       const pill = document.createElement('span');
       pill.className = `chip${chip.neg ? ' chip--neg' : ''}`;
+      // A new chip pops in with a brief firefly glow (css .chip--new); the rest stay still.
+      if (!before.has(chipSig(chip))) {
+        pill.classList.add('chip--new');
+        pill.appendChild(fireflies([[18, 20], [50, 0], [82, 30], [66, 90]]));
+      }
 
       if (chip.kind === 'species' || chip.kind === 'mega') {
         pill.appendChild(ctx.sprite(chip.value, { size: 20 }));
