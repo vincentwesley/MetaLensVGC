@@ -54,7 +54,7 @@ Cloud-session notes:
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 - `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 45 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 44 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -83,9 +83,8 @@ Cloud-session notes:
   9 teams) fills snapshot / usage / quadrant / items with the "includes n < 20" flag.
 - Fireflies: the snapshot's leader card carries 4 fireflies and the card is `is-live` only while on screen; only a newly
   added chip gets `chip--new` (earlier chips and non-chip changes animate nothing).
-- Motion layer: below-the-fold sections start `data-reveal=pending` and reveal on scroll, the fold is never hidden, reduced
-  motion adds no reveal state; a changed KPI gets `kpi--changed`, leaderboard bars run `bar-grow`, the drawer stays visible
-  for its slide-out then hides. The section-nav check also guards the reveal (a jump must not land under the sticky bar).
+- Motion budget: after a filter click only allowlisted animations run on screen (new chip, bar-grow, ambient fireflies,
+  scroll progress, busy bar); leaderboard bars run `bar-grow`; the drawer hides only after its slide-out.
 
 ### Verified once, by hand or ad-hoc script (not in the suite)
 - The weekly refresh Action end to end (run 36573240204: failure alert opened with correct step and log;
@@ -183,7 +182,7 @@ once (top 3), SP column header, per-row share bar, `* Nature` assumption marker,
 wording. e2e updated (bar segments, natures line, cover line); screenshots reviewed at 1440 (M-C Rillaboom) and 390
 (M-B Incineroar, Smogon).
 
-Motion layer (2026-09-30, cloud): section reveal, bar grow, KPI tick, drawer easing + slide-out, row accent edge,
+Motion layer (2026-09-30, cloud; reveal, KPI tick and section fade later removed, see "Motion audit"): section reveal, bar grow, KPI tick, drawer easing + slide-out, row accent edge,
 title markers, skin/theme cross-fade (`ui/motion.js`, "motion" block in app.css). Filmstrips reviewed at 1440 in Pro dark
 and Retro light (frames taken by pausing `document.getAnimations()` at fixed times, composited in a page and
 screenshotted: no image tools needed). 4x CPU throttle, placement clicks: longest task 161-234 ms after vs 202-267 ms
@@ -206,6 +205,12 @@ hop on hover, scroll-progress hairline (CSS scroll timeline), a still firefly on
 Pro light, Retro light, Retro dark (chip frozen mid-glow). Idle main thread at 4x throttle, snapshot on screen:
 6.2% before, 8.6-9.1% after (inside the 7-9% range accepted earlier; back to baseline once the snapshot scrolls away).
 Found on the way: every chip re-popped on every state change (now only new ones animate).
+
+Motion audit (2026-09-30, owner: "make sure it isn't overwhelming"): counted running on-screen animations. Before:
+idle top = halo + 4 fireflies; mid-scroll = 5 sections revealing at once; one filter click = ~8 effects at once (chip
+pop/glow/fireflies, 5 KPI ticks, bars, 3 section fades, halo). Removed the reveal, the section fade, KPI ticks, the
+breathing halo, whole-card hover lift and row-wide sprite hops. After: idle top = 4 fireflies; mid-scroll = nothing;
+a click = the new chip + the bars. Guarded by the allowlist in the e2e motion check.
 
 ## Not yet tested (candidates for the next pass)
 
