@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 132 tests)
+### Automated: unit (`npm test`, 141 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -53,7 +53,7 @@ Cloud-session notes:
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 36 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 39 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -158,6 +158,11 @@ Second smoke + UX round (2026-09-29, evening; sonnet sweep with measurements, fi
   sections catching up, snapshot change line, hyphen-only Mega name breaks, quadrant corner labels
   (all in e2e). Screenshots reviewed with real network: 390 pro dark, 1440 retro light, quadrant.
 
+Spread explorer (2026-09-30): `lib/spreads.js` + `spCheck` unit-tested on real Rillaboom data; e2e: Rillaboom M-C
+(>= 3 rows, 6 numeric stats, strip, shift "NEW in M-C", no Smogon toggle), Incineroar M-B (Smogon toggle -> meta line
+with n battles), scanner SP check on an EVs:-style paste, no overflow at 390. Real-network screenshots reviewed
+(1440/390, pro-dark/retro-light). Rillaboom's top ranked spreads cover only 38% of its players (shown as such).
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
@@ -166,6 +171,7 @@ Second smoke + UX round (2026-09-29, evening; sonnet sweep with measurements, fi
 - Real screen readers (NVDA/VoiceOver) with the ECharts aria descriptions; real touch devices
   (tap tooltips, `[data-tip]`, Android back gesture on the drawer).
 - Browser zoom via the real zoom control (only DPR emulation was used).
-- Step 4 of the 2026-09-29 plan (SP spread explorer + scanner SP check) is parked unreviewed on branch
-  `wip/sp-spread-explorer`; nothing of it is tested.
+- **Flaky e2e**: "chart tooltips and [data-tip] tips stay inside the viewport on a phone" fails intermittently
+  (3 of 5 runs on a slow Windows box, predates the Spread explorer). Root-cause it (likely a timing wait, not a real
+  overflow) before trusting a red run.
 - Retro type sizes with the real VT323 font at 390 (the UX probe had fonts stubbed).
