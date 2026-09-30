@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 148 tests)
+### Automated: unit (`npm test`, 149 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -54,7 +54,11 @@ Cloud-session notes:
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 - `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 47 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 50 checks in `e2e/app.spec.js`)
+- Third batch (2026-09-30): Library Filter loads + scans the team against the whole field (team chip named "Player · Event",
+  "View scan" toast action); leaderboard search ("/" focuses, real usage rank kept, Escape clears, no-match state), Change
+  column present with a previous period and never "-0.0"; Change column absent for M-A, ladder and ranked with no NaN;
+  Copy link with the Clipboard API removed raises no uncaught error. Unit: `changeDir` (NEW/up/flat/down).
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -223,6 +227,10 @@ Owner calls built (2026-09-30): item shares one decimal (fmt.pct shows "<0.1%" f
 meta by country (screenshots 1440 pro-dark, retro-light M-B, 390 stacked cards; no overflow). Found: grid sections had
 min-width:auto, so a wide table grew the page instead of scrolling (fixed for every section). countrySplit on M-B
 (33k teams): 52 ms.
+
+Third batch review (2026-09-30, local Windows run, E2E_OFFLINE=1, --workers=2): 149 unit, 50 e2e all green (the phone
+tooltip check passed in the full run). Reviewed the cleanup edits (shared copyText, changeDir, usageRank Map,
+labelFor(chip, ctx.teamLabel), view.field, ctx.scan) and found no bugs; added the absent-column / no-clipboard check.
 
 ## Not yet tested (candidates for the next pass)
 
