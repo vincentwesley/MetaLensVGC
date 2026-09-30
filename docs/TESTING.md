@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 151 tests)
+### Automated: unit (`npm test`, 153 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -44,7 +44,8 @@ Cloud-session notes:
   min-n out of range, unknown/duplicate/empty chips, one-key cores).
 - `metaSpeed` source chain (sheets -> in-game ranked -> Smogon -> bounds).
 - `lib/scan.js` (scanner evidence: similar teams, matchups, archetype fallback, items +
-  item clause, teammate picks, weakest link) on synthetic fixtures.
+  item clause, teammate picks, weakest link) on synthetic fixtures; never-blank rule: small samples come back
+  flagged `low`/`relaxed` (weakest link ordering, `clear` false on low rows, sharing-2 fallback, truly empty).
 - Chart defaults (`withChartDefaults`: confine, wrapping, aria) and `clampTip` positioning.
 - WCAG contrast of `--ink`/`--ink-2`/`--muted` on every surface, text on `--accent`, and `--accent-2`
   links, in all four skin/theme combos (reads app.css).
@@ -54,7 +55,7 @@ Cloud-session notes:
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 - `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 51 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 52 checks in `e2e/app.spec.js`)
 - Third batch (2026-09-30): Library Filter loads + scans the team against the whole field (team chip named "Player · Event",
   "View scan" toast action); leaderboard search ("/" focuses, real usage rank kept, Escape clears, no-match state), Change
   column present with a previous period and never "-0.0"; Change column absent for M-A, ladder and ranked with no NaN;
@@ -232,6 +233,12 @@ min-width:auto, so a wide table grew the page instead of scrolling (fixed for ev
 Third batch review (2026-09-30, local Windows run, E2E_OFFLINE=1, --workers=2): 151 unit, 51 e2e all green (the phone
 tooltip check passed in the full run). Reviewed the cleanup edits (shared copyText, changeDir, usageRank Map,
 labelFor(chip, ctx.teamLabel), view.field, ctx.scan) and found no bugs; added the absent-column / no-clipboard check.
+
+Scanner never-blank fix (2026-09-30): Weakest link used to say "Insufficient data" when a side had < 100 games. Repro on M-C
+real data: `#tiers=regional&place=topcut` (36 teams) with Rillaboom/Incineroar/Sneasler/Salamence/Kingambit/Basculegion gave 0
+rows (also place=winner: 67 teams). Now every member with games on both sides shows, flagged "low sample", plus the
+"includes n < 100" meta tag; same rule for matchups, item check and teammate picks. E2E: default + that narrow view, no
+"Insufficient data" in any scanner card. Screenshots (1440/390, pro-dark) reviewed.
 
 ## Not yet tested (candidates for the next pass)
 

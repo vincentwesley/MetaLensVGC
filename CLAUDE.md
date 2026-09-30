@@ -66,6 +66,11 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
 - `aggregate.js#countrySplit(teams)` (one pass; `COUNTRY_LIMITS`: top 3, over 2, minMon 5, minLift 1.25) feeds the country section.
 - `scan.js`: the Team Scanner's evidence (`scanTeam` → archetype, matchups vs Pokémon/archetypes from real
   match results of "teams like yours", item check with item clause, teammate picks, weakest link; `spCheck` compares a pasted SP line to ranked spreads). Thresholds in `LIMITS`, `RARE_NATURE`.
+  **Never blank after a scan**: `LIMITS` are "solid read" lines, not gates. Below them the real smaller samples come back
+  flagged (`low` per row, `relaxed` per card, rendered as a "low sample" tag + dimmed row + `ctx.meta(..., { relaxed })`);
+  `weakestLink` lists every member with a game on both sides and retries at "shares 2" (`threshold`) if nothing has one at 3.
+  An empty state only when nothing exists, titled with what is missing ("No tournament teams in view share 2+ of your other
+  Pokémon"), never "Insufficient data". `spCheck` kind / item status `none` = no ranked spreads / no recorded item exist.
 
 ### State (`public/js/state.js`)
 ```js

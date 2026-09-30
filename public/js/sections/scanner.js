@@ -266,7 +266,7 @@ export default {
       const theme = ctx.chartTheme();
       const { card: wCard, body: wBody } = sectionCard('Weaknesses vs. the current meta');
       if (!freq.some((f) => f.freq > 0)) {
-        emptyState(wBody, 'Insufficient data — no damaging moves recorded in the current view');
+        emptyState(wBody, 'No damaging moves recorded in the current view');
       } else {
         const legend = elm('div', 'scn-legend');
         for (const m of [0, 0.25, 0.5, 1, 2, 4]) {
@@ -410,11 +410,11 @@ export default {
       const pct = (x) => ctx.fmt.pct(x, 0);
       const ciText = (v) => `${(v.ci[0] * 100).toFixed(0)}–${(v.ci[1] * 100).toFixed(0)}%`;
       const src = 'Tournament teams and match results';
-      const withMeta = (title, n, unit) => {
+      const withMeta = (title, n, unit, relaxed) => {
         const c = sectionCard(title);
         const m = elm('span');
         c.card.querySelector('.card__head').appendChild(m);
-        ctx.meta(m, { source: src, n, unit });
+        ctx.meta(m, { source: src, n, unit, relaxed });
         return c;
       };
       const chipBtn = (kind, value, label, cls) => {
@@ -432,6 +432,7 @@ export default {
       };
       const tag = (call, text) => elm('span', `scn-tag scn-tag--${call}`, text || CALL_LABEL[call]);
       const record = (v) => `${v.w}-${v.l}`;
+      const lowTag = () => elm('span', 'scn-tag scn-tag--unclear', 'low sample');
 
       // 1. archetype
       {
@@ -450,25 +451,27 @@ export default {
       const nSim = r.sim ? r.sim.teams.length : 0;
       const gamesN = r.games ? r.games.w + r.games.l : 0;
       {
-        const { card, body: b } = withMeta('Matchups: Pokémon', nSim, 'teams like yours');
-        if (!r.sim) emptyState(b, `Insufficient data — need at least ${LIMITS.simFallback} different Pokémon`);
+        const { card, body: b } = withMeta('Matchups: Pokémon', nSim, 'teams like yours', r.species.relaxed || (gamesN > 0 && gamesN < LIMITS.totalGames) ? LIMITS.matchGames : 0);
+        if (!r.sim) emptyState(b, `Needs at least ${LIMITS.simFallback} different Pokémon`);
         else {
-          const th = elm('div', 'ddv-note', `Teams like yours: tournament teams sharing at least ${r.sim.threshold} of your ${new Set(mons.map((m) => m.k)).size} Pokémon${r.sim.fellBack ? ` (fewer than ${LIMITS.simTeams} teams share ${LIMITS.simMin}, so the threshold was lowered to ${LIMITS.simFallback})` : ''}. ${nSim.toLocaleString('en-US')} teams matched, ${gamesN.toLocaleString('en-US')} games with a result${r.games ? ` (${r.games.w}-${r.games.l}, ${pct(r.games.w / gamesN)} overall)` : ''}. Mirror games are excluded.`);
+          const th = elm('div', 'ddv-note', `Teams like yours: tournament teams sharing at least ${r.sim.threshold} of your ${new Set(mons.map((m) => m.k)).size} Pokémon${r.sim.fellBack ? ` (fewer than ${LIMITS.simTeams} teams share ${LIMITS.simMin}, so the threshold was lowered to ${LIMITS.simFallback})` : ''}. ${nSim.toLocaleString('en-US')} teams matched, ${gamesN.toLocaleString('en-US')} games with a result${r.games && gamesN ? ` (${r.games.w}-${r.games.l}, ${pct(r.games.w / gamesN)} overall)` : ''}. Mirror games are excluded.`);
           b.appendChild(th);
-          if (gamesN < LIMITS.totalGames || !r.species.rows.length) {
-            emptyState(b, `Insufficient data — teams like yours have ${gamesN} games (need ${LIMITS.totalGames}, and ${LIMITS.matchGames}+ per opponent Pokémon)`);
+          if (!r.species.rows.length) {
+            emptyState(b, nSim ? 'No match results for teams like yours in the current view' : `No tournament teams in view share ${r.sim.threshold}+ of your Pokémon`);
           } else {
-            b.appendChild(elm('div', 'ddv-note', `Win rate of teams like yours against opponents that bring the Pokémon, top-meta Pokémon with ${LIMITS.matchGames}+ games. Best = highest 95% Wilson lower bound, worst = lowest upper bound. "Favourable/unfavourable" only when the interval excludes 50%.`));
+            if (r.species.relaxed || gamesN < LIMITS.totalGames) b.appendChild(elm('div', 'ddv-note scn-note', `Teams like yours have ${gamesN} games in this view (${LIMITS.totalGames}+ for a solid read, ${LIMITS.matchGames}+ per opponent Pokémon); smaller samples are shown and flagged. Read with care.`));
+            b.appendChild(elm('div', 'ddv-note', `Win rate of teams like yours against opponents that bring the Pokémon. Best = highest 95% Wilson lower bound, worst = lowest upper bound. "Favourable/unfavourable" only when the interval excludes 50%.`));
             const cols = elm('div', 'scn-cols');
             for (const [title, rows] of [['Best matchups', r.species.best], ['Worst matchups', r.species.worst]]) {
               const col = elm('div', 'scn-col');
               col.appendChild(elm('h4', 'scn-sub', title));
-              if (!rows.length) emptyState(col, 'Insufficient data');
+              if (!rows.length) emptyState(col, 'No other opponent Pokémon with a game');
               for (const v of rows) {
-                const row = elm('div', 'scn-mrow');
+                const row = elm('div', `scn-mrow${v.low ? ' scn-low' : ''}`);
                 row.appendChild(monLabel(v.key));
                 const st = elm('span', 'scn-mrow__stat');
                 st.append(elm('strong', null, pct(v.winPct)), document.createTextNode(` ${record(v)} · n=${v.n} · CI ${ciText(v)} `), tag(v.call));
+                if (v.low) st.append(' ', lowTag());
                 row.appendChild(st);
                 col.appendChild(row);
               }
@@ -483,12 +486,13 @@ export default {
       // 3. archetype matchups
       {
         const am = r.archMatchups;
-        const { card, body: b } = withMeta('Matchups: archetypes', am.source === 'similar' ? nSim : base.length, am.source === 'similar' ? 'teams like yours' : 'teams in view');
-        if (!am.rows.length) emptyState(b, `Insufficient data — no opponent archetype has ${LIMITS.matchGames}+ games`);
+        const { card, body: b } = withMeta('Matchups: archetypes', am.source === 'similar' ? nSim : base.length, am.source === 'similar' ? 'teams like yours' : 'teams in view', am.relaxed ? LIMITS.matchGames : 0);
+        if (!am.rows.length) emptyState(b, 'No match results against any opponent archetype in the current view');
         else {
+          if (am.relaxed) b.appendChild(elm('div', 'ddv-note scn-note', `No opponent archetype reaches ${LIMITS.matchGames}+ games with these filters; smaller samples are shown and flagged. Read with care.`));
           b.appendChild(elm('div', 'ddv-note', am.source === 'similar'
-            ? `Teams like yours (see above) against each opponent's primary archetype, ${LIMITS.matchGames}+ games per row.`
-            : `Teams like yours are too few for this, so this is the ${r.arch.label} row of the archetype matrix over every team in view (not your exact team), ${LIMITS.matchGames}+ games per row.`));
+            ? `Teams like yours (see above) against each opponent's primary archetype, rows under ${LIMITS.matchGames} games flagged.`
+            : `Teams like yours are too few for this, so this is the ${r.arch.label} row of the archetype matrix over every team in view (not your exact team), rows under ${LIMITS.matchGames} games flagged.`));
           const wrap = elm('div', 'table-wrap');
           const table = elm('table', 'data-table scn-arch-table');
           const th = elm('thead');
@@ -498,13 +502,14 @@ export default {
           table.appendChild(th);
           const tb = elm('tbody');
           for (const v of am.rows) {
-            const tr = elm('tr', `scn-row--${v.call}`);
+            const tr = elm('tr', `scn-row--${v.call}${v.low ? ' scn-low' : ''}`);
             tr.appendChild(elm('td', null, v.label));
             tr.appendChild(elm('td', 'num', pct(v.winPct)));
             tr.appendChild(elm('td', 'num', record(v)));
             tr.appendChild(elm('td', 'num', String(v.n)));
             tr.appendChild(elm('td', 'num', ciText(v)));
             const td = elm('td'); td.appendChild(tag(v.call));
+            if (v.low) td.append(' ', lowTag());
             tr.appendChild(td);
             tb.appendChild(tr);
           }
@@ -517,19 +522,19 @@ export default {
 
       // 4. items
       {
-        const { card, body: b } = withMeta('Item check', base.length, 'teams in view');
+        const { card, body: b } = withMeta('Item check', base.length, 'teams in view', r.items.mons.some((m) => m.low) ? LIMITS.itemSlots : 0);
         const it = r.items;
         for (const d of it.duplicates) b.appendChild(elm('div', 'scn-warn', `Item clause: ${d.item} is held by ${d.keys.join(' and ')} — no two Pokémon may hold the same item.`));
-        b.appendChild(elm('div', 'ddv-note', `Your item vs. the three most common items for that species in the current view (${LIMITS.itemSlots}+ appearances needed). Win % is the tournament record of teams running that species with that item (${LIMITS.itemGames}+ games).`));
+        b.appendChild(elm('div', 'ddv-note', `Your item vs. the three most common items for that species in the current view (species under ${LIMITS.itemSlots} appearances are flagged). Win % is the tournament record of teams running that species with that item (under ${LIMITS.itemGames} games flagged).`));
         const list = elm('div', 'scn-items');
         for (const m of it.mons) {
           const row = elm('div', 'scn-item');
           row.appendChild(monLabel(m.key));
           const info = elm('div', 'scn-item__info');
           const cur = m.item || 'no item';
-          const winTxt = (x) => (x.winPct == null ? `win % needs ${LIMITS.itemGames}+ games (has ${x.games})` : `${pct(x.winPct)} over ${x.games} games`);
+          const winTxt = (x) => (x.winPct == null ? 'no team games' : `${pct(x.winPct)} over ${x.games} games${x.low ? ' (low sample)' : ''}`);
           if (m.status === 'fixed') info.appendChild(elm('span', 'ddv-note', `${cur} — Mega Stone, fixed`));
-          else if (m.status === 'insufficient') info.appendChild(elm('span', 'ddv-note', `${cur} — Insufficient data (${m.slotN} appearances)`));
+          else if (m.status === 'none') info.appendChild(elm('span', 'ddv-note', `${cur} — no item recorded for ${m.key} in the current view`));
           else {
             const head = elm('span', null);
             head.appendChild(document.createTextNode(`${cur}: `));
@@ -537,6 +542,7 @@ export default {
               ? `among the top 3 (${pct(m.current.pct)} of ${m.slotN} ${m.key})`
               : m.item ? `${m.current.n ? `${pct(m.current.pct)} of ${m.slotN} ${m.key} (${m.current.n} teams), not in the top 3` : `not held by any of ${m.slotN} ${m.key} in view`}` : 'no item listed'));
             info.appendChild(head);
+            if (m.low) info.appendChild(elm('span', 'ddv-note scn-low', `low sample: only ${m.slotN} ${m.key} in view`));
             if (m.current && m.current.n) info.appendChild(elm('span', 'ddv-note', `Yours: ${winTxt(m.current)}`));
             if (m.status === 'suggest') {
               const sug = elm('div', 'scn-sug');
@@ -544,7 +550,7 @@ export default {
                 const line = elm('span', `scn-sug__item${t.blockedBy ? ' scn-sug__item--blocked' : ''}`);
                 line.appendChild(chipBtn('item', t.name));
                 line.appendChild(document.createTextNode(` ${pct(t.pct)} of ${m.key}`));
-                line.appendChild(document.createTextNode(t.winPct == null ? ' · win % Insufficient data' : ` · ${pct(t.winPct)} over ${t.games} games`));
+                line.appendChild(document.createTextNode(` · ${t.winPct == null ? 'no team games' : `${pct(t.winPct)} over ${t.games} games${t.low ? ' (low sample)' : ''}`}`));
                 if (t.blockedBy) line.appendChild(document.createTextNode(` · already held by ${t.blockedBy}`));
                 sug.appendChild(line);
               }
@@ -561,17 +567,20 @@ export default {
       // 5a. teammate picks
       {
         const pk = r.picks;
-        const { card, body: b } = withMeta('Common teammate picks', pk ? pk.poolTeams : 0, 'teams sharing 3+ of yours');
+        const { card, body: b } = withMeta('Common teammate picks', pk ? pk.poolTeams : 0, 'teams sharing 3+ of yours', pk && (pk.relaxed || pk.poolTeams < LIMITS.simTeams) ? LIMITS.pickTeams : 0);
         const weakTxt = r.weak.length ? r.weak.map((w) => `${w.type} (${w.n} of your Pokémon)`).join(', ') : null;
-        if (!pk || pk.poolTeams < LIMITS.simTeams || !pk.picks.length) emptyState(b, `Insufficient data — need ${LIMITS.simTeams}+ teams sharing 3 of your Pokémon and picks on ${LIMITS.pickTeams}+ of them`);
+        if (!pk) emptyState(b, `Needs at least ${LIMITS.simFallback} different Pokémon`);
+        else if (!pk.picks.length) emptyState(b, `No tournament teams in view share ${LIMITS.simFallback}+ of your Pokémon`);
         else {
+          if (pk.relaxed || pk.poolTeams < LIMITS.simTeams) b.appendChild(elm('div', 'ddv-note scn-note', `Only ${pk.poolTeams} teams in view share ${LIMITS.simFallback}+ of your Pokémon${pk.relaxed ? `, and no pick is on ${LIMITS.pickTeams}+ of them` : ''}; smaller samples are shown and flagged. Read with care.`));
           b.appendChild(elm('div', 'ddv-note', `Among ${pk.poolTeams.toLocaleString('en-US')} teams sharing at least 3 of your Pokémon (record ${pk.poolWinPct == null ? '—' : pct(pk.poolWinPct)} over ${pk.poolGames} games), the other Pokémon they run most. Win % is those teams' tournament record. Picks that resist a shared weakness${weakTxt ? ` (${weakTxt})` : ' (your team has none shared by 3+ members)'} or the STAB types of your worst matchups are listed first and tagged.`));
           const list = elm('div', 'scn-items');
           for (const p of pk.picks) {
-            const row = elm('div', 'scn-item');
+            const row = elm('div', `scn-item${p.low ? ' scn-low' : ''}`);
             row.appendChild(monLabel(p.key));
             const info = elm('div', 'scn-item__info');
-            info.appendChild(elm('span', null, `On ${pct(p.share)} of those teams (${p.n} teams) · ${p.winPct == null ? 'win % Insufficient data' : `${pct(p.winPct)} over ${p.games} games (CI ${ciText(p)})`}`));
+            info.appendChild(elm('span', null, `On ${pct(p.share)} of those teams (${p.n} teams) · ${p.winPct == null ? 'no team games' : `${pct(p.winPct)} over ${p.games} games (CI ${ciText(p)})${p.lowWin ? ' (low sample)' : ''}`}`));
+            if (p.low) info.appendChild(lowTag());
             const tags = elm('span', 'scn-tags');
             if (p.resists.length) tags.appendChild(elm('span', 'scn-tag scn-tag--good', `resists ${p.resists.join(', ')}`));
             if (p.answers.length) tags.appendChild(elm('span', 'scn-tag scn-tag--good', `resists the STABs of ${p.answers.join(', ')}`));
@@ -586,11 +595,13 @@ export default {
 
       // 5b. weakest link
       {
-        const rows = r.link.rows;
-        const { card, body: b } = withMeta('Weakest link', base.length, 'teams in view');
-        if (!rows.length) emptyState(b, `Insufficient data — needs ${LIMITS.linkGames}+ games both with and without a member among teams sharing 3 of your other Pokémon`);
+        const { rows, relaxed, threshold } = r.link;
+        const { card, body: b } = withMeta('Weakest link', base.length, 'teams in view', relaxed ? LIMITS.linkGames : 0);
+        if (new Set(mons.map((m) => m.k)).size < 4) emptyState(b, 'Needs at least 4 different Pokémon');
+        else if (!rows.length) emptyState(b, `No tournament teams in view share ${LIMITS.simFallback - 1}+ of your other Pokémon`);
         else {
-          b.appendChild(elm('div', 'ddv-note', `For each member: tournament record of teams that share 3+ of your OTHER Pokémon and run it, vs. those that do not (${LIMITS.linkGames}+ games each side). Correlation from real teams, not proof the Pokémon is the cause. "Clear" = the 95% intervals do not overlap.`));
+          if (relaxed) b.appendChild(elm('div', 'ddv-note scn-note', `No member reaches ${LIMITS.linkGames}+ games on both sides with these filters; smaller samples shown — read with care.`));
+          b.appendChild(elm('div', 'ddv-note', `For each member: tournament record of teams that share ${threshold}+ of your OTHER Pokémon and run it, vs. those that do not${threshold < LIMITS.simFallback ? ` (no member has games on both sides at ${LIMITS.simFallback}+, so the threshold was lowered to ${threshold})` : ''}. Rows under ${LIMITS.linkGames} games on a side are flagged. Correlation from real teams, not proof the Pokémon is the cause. "Clear" = the 95% intervals do not overlap.`));
           const wrap = elm('div', 'table-wrap');
           const table = elm('table', 'data-table scn-arch-table');
           const th = elm('thead');
@@ -600,10 +611,12 @@ export default {
           table.appendChild(th);
           const tb = elm('tbody');
           for (const v of rows) {
-            const tr = elm('tr', v.clear && v.diff > 0 ? 'scn-row--bad' : v.clear ? 'scn-row--good' : '');
-            tr.appendChild(elm('td', null, v.key));
-            tr.appendChild(elm('td', 'num', `${pct(v.with.winPct)} (${v.with.w + v.with.l} g)`));
-            tr.appendChild(elm('td', 'num', `${pct(v.without.winPct)} (${v.without.w + v.without.l} g)`));
+            const tr = elm('tr', `${v.clear && v.diff > 0 ? 'scn-row--bad' : v.clear ? 'scn-row--good' : ''}${v.low ? ' scn-low' : ''}`.trim());
+            const tdName = elm('td', null, v.key);
+            if (v.low) tdName.append(' ', lowTag());
+            tr.appendChild(tdName);
+            tr.appendChild(elm('td', 'num', `${pct(v.with.winPct)} ${record(v.with)} (${v.with.w + v.with.l} g)`));
+            tr.appendChild(elm('td', 'num', `${pct(v.without.winPct)} ${record(v.without)} (${v.without.w + v.without.l} g)`));
             tr.appendChild(elm('td', 'num', `${v.diff > 0 ? '+' : ''}${(v.diff * 100).toFixed(0)} pts${v.clear ? '' : ' (unclear)'}`));
             const td = elm('td');
             if (v.replacement) {
@@ -639,7 +652,7 @@ export default {
           const row = elm('div', 'scn-item');
           const info = elm('div', 'scn-item__info');
           const line = (text, cls) => info.appendChild(elm('div', cls || 'ddv-note', text));
-          if (c.kind === 'insufficient') line(`Insufficient data: no in-game ranked spreads for ${key}${season ? ` in ${season.season}` : ''}.`);
+          if (c.kind === 'none') line(`No in-game ranked spreads for ${key}${season ? ` in ${season.season}` : ''}.`);
           else if (c.kind === 'assumed') line('no SP line — assumed most common spread', 'ddv-note scn-muted');
           else if (c.kind === 'exact') line(`Common spread (#${c.rank}, ${pct(c.row.share)} of ranked spreads): ${c.row.sp.join('/')}`, 'scn-ok');
           else {

@@ -307,3 +307,4 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
   }
   .cty-table .usage-bar { min-width: 0; }
 }
+.scn-low { opacity: .75; }
