@@ -99,7 +99,8 @@ Cloud-session notes:
 ### Verified once, by hand or ad-hoc script (not in the suite)
 - The weekly refresh Action end to end (run 36573240204: failure alert opened with correct step and log;
   run 36573679607: real refresh succeeded in 45.5 min, data commit rebased cleanly over concurrent code pushes,
-  issue commented and closed).
+  issue commented and closed; run 36710957061 on 2026-09-30: success in 17.5 min with the restored HTTP cache,
+  data commit only in public/data). The cron trigger itself has not fired yet (first: 2026-10-05).
 - Performance profile (CPU profiler, 1440×900): longest main-thread block on first load
   1.2 s → 0.10 s, M-B switch 2.2 s → 0.22 s, filter change 0.6 s → 0.08 s. The previous
   regulation's file loads after first paint.
