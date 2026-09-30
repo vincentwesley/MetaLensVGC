@@ -855,3 +855,14 @@ test('fireflies: the meta leader glows while on screen; only a newly added chip 
   await waitForAllSections(page);
   await expect(page.locator('#chips .chip--new')).toHaveCount(0); // a non-chip change animates nothing
 });
+
+test('one sprite scale (24/32/48/96) everywhere; item shares carry one decimal, so no real item reads 0%', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sizes = await page.evaluate(() => [...new Set([...document.querySelectorAll('main img.sprite, #chips img.sprite')].map((i) => i.getBoundingClientRect().width))]);
+  expect(sizes.every((w) => [24, 32, 48, 96].includes(w)), `sprite widths: ${sizes}`).toBe(true);
+  const shares = await page.locator('[data-section="items"] .item-link__pct').allTextContents();
+  expect(shares.length).toBeGreaterThan(10);
+  for (const s of shares) expect(s).toMatch(/^\d+\.\d%$/);
+  expect(shares).not.toContain('0.0%');
+});

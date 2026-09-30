@@ -357,7 +357,7 @@ html { scroll-padding-top: calc(var(--header-real, var(--header-h)) + var(--stic
   position: relative;
 }
 [data-skin="pro"] .chip { border: 1px solid var(--border); border-radius: 3px; }
-.chip img.sprite { width: 20px; height: 20px; image-rendering: pixelated; }
+.chip img.sprite { width: 24px; height: 24px; margin: -2px 0; image-rendering: pixelated; }
 .chip--neg { background: color-mix(in srgb, var(--status-critical) 18%, var(--surface-2)); }
 .chip--neg .chip__label::before { content: "NOT "; color: var(--status-critical); font-weight: 700; }
 .chip__swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }

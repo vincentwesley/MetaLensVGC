@@ -3,7 +3,12 @@
 
 export const fmt = {
   n(x) { return x == null ? '—' : Number(x).toLocaleString('en-US'); },
-  pct(x, digits = 1) { return x == null ? '—' : `${(x * 100).toFixed(digits)}%`; },
+  // A real (nonzero) share never reads as 0: it shows as "<0.1%" instead.
+  pct(x, digits = 1) {
+    if (x == null) return '—';
+    const v = (x * 100).toFixed(digits);
+    return x > 0 && Number(v) === 0 ? `<${(10 ** -digits).toFixed(digits)}%` : `${v}%`;
+  },
   signedPct(x, digits = 1) {
     if (x == null) return '—';
     const v = (x * 100).toFixed(digits);

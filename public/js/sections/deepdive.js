@@ -323,7 +323,7 @@ export default {
       // --- header: sprite, types, base stats, usage %, win % ---
       const head = elm('div', 'ddv-head');
       const spriteWrap = elm('div', 'ddv-sprite-lg');
-      spriteWrap.appendChild(ctx.sprite(key, { size: 96, animated: view.state.anim }));
+      spriteWrap.appendChild(ctx.sprite(key, { size: 'lg', animated: view.state.anim }));
       const info = elm('div', 'ddv-info');
       info.appendChild(elm('h3', null, key));
       const types = elm('div', 'ddv-types');
@@ -429,7 +429,7 @@ export default {
         for (const t of teammates.slice(0, 12)) {
           const cell = elm('button', 'sprite-cell');
           cell.type = 'button';
-          cell.appendChild(ctx.sprite(t.name, { size: 32, animated: view.state.anim }));
+          cell.appendChild(ctx.sprite(t.name, { size: 'sm', animated: view.state.anim }));
           cell.appendChild(elm('span', null, t.name));
           cell.appendChild(elm('span', 'ddv-note', ctx.fmt.pct(t.pct)));
           cell.addEventListener('click', (e) => ctx.chip('species', t.name, e));
@@ -462,7 +462,7 @@ export default {
           mon.teammates.forEach((t, i) => {
             const cell = elm('button', 'sprite-cell');
             cell.type = 'button';
-            cell.appendChild(ctx.sprite(t, { size: 32, animated: view.state.anim }));
+            cell.appendChild(ctx.sprite(t, { size: 'sm', animated: view.state.anim }));
             cell.appendChild(elm('span', null, t));
             cell.appendChild(elm('span', 'ddv-note', `#${i + 1}`));
             cell.addEventListener('click', (e) => ctx.chip('species', t, e));

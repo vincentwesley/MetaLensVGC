@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { withChartDefaults } from '../public/js/ui/echarts-theme.js';
 import { clampTip } from '../public/js/ui/tip.js';
 import { pickCurrent, isDismissed, dismiss } from '../public/js/ui/secnav.js';
+import { fmt } from '../public/js/ui/fmt.js';
 import { changeText } from '../public/js/lib/aggregate.js';
 
 test('withChartDefaults: every tooltip is confined and wraps, section options win', () => {
@@ -64,4 +65,12 @@ test('changeText: NEW, or a signed point change with an arrow', () => {
   assert.equal(changeText({ isNew: false, pts: 14.94 }), '▲ +14.9pt');
   assert.equal(changeText({ isNew: false, pts: -14.6 }), '▼ -14.6pt');
   assert.equal(changeText({ isNew: false, pts: 0 }), '— 0.0pt');
+});
+
+test('fmt.pct: one decimal by default; a real share never reads 0', () => {
+  assert.equal(fmt.pct(0.6694), '66.9%');
+  assert.equal(fmt.pct(0.0002), '<0.1%');
+  assert.equal(fmt.pct(0.004, 0), '<1%');
+  assert.equal(fmt.pct(0), '0.0%');
+  assert.equal(fmt.pct(null), '—');
 });

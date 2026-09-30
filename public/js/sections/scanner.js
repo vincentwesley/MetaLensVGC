@@ -264,7 +264,7 @@ export default {
         const known = !!(dex.species[m.k] || dex.species[m.s]);
         if (!known) anyUnknown = true;
         const cell = elm('div', `scn-mon${known ? '' : ' scn-mon--unknown'}`);
-        cell.appendChild(ctx.sprite(m.k, { size: 40, animated: view.state.anim }));
+        cell.appendChild(ctx.sprite(m.k, { size: 'md', animated: view.state.anim }));
         cell.appendChild(elm('span', 'scn-mon__name', m.k));
         if (m.item) cell.appendChild(elm('span', 'scn-mon__item', m.item));
         if (!known) cell.appendChild(elm('span', 'scn-mon__flag', 'Unknown species'));
@@ -350,7 +350,7 @@ export default {
         const list = elm('div', 'scn-threats');
         for (const th of threats) {
           const row = elm('div', 'scn-threat');
-          row.appendChild(ctx.sprite(th.key, { size: 32, animated: view.state.anim }));
+          row.appendChild(ctx.sprite(th.key, { size: 'sm', animated: view.state.anim }));
           const info = elm('div', 'scn-threat__info');
           info.appendChild(elm('span', 'scn-threat__name', `${th.key} (${ctx.fmt.pct(th.pct)} usage)`));
           info.appendChild(elm('span', 'scn-threat__reason', th.reasons.join(' · ')));
@@ -444,7 +444,7 @@ export default {
         b.addEventListener('click', (e) => ctx.chip(kind, value, e));
         return b;
       };
-      const monLabel = (key, size = 28) => {
+      const monLabel = (key, size = 'sm') => {
         const w = elm('span', 'scn-ml');
         w.appendChild(ctx.sprite(key, { size, animated: view.state.anim }));
         w.appendChild(chipBtn('species', key));
@@ -673,7 +673,7 @@ export default {
             }
           }
           if (c.rarity) line(`Nature ${c.rarity.nature}: ${c.rarity.share == null ? 'not among the reported ranked natures' : `${pct(c.rarity.share)} of ranked players`} (under ${pct(RARE_NATURE)}).`, 'scn-note');
-          row.append(monLabel(key, 24), info);
+          row.append(monLabel(key, 'xs'), info);
           list.appendChild(row);
         }
         b.appendChild(list);

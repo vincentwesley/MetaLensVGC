@@ -330,7 +330,7 @@ function drawerButton(ctx, key, anim) {
   btn.className = 'sprite-btn';
   btn.title = `Details: ${key}`;
   btn.setAttribute('aria-label', `Open details for ${key}`);
-  btn.appendChild(ctx.sprite(key, { size: 36, animated: anim }));
+  btn.appendChild(ctx.sprite(key, { size: 'sm', animated: anim }));
   btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.openDrawer(key); });
   btn.addEventListener('keydown', (e) => e.stopPropagation());
   return btn;
@@ -349,7 +349,7 @@ function itemCell(ctx, top) {
   name.textContent = top.name;
   const pct = document.createElement('span');
   pct.className = 'item-link__pct';
-  pct.textContent = ctx.fmt.pct(top.pct, 0);
+  pct.textContent = ctx.fmt.pct(top.pct);
   btn.append(name, pct);
   btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.chip('item', top.name, e); });
   btn.addEventListener('keydown', (e) => e.stopPropagation());
