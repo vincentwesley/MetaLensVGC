@@ -4,6 +4,7 @@
 import { usage, atMinN, kpis, changeVsPrev, changeText, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
 import { rankedSource, clickHint } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
+import { fireflies, liveWhenVisible } from '../ui/motion.js';
 
 function emptyState(el, title, detail) {
   el.innerHTML = '';
@@ -116,6 +117,7 @@ export default {
     el.innerHTML = '';
     const card = document.createElement('div');
     card.className = 'card snapshot-card';
+    liveWhenVisible(card);
     const head = document.createElement('div');
     head.className = 'card__head';
     const h = document.createElement('h3');
@@ -255,6 +257,12 @@ export default {
           now.set(label, value);
         }
         lastKpis = now;
+        // The meta leader (first card, by usage or rank) glows, with a few fireflies around it.
+        const lead = hero.querySelector('.snapshot__mon');
+        if (lead) {
+          lead.classList.add('snapshot__mon--lead');
+          lead.appendChild(fireflies([[-4, 22], [104, 34], [14, 96], [92, -6]]));
+        }
         // render() re-prepends the hero and can wipe the body; keep one hint on top.
         if (body.firstChild !== hint) body.prepend(hint);
         hint.hidden = !body.querySelector('.snapshot__mon');

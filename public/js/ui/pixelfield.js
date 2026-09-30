@@ -11,6 +11,7 @@ import {
   placeItems, itemState, blobs, blobPos, blobRadius, bayer, blobEdge,
   TRAIL_STEP, TRAIL_LIFE, TRAIL_MAX, trailAlpha,
 } from '../lib/pixelfield-core.js';
+import { liveWhenVisible } from './motion.js';
 
 const CLICK_LIFE = 0.45;
 // Weak devices (<= 4 cores, or touch-first phones) get a slower loop.
@@ -18,16 +19,9 @@ const WEAK = (navigator.hardwareConcurrency || 8) <= 4 || matchMedia('(pointer: 
 const FRAME_MS = 1000 / (WEAK ? 6 : FPS);
 const BLOB_STEP = WEAK ? 0.5 : 0.25; // seconds between blob repaints
 
-// The Credits card's CSS animations only run while it is on screen.
-function watchCredits() {
-  const card = document.querySelector('.creator');
-  if (!card) return;
-  if (!window.IntersectionObserver) { card.classList.add('is-live'); return; }
-  new IntersectionObserver(([e]) => card.classList.toggle('is-live', e.isIntersecting)).observe(card);
-}
 
 export function installPixelField() {
-  watchCredits();
+  liveWhenVisible(document.querySelector('.creator')); // Credits animations run only on screen
   const root = document.documentElement;
   const region = document.createElement('div');
   region.className = 'fx-region';
