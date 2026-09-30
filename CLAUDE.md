@@ -182,12 +182,14 @@ Background: pixel field canvas.
   timer loop (10 fps, 6 on weak devices), not rAF. Status colours use `--up/--down/--warn`, pills `--pill-*`.
 - **UI chrome** also holds the section jump nav (`ui/secnav.js`, inside `.stickybar`) and the first-visit tips strip
   (`metalens.howtoDismissed`). Sections catching up carry `aria-busy`.
-- **Motion** (`ui/motion.js` + the "motion" block at the end of app.css): opacity/transform only, content is in the DOM
-  before anything animates, all of it off under reduced motion. Reveal-on-scroll moves a section's *children*, never
-  the section (scroll targets and observers use its box). `settle()` fades an on-screen section after a redraw (Web
-  Animations, no forced reflow); bar fills `bar-grow` on (re)draw (first 30 leaderboard rows only); snapshot KPIs whose
-  value changed get `.kpi--changed`; skin/theme go through `crossfade()` (View Transitions). No count-up numbers (the
-  in-between values would be invented) and no exit animations that hold back a render.
+- **Motion budget** (owner: "not overwhelming"; `ui/motion.js` + the "motion" / "fireflies" blocks of app.css):
+  opacity/transform only, content in the DOM before anything animates, all off under reduced motion. One signal per
+  action: a filter click moves only the new chip (pop + glow + fireflies) and the bars (`bar-grow`, first 30 leaderboard
+  rows); idle, only the snapshot leader's 4 fireflies move (plus the background field); scrolling moves nothing.
+  The e2e "motion" check fails on any other running animation after a click (allowlist). Removed on purpose
+  (2026-09-30): section reveal on scroll, section fade after a redraw, KPI ticks, the leader's breathing halo, hover
+  lift on whole cards, sprite hop on row hover (only the drawer-opening sprite hops). Also: drawer eases open and
+  slides out; skin/theme go through `crossfade()`. No count-up numbers, no exit animations that hold back a render.
 - **Fireflies** are the page's one decorative accent: Credits, the snapshot's leader card (`fireflies()` +
   `liveWhenVisible()` in ui/motion.js; loops run only while `.is-live`), a one-shot glow on a newly added chip, and a
   still dot on empty states. Colours via `--ff-core/--ff-glow`. Keep them there; don't scatter glows across cards.

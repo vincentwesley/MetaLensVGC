@@ -43,7 +43,7 @@
   --ff-glow: 0 0 4px 1px #b8f06a, 0 0 12px 4px color-mix(in srgb, #5fd07a 70%, transparent), 0 0 26px 8px color-mix(in srgb, #3fae6a 35%, transparent);
   /* motion block (end of file): entrances decelerate, exits accelerate and are shorter */
   --ease-out: cubic-bezier(.16,1,.3,1); --ease-in: cubic-bezier(.4,0,1,1);
-  --dur-open: 320ms; --dur-close: 180ms; --dur-reveal: 420ms;
+  --dur-open: 320ms; --dur-close: 180ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -413,10 +413,10 @@ main.grid .section.span-4 { grid-column: span 4; }
   background: color-mix(in srgb, var(--surface-1) 88%, transparent);
   border: 2px solid var(--frame);
   border-radius: var(--radius);
-  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 [data-skin="pro"] .card { border: 1px solid var(--border); }
-.card:hover { transform: translateY(-1px); }
+/* No hover lift on whole cards: sweeping the mouse across the page shouldn't twitch every
+   panel. Clickable pieces inside (snapshot cards, rows) carry their own hover state. */
 .card__head {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);
   flex-wrap: wrap;
@@ -614,7 +614,7 @@ button[data-tip] { cursor: pointer; }
 /* light themes: deeper green pixels so they read on a pale card */
 :root[data-theme="light"] .creator__fx .spark { color: #2f9a55; }
 @media (prefers-reduced-motion: reduce) {
-  .creator__fx i, .creator__fx .spark, .creator__name span::after, .ff-layer i, .snapshot__mon--lead::before { animation: none !important; }
+  .creator__fx i, .creator__fx .spark, .creator__name span::after, .ff-layer i { animation: none !important; }
   .chip--new .ff-layer { display: none; }
   .creator__name span::after { opacity: .5; }
   .creator__fx i { opacity: .6; }
@@ -683,12 +683,6 @@ main.grid .section { position: relative; }
    Opacity/transform only; content is in the DOM before any of it runs; the global
    reduced-motion rule near the top of this file turns all of it off. */
 
-/* Sections below the fold fade + rise the first time they scroll into view.
-   The children move, not the section, so its box (scroll targets, observers) stays put. */
-.section[data-reveal] > * { transition: opacity var(--dur-reveal) var(--ease-out), transform var(--dur-reveal) var(--ease-out); }
-.section[data-reveal="pending"] > * { opacity: 0; transform: translateY(14px); }
-@media print { .section[data-reveal] > * { opacity: 1 !important; transform: none !important; } }
-
 /* Bar fills grow in from the left whenever they are (re)drawn. */
 .usage-bar__fill, .items-share__fill, .ddv-stat-fill, .bar-row__fill {
   transform-origin: left center; animation: bar-grow 480ms var(--ease-out) both;
@@ -696,10 +690,6 @@ main.grid .section { position: relative; }
 @keyframes bar-grow { from { transform: scaleX(0); } }
 /* "Show all" lists hundreds of rows: only the first screenful animates. */
 tr:nth-child(n+31) .usage-bar__fill { animation: none; }
-
-/* A KPI whose value changed after a filter click ticks up into place. */
-.kpi--changed { animation: kpi-tick 380ms var(--ease-out) both; }
-@keyframes kpi-tick { from { opacity: 0; transform: translateY(6px); } }
 
 /* Deep-dive content fades in just behind the sliding panel (once per open). */
 .drawer.is-open .drawer__body { animation: drawer-content 360ms var(--ease-out) 80ms both; }
@@ -727,15 +717,13 @@ table.data-table tbody tr:focus-visible > :first-child { box-shadow: inset 3px 0
 .ff-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .ff-layer i { --s: 3px; }
 
-/* The meta leader: a soft breathing halo (opacity only) and fireflies drifting around it. */
+/* The meta leader: a still halo, with fireflies drifting around it. */
 .snapshot__mon--lead { position: relative; }
 .snapshot__mon--lead::before {
   content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 22px 2px color-mix(in srgb, var(--accent) 38%, transparent);
-  opacity: .55; animation: lead-breathe 4.8s ease-in-out infinite; animation-play-state: paused;
+  opacity: .7;
 }
-.is-live .snapshot__mon--lead::before { animation-play-state: running; }
-@keyframes lead-breathe { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
 
 /* A new filter chip pops in and a few fireflies lift off it once. */
 .chip--new { animation: chip-pop var(--dur-med) var(--ease); }
@@ -752,8 +740,8 @@ table.data-table tbody tr:focus-visible > :first-child { box-shadow: inset 3px 0
   100% { opacity: 0; transform: translate(calc(var(--dx) * .6), -22px); }
 }
 
-/* Sprites hop once, pixel-style, when their row or card is pointed at. */
-table.data-table tbody tr:hover img.sprite, .snapshot__mon:hover .snapshot__mon-sprite { animation: sprite-hop 360ms steps(3, jump-none); }
+/* A sprite that opens the deep dive hops once, pixel-style, when pointed at. */
+table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, jump-none); }
 @keyframes sprite-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 
 /* Scroll progress: a hairline under the sticky bar, driven by the scroll position itself (no JS). */

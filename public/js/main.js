@@ -15,7 +15,7 @@ import { installKeyActivation } from './ui/keys.js';
 import { installPixelField } from './ui/pixelfield.js';
 import { isStale } from './lib/stale.js';
 import { mountSecnav, mountHowto } from './ui/secnav.js';
-import { installReveal, settle, crossfade } from './ui/motion.js';
+import { crossfade } from './ui/motion.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
@@ -266,14 +266,9 @@ async function boot() {
     for (const [id, el] of sectionEls) el?.setAttribute('aria-busy', String(dirty.has(id)));
   };
 
-  // A section redrawn on screen after it has shown data once settles in softly
-  // (the new content is already there; only its opacity eases up).
-  const shown = new Set();
   function updateSection(s, view) {
     dirty.delete(s.id);
     try { s.api?.update?.(view); } catch (err) { console.warn(`[main] section "${s.id}" update failed:`, err); }
-    if (shown.has(s.id) && nearView.has(s.id)) settle(sectionEls.get(s.id)?.querySelector('.section__mount'));
-    shown.add(s.id);
     syncPending();
   }
 
@@ -318,7 +313,6 @@ async function boot() {
     const el = document.querySelector(`main [data-section="${s.id}"]`);
     if (el) io.observe(el);
   }
-  installReveal([...sectionEls.values()]);
 
   let raf = null;
   let rendering = false;

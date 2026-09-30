@@ -139,7 +139,6 @@ export default {
     body.prepend(hint);
 
     let lastView = null;
-    let lastKpis = new Map();
 
     function render() {
       const view = lastView;
@@ -248,15 +247,6 @@ export default {
     return {
       update(view) {
         lastView = view; render();
-        // KPI values that changed since the last render get a short tick (css .kpi--changed).
-        const now = new Map();
-        for (const t of kpiRow.querySelectorAll('.kpi')) {
-          const label = t.querySelector('.kpi__label').textContent, v = t.querySelector('.kpi__value');
-          const value = v.textContent;
-          if (lastKpis.has(label) && lastKpis.get(label) !== value) v.classList.add('kpi--changed');
-          now.set(label, value);
-        }
-        lastKpis = now;
         // The meta leader (first card, by usage or rank) glows, with a few fireflies around it.
         const lead = hero.querySelector('.snapshot__mon');
         if (lead) {

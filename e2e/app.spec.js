@@ -786,30 +786,19 @@ test('when Smogon publishes an M-C month (simulated with the M-B file), Ladder m
   expect(errors).toEqual([]);
 });
 
-// Motion layer (ui/motion.js + the "motion" block of app.css).
-test('motion: below-the-fold sections reveal on scroll, the fold is never hidden, reduced motion shows everything', async ({ page }) => {
-  await page.goto('/');
-  await waitForAllSections(page);
-  const reveal = (id) => page.locator(`main [data-section="${id}"]`).getAttribute('data-reveal');
-  expect(await reveal('snapshot')).toBeNull(); // on screen at load: never hidden
-  expect(await reveal('scanner')).toBe('pending');
-  await page.locator('main [data-section="scanner"]').scrollIntoViewIfNeeded();
-  await expect(page.locator('main [data-section="scanner"]')).toHaveAttribute('data-reveal', 'in');
-  await expect.poll(() => page.locator('main [data-section="scanner"] > *').first()
-    .evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.reload();
-  await waitForAllSections(page);
-  expect(await page.locator('main [data-reveal]').count()).toBe(0);
-});
-
-test('motion: a changed KPI ticks, bars grow, the drawer slides out before it hides', async ({ page }) => {
+// Motion layer (ui/motion.js + the "motion" / "fireflies" blocks of app.css).
+test('motion: bars grow after a filter click (and nothing else moves), the drawer slides out before it hides', async ({ page }) => {
   await page.goto('/');
   await waitForAllSections(page);
   await page.locator('[data-section="usage"] tbody tr').first().click();
   await waitForAllSections(page);
-  await expect(teamsSampledValue(page)).toHaveClass(/kpi--changed/);
+  // Motion budget (CLAUDE.md): after a click only the new chip, the bars and the ambient fireflies move.
+  const moving = await page.evaluate(() => [...new Set(document.getAnimations()
+    .filter((a) => a.playState === 'running')
+    .filter((a) => { const r = a.effect?.target?.getBoundingClientRect?.(); return r && r.bottom > 0 && r.top < innerHeight; })
+    .map((a) => a.animationName || a.transitionProperty || 'script'))]);
+  const allowed = ['chip-pop', 'chip-glow', 'ff-lift', 'ff-drift', 'ff-blink', 'bar-grow', 'scroll-progress', 'busy-sweep'];
+  expect(moving.filter((n) => !allowed.includes(n)), `unexpected animations: ${moving}`).toEqual([]);
   const anim = await page.locator('[data-section="usage"] .usage-bar__fill').first().evaluate((e) => getComputedStyle(e).animationName);
   expect(anim).toBe('bar-grow');
 
