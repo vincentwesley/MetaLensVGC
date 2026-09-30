@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import {
   decode, filterTeams, previousPeriod, usage, kpis, typeUsage, attackingTypes,
   weaknesses, archetypeSplit, archetypeMatrix, coUsage, cores, speciesDetail,
-  weekly, movers, changeVsPrev, speedTiers, closestTeams, toCSV, toJSONRows,
+  weekly, movers, atMinN, changeVsPrev, speedTiers, closestTeams, toCSV, toJSONRows,
 } from '../public/js/lib/aggregate.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -198,11 +198,11 @@ function fakeTeam(date, keys, w = 1, l = 0) {
   return { date, keys, w, l };
 }
 
-test('weekly: drops a partial/small week (< max(100, 25% of median week))', () => {
+test('weekly: drops a partial/small week (< max(5, 25% of median week))', () => {
   const mkWeek = (date, n) => Array.from({ length: n }, () => fakeTeam(date, ['Y']));
   const wk1 = mkWeek('2026-01-05', 100);
   const wk2 = mkWeek('2026-01-12', 100);
-  const wk3 = mkWeek('2026-01-19', 5); // partial: median of [100,100,5]=100, threshold=100, 5 fails
+  const wk3 = mkWeek('2026-01-19', 5); // partial: median of [100,100,5]=100, threshold=25, 5 fails
   const rows = weekly([...wk1, ...wk2, ...wk3], ['Y']);
   assert.deepEqual(rows.weeks, ['2026-01-05', '2026-01-12']);
   assert.deepEqual(rows.totals, [100, 100]);
@@ -502,4 +502,20 @@ test('changeVsPrev: NEW when prev row absent, n=0 or n < minN; else pt delta', (
   assert.equal(changeVsPrev(0.5, { n: 20, pct: 0.3 }, 20).isNew, false);
   assert.ok(Math.abs(changeVsPrev(0.5, { n: 50, pct: 0.3 }, 20).pts - 20) < 1e-9);
   assert.ok(Math.abs(changeVsPrev(0.1, { n: 50, pct: 0.25 }, 20).pts + 15) < 1e-9);
+});
+
+test('atMinN: applies min n, but a filter that leaves nothing above it keeps the real rows (flagged)', () => {
+  const rows = [{ key: 'A', n: 40 }, { key: 'B', n: 9 }, { key: 'C', n: 3 }];
+  assert.deepEqual(atMinN(rows, 20), { rows: [rows[0]], relaxed: false });
+  assert.deepEqual(atMinN(rows, 50), { rows, relaxed: 50 });
+  // A grid that needs two Pokémon relaxes as soon as fewer than two clear it.
+  assert.deepEqual(atMinN(rows, 20, 2), { rows, relaxed: 20 });
+  assert.deepEqual(atMinN([], 20), { rows: [], relaxed: false });
+  assert.deepEqual(atMinN(rows, 1), { rows, relaxed: false });
+});
+
+test('weekly: a narrowly filtered view (a few teams a week) still has weeks to plot', () => {
+  const mk = (date, n) => Array.from({ length: n }, () => fakeTeam(date, ['Y']));
+  const wk = weekly([...mk('2026-01-05', 12), ...mk('2026-01-12', 9), ...mk('2026-01-19', 2)], ['Y']);
+  assert.deepEqual(wk.weeks, ['2026-01-05', '2026-01-12']); // the 2-team week is still dropped (< 5)
 });

@@ -821,3 +821,23 @@ test('motion: a changed KPI ticks, bars grow, the drawer slides out before it hi
   expect(await drawer.evaluate((e) => getComputedStyle(e).visibility)).toBe('visible');
   await expect(drawer).toBeHidden();
 });
+
+// Owner's call (2026-09-30): cross-filters never blank a chart. A selected Pokémon is plotted on its own;
+// a view where nothing reaches min n shows the real smaller samples, flagged "includes n < 20".
+test('cross-filters: the quadrant plots a single selected Pokémon; a rare one fills every chart with an n flag', async ({ page }) => {
+  await page.goto('/#chips=species:Rillaboom');
+  await waitForAllSections(page);
+  const quad = page.locator('main [data-section="quadrant"]');
+  await expect(quad.locator('.empty-state')).toHaveCount(0);
+  const pts = await quad.locator('[_echarts_instance_]').evaluate((e) => echarts.getInstanceByDom(e).getOption().series[0].data.map((d) => d.key));
+  expect(pts).toEqual(['Rillaboom']);
+
+  await page.goto('/#chips=species:Pikachu'); // 9 teams on M-C, under the default min n of 20
+  await waitForAllSections(page);
+  for (const id of ['snapshot', 'usage', 'quadrant', 'items']) {
+    const sec = page.locator(`main [data-section="${id}"]`);
+    await expect(sec.locator('.empty-state')).toHaveCount(0);
+    await expect(sec.locator('.meta-line__relaxed').first()).toHaveText('includes n < 20');
+  }
+  await expect(page.locator('main [data-section="usage"] tbody tr')).toHaveCount(1);
+});

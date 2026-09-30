@@ -5,7 +5,10 @@ Cloudflare Pages serves `public/` as-is: no framework, no bundler, plain ES modu
 
 ## Hard rules
 - **Real data only.** Every number comes from `public/data/*.json`, which `npm run data` builds from fetched sources.
-  Never hardcode, invent or "calibrate" stats. If a widget lacks data for the current filters, show "Insufficient data".
+  Never hardcode, invent or "calibrate" stats. Owner's call (2026-09-30): cross-filters never blank a chart. Min n goes
+  through `atMinN()` (aggregate.js): when nothing clears it, the real smaller samples are shown and the meta line says
+  "includes n < N" (`ctx.meta(..., { relaxed: minN })`); the quadrant plots a single Pokémon. An empty state only when there
+  is truly nothing (0 teams, no match results, one week for a trend line), titled with what is missing, not "Insufficient data".
 - Every view shows its source, sample size (n teams / n battles) and last-updated date.
 - Champions mechanics: no Tera (Mega Evolution instead); no EVs/IVs, **Stat Points** instead:
   66 SP total, max 32 per stat. Lv50: `HP = base + 75 + sp`, other = `floor((base + 20 + sp) * nature)`.

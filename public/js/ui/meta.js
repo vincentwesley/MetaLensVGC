@@ -1,7 +1,7 @@
 // Renders the "source / sample size / updated" line every card must show.
-// ctx.meta(el, { source, n, unit }) in main.js injects `updated` from manifest.generated.
+// ctx.meta(el, { source, n, unit, relaxed }) in main.js injects `updated` from manifest.generated.
 
-export function renderMetaLine(el, { source, n, unit = 'teams', updated } = {}) {
+export function renderMetaLine(el, { source, n, unit = 'teams', updated, relaxed } = {}) {
   if (!el) return;
   el.classList.add('meta-line');
   el.textContent = '';
@@ -20,6 +20,15 @@ export function renderMetaLine(el, { source, n, unit = 'teams', updated } = {}) 
     span.className = 'meta-line__part';
     span.textContent = `updated ${updated}`;
     el.appendChild(span);
+  }
+  // atMinN() had to include Pokémon under the min-n threshold to show anything.
+  if (relaxed) {
+    const warn = document.createElement('span');
+    warn.className = 'meta-line__part meta-line__relaxed';
+    warn.textContent = `includes n < ${relaxed}`;
+    warn.dataset.tip = `Nothing in this view reaches the minimum sample (n ≥ ${relaxed}), so smaller samples are shown. Read them with care.`;
+    warn.tabIndex = 0;
+    el.append(' · ', warn);
   }
 }
 

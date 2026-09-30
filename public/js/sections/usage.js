@@ -1,7 +1,7 @@
 // usage.js — Usage leaderboard: sortable table, rank/sprite/name/usage bar/
 // usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
-import { usage, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies } from '../lib/aggregate.js';
+import { usage, atMinN, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies } from '../lib/aggregate.js';
 import { rankedSource, clickHint } from '../ui/meta.js';
 import { TYPE_COLORS } from '../lib/types.js';
 
@@ -99,7 +99,7 @@ export default {
       if (!view) return;
       const state = view.state;
       const dex = view.dex;
-      let rows, cols, unit, source, n;
+      let rows, cols, unit, source, n, relaxed = false;
 
       if (state.source === 'ranked') { renderRanked(view); return; }
       body.querySelector('.ddv-note')?.remove();
@@ -114,16 +114,15 @@ export default {
           return;
         }
         n = merged.battles;
-        rows = merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null, topItem: m.items[0] || null }))
-          .filter((r) => r.n >= state.minN);
+        ({ rows, relaxed } = atMinN(merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null, topItem: m.items[0] || null })), state.minN));
       } else {
         cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.monTeams.length;
         const byItem = itemsBySpecies(view.monTeams);
-        rows = usage(view.monTeams).filter((r) => r.n >= state.minN)
-          .map((r) => ({ ...r, topItem: byItem.get(r.key)?.items[0] || null }));
+        ({ rows, relaxed } = atMinN(usage(view.monTeams), state.minN));
+        rows = rows.map((r) => ({ ...r, topItem: byItem.get(r.key)?.items[0] || null }));
       }
 
-      ctx.meta(meta, { source, n, unit });
+      ctx.meta(meta, { source, n, unit, relaxed });
       body.querySelector('.empty-state')?.remove();
       if (!rows.length) {
         emptyState(body, 'Insufficient data');

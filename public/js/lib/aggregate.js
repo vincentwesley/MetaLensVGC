@@ -215,6 +215,15 @@ export function previousPeriod(teamsInReg, filters = {}, prevRegTeams = []) {
 }
 
 // --- basic aggregates -----------------------------------------------------
+// Min-n for charts: the rows with n >= minN, unless the filters leave fewer than
+// `need` of them. Then every row comes back (real data, smaller samples) with
+// relaxed = the threshold they missed, so cross-filters never blank a chart; the
+// caller passes it to its meta line (ctx.meta(..., { relaxed })).
+export function atMinN(rows, minN, need = 1) {
+  const kept = rows.filter((r) => r.n >= minN);
+  return kept.length >= need || kept.length === rows.length ? { rows: kept, relaxed: false } : { rows, relaxed: minN };
+}
+
 // Several sections ask for usage() of the same filtered array in one render;
 // memoize per array identity. Callers get a fresh array (rows are shared and
 // must be treated as read-only).
@@ -702,11 +711,13 @@ function median(nums) {
 // Drop partial/small weeks (e.g. a currently-in-progress week, or a week with
 // only one minor online event) so they don't distort weekly trend lines or
 // week-over-week movers. A week qualifies when it has at least
-// max(100, 25% of the median week's team count).
+// max(5, 25% of the median week's team count). The relative part catches partial
+// weeks; the floor is small so a narrowly filtered view (a species on winning
+// teams) still has weeks to plot.
 function qualifyingWeeks(byWeek) {
   const weeks = [...byWeek.keys()].sort();
   const counts = weeks.map((w) => byWeek.get(w).length);
-  const threshold = Math.max(100, median(counts) * 0.25);
+  const threshold = Math.max(5, median(counts) * 0.25);
   return weeks.filter((w, i) => counts[i] >= threshold);
 }
 

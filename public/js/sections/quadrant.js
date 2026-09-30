@@ -1,7 +1,7 @@
 // quadrant.js — Usage vs win-rate scatter: sprite markers, split lines at
 // median usage / 50% win, four quadrant labels. Tournament-only (ladder has
 // no win rate, so a win axis isn't meaningful there).
-import { usage } from '../lib/aggregate.js';
+import { usage, atMinN } from '../lib/aggregate.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 const QUADRANTS = [
@@ -78,12 +78,13 @@ export default {
       // so a raw float here renders as a long unrounded string that overflows
       // the chart edge.
       const xVals = rows.map((r) => r.pct * 100);
-      const xMax = Math.ceil((Math.max(...xVals) * 1.15 || 10));
+      const xMax = Math.min(100, Math.ceil((Math.max(...xVals) * 1.15 || 10)));
       // Usage %% spans orders of magnitude (a handful of teams up to a majority
       // of them), which crams everything into the left edge on a linear axis.
       // Log scale needs a positive min: round the smallest data point down to
       // its power of ten (e.g. 0.4% -> 0.1%) so every point stays on-chart.
-      const xMin = Math.pow(10, Math.floor(Math.log10(Math.max(Math.min(...xVals), 0.01))));
+      // Kept at least a decade below xMax, so a single point (e.g. 100%) still has an axis.
+      const xMin = Math.min(Math.pow(10, Math.floor(Math.log10(Math.max(Math.min(...xVals), 0.01)))), xMax / 10);
       const yVals = rows.map((r) => r.winPct * 100);
       const yMin = Math.floor(Math.max(0, Math.min(...yVals) - 5));
       const yMax = Math.ceil(Math.min(100, Math.max(...yVals) + 5));
@@ -137,12 +138,13 @@ export default {
         lastRows = null;
         return;
       }
-      const rows = usage(view.monTeams).filter((r) => r.n >= state.minN && r.winPct != null);
-      ctx.meta(meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
+      // One Pokémon is a valid plot (a species chip leaves just that one).
+      const { rows, relaxed } = atMinN(usage(view.monTeams).filter((r) => r.winPct != null), state.minN);
+      ctx.meta(meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams', relaxed });
       body.querySelector('.empty-state')?.remove();
       if (!body.contains(chartEl)) body.appendChild(chartEl);
-      if (rows.length < 2) {
-        emptyState(body, 'Insufficient data');
+      if (!rows.length) {
+        emptyState(body, 'No Pokémon in view');
         lastRows = null;
         return;
       }

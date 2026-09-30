@@ -1,7 +1,7 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
 // Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
-import { usage, kpis, changeVsPrev, changeText, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
+import { usage, atMinN, kpis, changeVsPrev, changeText, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
 import { rankedSource, clickHint } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
 
@@ -204,7 +204,8 @@ export default {
         return;
       }
 
-      ctx.meta(meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
+      const { rows, relaxed } = atMinN(usage(view.monTeams), state.minN);
+      ctx.meta(meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams', relaxed });
       hero.innerHTML = ''; kpiRow.innerHTML = '';
       body.querySelector('.empty-state')?.remove();
       body.prepend(hero); body.append(kpiRow);
@@ -214,7 +215,6 @@ export default {
         return;
       }
 
-      const rows = usage(view.monTeams).filter((r) => r.n >= state.minN);
       const top = rows.slice(0, 6);
       if (!top.length) {
         emptyState(hero, 'Insufficient data');
