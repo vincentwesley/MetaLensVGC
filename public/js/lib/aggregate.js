@@ -104,6 +104,7 @@ function teamHasChip(team, chip, dex) {
     case 'core': return chipKeys(chip).every((k) => team.keys.includes(k));
     case 'archetype': return team.arch[0] === chip.value; // same as the donut / library pill
     case 'team': return team.id === chip.value;
+    case 'country': return team.country === chip.value;
     default: return ATTR_KINDS.has(chip.kind) ? team.mons.some((mon) => monMatchesAttr(mon, chip, dex)) : false;
   }
 }
@@ -162,7 +163,7 @@ export function projectTeams(teams, chips = [], dex, opts = {}) {
  * Species-level version of the chips for views that only have per-Pokémon rows
  * (Smogon ladder, in-game ranked): { test(key) -> bool | null, unsupported: Chip[] }.
  * species/mega/core, type and weak chips can be checked per species; item, move,
- * movetype, archetype and team chips need team sheets and are reported unsupported.
+ * movetype, archetype, team and country chips need team sheets and are reported unsupported.
  */
 export function speciesChipFilter(chips = [], dex) {
   const unsupported = chips.filter((c) => !['species', 'mega', 'core', 'type', 'weak'].includes(c.kind));
@@ -355,6 +356,42 @@ export function weaknesses(teams, dex) {
       x4: share(by.x4), x2: share(by.x2), x1: share(by.x1), x05: share(by.x05), x025: share(by.x025), x0: share(by.x0),
     };
   });
+}
+
+// Meta by country (ISO-2 codes from the team sheets; teams without one are left out and
+// counted in `unknown`). Per country: share of teams that list a country, win rate with a
+// Wilson CI, its most-used Pokémon, and the ones it plays clearly more than the view as a
+// whole (lift = usage in the country / usage in the view; needs >= minMon teams and >= minLift).
+export const COUNTRY_LIMITS = { top: 3, over: 2, minMon: 5, minLift: 1.25 };
+export function countrySplit(teams) {
+  const { top, over, minMon, minLift } = COUNTRY_LIMITS;
+  const field = new Map(usage(teams).map((r) => [r.key, r.pct]));
+  // One pass: per country, team count, w/l and how many of its teams use each Pokémon.
+  const by = new Map();
+  let total = 0;
+  for (const t of teams) {
+    if (!t.country) continue;
+    total++;
+    let c = by.get(t.country);
+    if (!c) { c = { n: 0, w: 0, l: 0, mons: new Map() }; by.set(t.country, c); }
+    c.n++; c.w += t.w; c.l += t.l;
+    for (const k of new Set(t.keys)) c.mons.set(k, (c.mons.get(k) || 0) + 1);
+  }
+  const rows = [...by.entries()].map(([code, c]) => {
+    const games = c.w + c.l;
+    const mons = [...c.mons.entries()].map(([key, n]) => ({ key, n, pct: n / c.n }));
+    return {
+      code, n: c.n, pct: c.n / total,
+      winPct: games > 0 ? c.w / games : null, ci: games > 0 ? wilson(c.w, games) : null,
+      top: mons.sort((a, b) => b.n - a.n || a.key.localeCompare(b.key)).slice(0, top).map(({ key, pct }) => ({ key, pct })),
+      over: mons.filter((m) => m.n >= minMon && field.get(m.key) > 0)
+        .map((m) => ({ key: m.key, n: m.n, pct: m.pct, lift: m.pct / field.get(m.key) }))
+        .filter((m) => m.lift >= minLift)
+        .sort((a, b) => b.lift - a.lift || b.n - a.n || a.key.localeCompare(b.key)).slice(0, over)
+        .map(({ key, pct, lift }) => ({ key, pct, lift })),
+    };
+  }).sort((a, b) => b.n - a.n || a.code.localeCompare(b.code));
+  return { rows, total, unknown: teams.length - total };
 }
 
 export function archetypeSplit(teams) {

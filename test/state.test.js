@@ -87,3 +87,10 @@ test('sanitizeState: reversed date range is swapped, minN clamped, valid state u
   // A regulation id that is not known yet (manifest not loaded) is kept.
   assert.equal(sanitizeState({ ...DEFAULT_STATE, reg: 'M-D' }).reg, 'M-D');
 });
+
+test('sanitizeState: country chips are ISO-2 codes (uppercased); anything else is dropped; they round-trip the hash', () => {
+  const s = sanitizeState({ ...DEFAULT_STATE, chips: [{ kind: 'country', value: 'br' }, { kind: 'country', value: 'Brazil' }, { kind: 'country', value: 'U1' }] }, {});
+  assert.deepEqual(s.chips, [{ kind: 'country', value: 'BR', neg: false }]);
+  const back = sanitizeState(fromHash(toHash(s), DEFAULT_STATE), {});
+  assert.deepEqual(back.chips, s.chips);
+});

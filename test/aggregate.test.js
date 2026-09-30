@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import {
   decode, filterTeams, previousPeriod, usage, kpis, typeUsage, attackingTypes,
   weaknesses, archetypeSplit, archetypeMatrix, coUsage, cores, speciesDetail,
-  weekly, movers, atMinN, changeVsPrev, speedTiers, closestTeams, toCSV, toJSONRows,
+  weekly, movers, atMinN, countrySplit, changeVsPrev, speedTiers, closestTeams, toCSV, toJSONRows,
 } from '../public/js/lib/aggregate.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -527,4 +527,30 @@ test('weekly with a membership test: primary-archetype shares per week sum to 1'
   assert.deepEqual(wk.weeks, ['2026-01-05', '2026-01-12']);
   assert.deepEqual(wk.series.rain, [0.75, 0.25]);
   assert.deepEqual(wk.series.sun, [0.25, 0.75]);
+});
+
+test('countrySplit: shares over teams that list a country, win rate, top and over-represented Pokémon', () => {
+  const t = (country, keys, w = 1, l = 1) => ({ country, keys, w, l });
+  const teams = [
+    ...Array.from({ length: 6 }, () => t('BR', ['A', 'B'], 3, 1)),
+    ...Array.from({ length: 12 }, () => t('US', ['A', 'C'])),
+    ...Array.from({ length: 2 }, () => t('', ['C'])),
+  ];
+  const { rows, total, unknown } = countrySplit(teams);
+  assert.equal(total, 18);
+  assert.equal(unknown, 2);
+  assert.deepEqual(rows.map((r) => r.code), ['US', 'BR']);
+  const br = rows.find((r) => r.code === 'BR');
+  assert.equal(br.pct, 6 / 18);
+  assert.equal(br.winPct, 0.75);
+  assert.ok(br.ci[0] < 0.75 && br.ci[1] > 0.75);
+  // B: 6/6 in BR vs 6/20 in the view -> lift 3.33; A is everywhere (lift 1.11 < 1.25).
+  assert.deepEqual(br.over.map((o) => o.key), ['B']);
+  assert.ok(Math.abs(br.over[0].lift - 20 / 6) < 1e-9);
+});
+
+test('filterTeams: country chip keeps that country; NOT country drops it', () => {
+  const teams = [{ country: 'BR', keys: ['A'], mons: [], arch: ['other'] }, { country: 'US', keys: ['A'], mons: [], arch: ['other'] }];
+  assert.deepEqual(filterTeams(teams, {}, [{ kind: 'country', value: 'BR', neg: false }]).map((x) => x.country), ['BR']);
+  assert.deepEqual(filterTeams(teams, {}, [{ kind: 'country', value: 'BR', neg: true }]).map((x) => x.country), ['US']);
 });

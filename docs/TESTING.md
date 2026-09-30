@@ -31,7 +31,7 @@ Cloud-session notes:
 
 ## Coverage ledger (already verified; don't repeat unless the code changed)
 
-### Automated: unit (`npm test`, 145 tests)
+### Automated: unit (`npm test`, 148 tests)
 - stats (SP formula incl. Jolly Garchomp 169, natures, Wilson, diversity), type chart, name
   normalization, archetype classification, paste export/parse, state hash codec, ranked helpers and out-of-window season handling.
 - aggregate: decode, usage/kpis/typeUsage/attackingTypes/weaknesses/archetypeSplit/matrix/
@@ -54,7 +54,7 @@ Cloud-session notes:
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 - `atMinN` (min n with the cross-filter fallback) and `weekly` keeping weeks of a narrowly filtered view.
 
-### Automated: browser (`npm run e2e:cloud`, 46 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 47 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -81,6 +81,9 @@ Cloud-session notes:
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
 - Cross-filters never blank a chart: a species chip leaves exactly that Pokémon on the quadrant; a rare species (Pikachu,
   9 teams) fills snapshot / usage / quadrant / items with the "includes n < 20" flag.
+- Meta by country: rows per country (United States first on M-C); a row click adds "Country: Brazil", changes the
+  snapshot, lands in the hash as `country:BR` and survives a reload (one row left). Unit: countrySplit, country chip in
+  filterTeams (and NOT), sanitizeState keeps ISO-2 only.
 - Archetype trend (M-B): 6 weekly lines covering every week; Tailwind has the same colour in donut and trend, and keeps it
   under a type chip that reorders the split; clicking a line adds an Archetype chip.
 - Sprite scale: every rendered sprite is 24/32/48/96 px; item shares in the items table have one decimal and none reads 0.
@@ -214,6 +217,12 @@ idle top = halo + 4 fireflies; mid-scroll = 5 sections revealing at once; one fi
 pop/glow/fireflies, 5 KPI ticks, bars, 3 section fades, halo). Removed the reveal, the section fade, KPI ticks, the
 breathing halo, whole-card hover lift and row-wide sprite hops. After: idle top = 4 fireflies; mid-scroll = nothing;
 a click = the new chip + the bars. Guarded by the allowlist in the e2e motion check.
+
+Owner calls built (2026-09-30): item shares one decimal (fmt.pct shows "<0.1%" for a nonzero share); sprite scale
+24/32/48/96 (hero 48 on phones); archetype share by week (M-C has only 2 full weeks; M-A/M-B show the regulation);
+meta by country (screenshots 1440 pro-dark, retro-light M-B, 390 stacked cards; no overflow). Found: grid sections had
+min-width:auto, so a wide table grew the page instead of scrolling (fixed for every section). countrySplit on M-B
+(33k teams): 52 ms.
 
 ## Not yet tested (candidates for the next pass)
 

@@ -19,7 +19,7 @@ import { crossfade } from './ui/motion.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
-  'teammates', 'speed', 'trends', 'library', 'scanner', 'methodology',
+  'teammates', 'speed', 'trends', 'countries', 'library', 'scanner', 'methodology',
 ];
 
 // Every chart is created through this: a full redraw (setOption with notMerge)

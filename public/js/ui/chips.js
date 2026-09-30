@@ -1,6 +1,7 @@
 // Chip row: renders state.chips as pills with × remove + "Clear all".
 // Species chips get a sprite; type chips get a type-coloured swatch; everything else a plain label.
 import { fireflies } from './motion.js';
+import { fmt } from './fmt.js';
 
 let TYPE_COLORS = {};
 try {
@@ -22,13 +23,14 @@ try {
 
 const KIND_LABEL = {
   type: 'Type', weak: 'Weak to', item: 'Item', move: 'Move', movetype: 'Move type',
-  archetype: 'Archetype', core: 'Core', mega: 'Mega', team: 'Team',
+  archetype: 'Archetype', core: 'Core', mega: 'Mega', team: 'Team', country: 'Country',
 };
 const MON_KINDS = new Set(['species', 'mega', 'core', 'type', 'weak', 'item', 'move', 'movetype']);
 
 function labelFor(chip) {
   const v = Array.isArray(chip.value) ? chip.value.join(' + ')
     : chip.kind === 'archetype' ? (ARCH_LABELS[chip.value] || chip.value)
+    : chip.kind === 'country' ? fmt.country(chip.value)
     : String(chip.value);
   const kind = KIND_LABEL[chip.kind];
   return `${kind ? `${kind}: ` : ''}${v}`; // negation is shown by the chip style ("NOT")

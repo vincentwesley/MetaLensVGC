@@ -387,7 +387,7 @@ main.grid {
   padding: var(--space-4);
   max-width: 1440px; margin: 0 auto;
 }
-main.grid .section { grid-column: span 12; }
+main.grid .section { grid-column: span 12; min-width: 0; } /* grid items default to min-width:auto and would grow to fit a wide table instead of letting it scroll */
 /* Same specificity family as `main.grid .section` above (both two classes +
    one type), so source order alone would be fragile; scope every span rule
    under `.grid` too so it always wins over the bare default. */
