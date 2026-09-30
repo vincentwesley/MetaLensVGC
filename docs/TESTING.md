@@ -53,7 +53,7 @@ Cloud-session notes:
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 39 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 40 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -74,6 +74,7 @@ Cloud-session notes:
 - Regulation-shift table has no NaN at min-n 0.
 - Back closes the deep-dive drawer (stays on the page); closing with X leaves history as it was.
 - Scanner on M-C: speed position has data, all evidence cards render, item clause flagged.
+- A hovered `[data-tip]` tip survives unrelated scrollers (the section nav re-centring) and hides when its anchor scrolls away.
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
 
 ### Verified once, by hand or ad-hoc script (not in the suite)
@@ -163,6 +164,10 @@ Spread explorer (2026-09-30): `lib/spreads.js` + `spCheck` unit-tested on real R
 with n battles), scanner SP check on an EVs:-style paste, no overflow at 390. Real-network screenshots reviewed
 (1440/390, pro-dark/retro-light). Rillaboom's top ranked spreads cover only 38% of its players (shown as such).
 
+Flaky phone-tooltip e2e (2026-09-30, cloud): root cause was real, not timing. `ui/tip.js` hid the tip on any
+scroll event in the page, including the section nav's own horizontal re-centring, which lands a moment after
+Playwright's hover scroll. Reproduced 6/6 fails in the cloud sandbox; after the fix 6/6 + 6/6 passes (with the new check).
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
@@ -171,7 +176,4 @@ with n battles), scanner SP check on an EVs:-style paste, no overflow at 390. Re
 - Real screen readers (NVDA/VoiceOver) with the ECharts aria descriptions; real touch devices
   (tap tooltips, `[data-tip]`, Android back gesture on the drawer).
 - Browser zoom via the real zoom control (only DPR emulation was used).
-- **Flaky e2e**: "chart tooltips and [data-tip] tips stay inside the viewport on a phone" fails intermittently
-  (3 of 5 runs on a slow Windows box, predates the Spread explorer). Root-cause it (likely a timing wait, not a real
-  overflow) before trusting a red run.
 - Retro type sizes with the real VT323 font at 390 (the UX probe had fonts stubbed).
