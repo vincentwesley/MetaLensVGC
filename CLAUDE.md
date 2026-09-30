@@ -56,8 +56,11 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   `sanitizeState(state, {regs})` (every state the store accepts goes through it; unknown values fall back).
 - `pixelfield-core.js`: background pixel field logic (sprites, placement, dither), painted by `ui/pixelfield.js`.
 - `stale.js`: `isStale(generatedISO, now, days=10)` for the stale-data notice. `contrast.js`: `inkOn(bg)` picks dark/white text for a fill.
+- `spreads.js`: SP spread archetypes (`SPREAD_ARCHETYPES`: No Speed, Max Speed, Bulk-heavy, Offense, Other; first match wins),
+  `rankedSpreadRows` / `smogonSpreadRows` (Lv50 stats via stats.js), `archetypeShares`, `speedBenchmarks`, `nearestSpread`, `metaSpeedField`.
+  `aggregate.js#speedSpecies` is the one species list for the Speed section and the explorer's benchmark field.
 - `scan.js`: the Team Scanner's evidence (`scanTeam` → archetype, matchups vs Pokémon/archetypes from real
-  match results of "teams like yours", item check with item clause, teammate picks, weakest link). Thresholds in `LIMITS`.
+  match results of "teams like yours", item check with item clause, teammate picks, weakest link; `spCheck` compares a pasted SP line to ranked spreads). Thresholds in `LIMITS`, `RARE_NATURE`.
 
 ### State (`public/js/state.js`)
 ```js
@@ -123,7 +126,7 @@ Background: pixel field canvas.
   teammates, checks/counters. M-A and M-B have 3 months; M-C has none until Smogon publishes (early October).
 - So any spread / stat analysis uses ranked (+ Smogon where present) and must say which, with its sample.
 
-## Project status (handover, 2026-09-29, end of the second smoke + UX round)
+## Project status (handover, 2026-09-30, after the Spread explorer)
 - Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
   `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
@@ -133,8 +136,9 @@ Background: pixel field canvas.
   closes it. Build step has its own 300-min timeout (a job timeout would cancel and skip the alert). `data-raw/` is cached.
   A new regulation: add it to `scripts/lib/regs.js`, `SUFFIX` in `scripts/sources/ladder.js`, `current` in build-data.js
   (until then out-of-window ranked seasons are skipped with a warning, `reg: null`).
-- **Parked work:** step 4 (SP spread explorer in the deep dive + scanner SP check, `lib/spreads.js`) is on branch
-  `wip/sp-spread-explorer`, unreviewed and untested. Resume from there (review, finish tests, merge into this branch).
+- **Spread explorer** (2026-09-30): the deep dive's "Spread explorer" card (ranked season / Smogon month toggle,
+  archetype strip with coverage, previous-regulation shift, per-spread Lv50 stats + speed benchmark vs the top-30
+  `speedSpecies`) and the scanner's "SP check" card. Ranked rows assume the most common ranked nature (flagged `*`).
 - Data sources: Limitless online + limitlessvgc.com official (tournament teams), Smogon 1760 ladder, and the in-game ranked "Battle Data" via championsbattledata.com (`ranked-<REG>.json`). The last one **requires attribution** ("Battle data provided by Pokémon Champions Battle Data" + link, already in the footer, methodology and README) and forbids redistributing the data as a data service. It publishes ranks, not usage shares: never show a usage % from it.
 - Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
 - Team-level sections show an explicit "not available" state under the ranked source (no per-team ranked data).
