@@ -126,7 +126,7 @@ Background: pixel field canvas.
   teammates, checks/counters. M-A and M-B have 3 months; M-C has none until Smogon publishes (early October).
 - So any spread / stat analysis uses ranked (+ Smogon where present) and must say which, with its sample.
 
-## Project status (handover, 2026-09-30, after the Spread explorer)
+## Project status (handover, 2026-09-30, after the Spread explorer and the motion layer)
 - Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
   `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
@@ -179,6 +179,12 @@ Background: pixel field canvas.
   timer loop (10 fps, 6 on weak devices), not rAF. Status colours use `--up/--down/--warn`, pills `--pill-*`.
 - **UI chrome** also holds the section jump nav (`ui/secnav.js`, inside `.stickybar`) and the first-visit tips strip
   (`metalens.howtoDismissed`). Sections catching up carry `aria-busy`.
+- **Motion** (`ui/motion.js` + the "motion" block at the end of app.css): opacity/transform only, content is in the DOM
+  before anything animates, all of it off under reduced motion. Reveal-on-scroll moves a section's *children*, never
+  the section (scroll targets and observers use its box). `settle()` fades an on-screen section after a redraw (Web
+  Animations, no forced reflow); bar fills `bar-grow` on (re)draw (first 30 leaderboard rows only); snapshot KPIs whose
+  value changed get `.kpi--changed`; skin/theme go through `crossfade()` (View Transitions). No count-up numbers (the
+  in-between values would be invented) and no exit animations that hold back a render.
 - **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the
   branch during a run are fine.
 

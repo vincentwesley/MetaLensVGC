@@ -785,3 +785,39 @@ test('when Smogon publishes an M-C month (simulated with the M-B file), Ladder m
   await expect(card.locator('.spx-toggle')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+// Motion layer (ui/motion.js + the "motion" block of app.css).
+test('motion: below-the-fold sections reveal on scroll, the fold is never hidden, reduced motion shows everything', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const reveal = (id) => page.locator(`main [data-section="${id}"]`).getAttribute('data-reveal');
+  expect(await reveal('snapshot')).toBeNull(); // on screen at load: never hidden
+  expect(await reveal('scanner')).toBe('pending');
+  await page.locator('main [data-section="scanner"]').scrollIntoViewIfNeeded();
+  await expect(page.locator('main [data-section="scanner"]')).toHaveAttribute('data-reveal', 'in');
+  await expect.poll(() => page.locator('main [data-section="scanner"] > *').first()
+    .evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await waitForAllSections(page);
+  expect(await page.locator('main [data-reveal]').count()).toBe(0);
+});
+
+test('motion: a changed KPI ticks, bars grow, the drawer slides out before it hides', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  await page.locator('[data-section="usage"] tbody tr').first().click();
+  await waitForAllSections(page);
+  await expect(teamsSampledValue(page)).toHaveClass(/kpi--changed/);
+  const anim = await page.locator('[data-section="usage"] .usage-bar__fill').first().evaluate((e) => getComputedStyle(e).animationName);
+  expect(anim).toBe('bar-grow');
+
+  await page.locator('[data-section="usage"] tbody tr img').first().click();
+  const drawer = page.locator('#deepdive');
+  await expect(drawer).toHaveClass(/is-open/);
+  await page.keyboard.press('Escape');
+  // Still visible for the slide-out, then hidden.
+  expect(await drawer.evaluate((e) => getComputedStyle(e).visibility)).toBe('visible');
+  await expect(drawer).toBeHidden();
+});
