@@ -53,7 +53,7 @@ Cloud-session notes:
   the weakness chart's buckets are real multipliers only (4, 2, 1, 1/2, 1/4, 0) and sum to 1.
 - Background pixel field logic (`lib/pixelfield-core.js`): sprites, deterministic on-canvas placement.
 
-### Automated: browser (`npm run e2e:cloud`, 40 checks in `e2e/app.spec.js`)
+### Automated: browser (`npm run e2e:cloud`, 41 checks in `e2e/app.spec.js`)
 - No console errors loading each regulation × Tournaments/Ladder/Ranked.
 - Leaderboard click adds a species chip and changes other sections; shift-click makes a NOT chip.
 - Regulation switch changes the data; URL hash round-trips filters and chips on reload.
@@ -75,6 +75,8 @@ Cloud-session notes:
 - Back closes the deep-dive drawer (stays on the page); closing with X leaves history as it was.
 - Scanner on M-C: speed position has data, all evidence cards render, item clause flagged.
 - A hovered `[data-tip]` tip survives unrelated scrollers (the section nav re-centring) and hides when its anchor scrolls away.
+- Smogon M-C month arriving (simulated by serving the M-B file as M-C): Ladder mode, Teammate rate ("Ladder (Smogon)")
+  and the Spread explorer's Smogon toggle light up; the M-C explorer check expects the toggle only when M-C has months.
 - Data staleness notice: when manifest is >10 days old, notice appears under header (routed to test a stale manifest).
 
 ### Verified once, by hand or ad-hoc script (not in the suite)

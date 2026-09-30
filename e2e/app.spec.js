@@ -702,7 +702,7 @@ async function openDeepDive(page, hash, key) {
   return card;
 }
 
-test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype strip, regulation shift, no Smogon option', async ({ page }) => {
+test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype strip, regulation shift, Smogon option only with an M-C month', async ({ page }) => {
   const card = await openDeepDive(page, '/', 'Rillaboom');
   const rows = card.locator('.spx-row');
   expect(await rows.count()).toBeGreaterThanOrEqual(3);
@@ -716,7 +716,9 @@ test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype str
   await expect(card.locator('.spx-shift')).not.toContainText('loading');
   await expect(card).toContainText('sample size not published');
   await expect(card).toContainText('Battle data provided by Pokémon Champions Battle Data');
-  await expect(card.locator('.spx-toggle')).toHaveCount(0); // no Smogon month for M-C: no toggle at all
+  // The Smogon toggle follows the data: none until Smogon publishes an M-C month, then it must appear.
+  const mcMonths = await page.evaluate(async () => ((await (await fetch('data/ladder-M-C.json')).json()).months || []).length);
+  await expect(card.locator('.spx-toggle')).toHaveCount(mcMonths ? 1 : 0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect(await card.evaluate((c) => c.scrollWidth <= c.clientWidth + 1)).toBe(true);
@@ -756,4 +758,28 @@ test('Scanner SP check: exact / nearest spread from an EVs-style SP line, no NaN
   expect(text).toMatch(/Common spread \(#\d+, \d+% of ranked spreads\)|Nearest common spread/);
   expect(text).toContain('no SP line — assumed most common spread');
   expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+});
+
+test('when Smogon publishes an M-C month (simulated with the M-B file), Ladder mode, Teammate rate and the Spread explorer use it', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.route(/data\/ladder-M-C\.json/, async (route) => {
+    const res = await route.fetch({ url: route.request().url().replace('ladder-M-C', 'ladder-M-B') });
+    const json = await res.json();
+    json.months = json.months.slice(-1).map((m) => ({ ...m, month: '2026-09' }));
+    await route.fulfill({ json });
+  });
+  await page.goto('/#source=ladder');
+  await waitForAllSections(page);
+  const lead = page.locator('[data-section="usage"]');
+  await expect(lead.locator('tbody tr').first()).toBeVisible();
+  await expect(lead).toContainText(/battles/);
+  const rate = page.locator('[data-section="teammates"] .card').filter({ hasText: 'Teammate rate' });
+  await rate.scrollIntoViewIfNeeded();
+  await waitForAllSections(page);
+  await expect(rate).toContainText('Ladder (Smogon)');
+  expect(await page.locator('body').innerText()).not.toMatch(/\bNaN\b|\bundefined\b/);
+  const card = await openDeepDive(page, '/', 'Incineroar');
+  await expect(card.locator('.spx-toggle')).toHaveCount(1);
+  expect(errors).toEqual([]);
 });
