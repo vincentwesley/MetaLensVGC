@@ -54,7 +54,17 @@ export function installTips(root = document) {
   root.addEventListener('focusout', hide);
   root.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
   // Keyboard focus scrolls the page after focusin: follow the element then.
-  const onMove = () => { if (current && document.activeElement === current) place(); else hide(); };
+  // Scrolls of unrelated containers (e.g. the section nav following the page)
+  // don't move the anchor, so they leave the tip alone; a still-hovered or
+  // focused anchor is followed while it stays on screen.
+  const onMove = (e) => {
+    if (!current) return;
+    const src = e?.target;
+    if (e?.type === 'scroll' && src instanceof Element && !src.contains(current)) return;
+    const r = current.getBoundingClientRect();
+    const onScreen = r.bottom > 0 && r.top < innerHeight && r.width > 0;
+    if (onScreen && (document.activeElement === current || current.matches(':hover'))) place(); else hide();
+  };
   window.addEventListener('scroll', onMove, { passive: true, capture: true });
   window.addEventListener('resize', onMove);
 }

@@ -399,6 +399,24 @@ test('chart tooltips and [data-tip] tips stay inside the viewport on a phone', a
   expect(tb.x + tb.width).toBeLessThanOrEqual(390);
 });
 
+test('a hovered [data-tip] tip survives the section nav scrolling sideways, hides when its anchor scrolls away', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForAllSections(page);
+  const tipped = page.locator('main [data-tip]').filter({ hasText: /lift/i }).first();
+  await tipped.scrollIntoViewIfNeeded();
+  await tipped.hover();
+  const tip = page.locator('#tip');
+  await expect(tip).toBeVisible();
+  // The jump nav re-centres its active link (horizontal scroll) as the page scrolls: unrelated to the anchor.
+  await page.evaluate(() => { const nav = document.getElementById('secnav'); nav.scrollLeft += 60; nav.dispatchEvent(new Event('scroll')); });
+  await page.waitForTimeout(100);
+  await expect(tip).toBeVisible();
+  await page.mouse.move(5, 830);
+  await page.evaluate(() => scrollBy(0, 3000));
+  await expect(tip).toBeHidden();
+});
+
 test('hand-edited hash is sanitized: bad values fall back, duplicates collapse, no errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
