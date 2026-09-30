@@ -947,3 +947,19 @@ test('leaderboard search: "/" focuses it, finds any Pokémon with its real rank,
   await expect(lb.locator('.empty-state__title')).toHaveText('No Pokémon matching “zzzz”');
   for (const t of await lb.locator('td.col-chg').allTextContents()) expect(t).not.toContain('-0.0');
 });
+
+test('leaderboard Change column is absent for M-A (no previous period), ladder and ranked; Copy link survives a missing Clipboard API', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }); });
+  for (const hash of ['reg=M-A', 'source=ladder', 'reg=M-B&source=ranked']) {
+    await page.goto(`/#${hash}`);
+    await waitForAllSections(page);
+    const lb = page.locator('main [data-section="usage"]');
+    await expect(lb.locator('th.col-chg')).toHaveCount(0);
+    expect(await lb.innerText()).not.toMatch(/NaN|undefined/);
+  }
+  await page.locator('#copy-link').click();
+  await expect(page.locator('.toast')).toBeVisible(); // copied via the textarea fallback, or an error toast; never a crash
+  expect(errors).toEqual([]);
+});
