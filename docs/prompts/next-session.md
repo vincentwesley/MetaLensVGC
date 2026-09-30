@@ -31,14 +31,12 @@ State: 148 unit tests, 47 e2e checks, all green.
 Library Filter scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column,
 Copy link, `changeDir`. State: 151 unit tests, 51 e2e checks, all green.
 
-## Remaining check: the Updater
-Owner asked to make sure it works: the "Refresh data" workflow last ran 2026-09-29 (run 36573679607,
-   success, 45 min, manual). It has never run on its cron yet (first: Mon 2026-10-05 06:00 UTC). Pipeline code
-   (scripts/, lib/names.js) is unchanged since that success; ladder.js already maps M-C to `...regmc...`, so the Smogon
-   M-C month is picked up when published. Remaining check: trigger it once manually (GitHub MCP
-   `actions_run_trigger` run_workflow, workflow `refresh-data.yml`, ref = live branch) once this batch is on the live branch, confirm success
-   (~45 min) and that its data commit rebased cleanly; after 2026-10-05 confirm the scheduled run fired.
-   Note: GitHub issue search 422s on this repo name via MCP (repo renamed to MetaLensVGC); check issues by listing.
+## The Updater (checked 2026-09-30)
+The "Refresh data" workflow was triggered manually after the third batch went live: run 36710957061 succeeded in
+17.5 min (the restored `data-raw` cache cut it from 45), data commit da05893 touched only public/data, no failure issue
+open. It has still never run on its cron (first: Mon 2026-10-05 06:00 UTC): confirm that one fired (step 1 below).
+ladder.js already maps M-C to `...regmc...`, so the Smogon M-C month is picked up when published.
+Note: GitHub issue search 422s on this repo name via MCP (repo renamed to MetaLensVGC); check issues by listing.
 
 ## Next, in order (report after each)
 0. **Check the session setup**: list your skills; say whether graphify built its graph. Report, don't fix settings.
