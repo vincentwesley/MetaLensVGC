@@ -491,6 +491,33 @@ test('Scanner (M-C): speed position has data, evidence cards render, item clause
   expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
 });
 
+test('Scanner never blanks a card after a scan: Weakest link shows flagged small samples, no "Insufficient data"', async ({ page }) => {
+  const paste = ['Rillaboom @ Miracle Seed\n- Fake Out', 'Incineroar @ Sitrus Berry\n- Fake Out',
+    'Sneasler @ Focus Sash\n- Fake Out', 'Salamence @ Salamencite\n- Tailwind', 'Kingambit @ Black Glasses\n- Sucker Punch',
+    'Basculegion @ Focus Sash\n- Last Respects'].join('\n\n');
+  // default view, then a narrow one: regional top cut is 36 teams, where "100+ games on both sides" used to blank the card
+  for (const [hash, relaxed] of [['', false], ['#tiers=regional&place=topcut', true]]) {
+    await page.goto(`/${hash}`);
+    await waitForAllSections(page);
+    const sc = page.locator('main [data-section="scanner"]');
+    await sc.scrollIntoViewIfNeeded();
+    await sc.locator('textarea').fill(paste);
+    await sc.getByRole('button', { name: 'Scan', exact: true }).click();
+    const card = sc.locator('.scn-block').filter({ has: page.getByText('Weakest link', { exact: true }) });
+    await expect(card.locator('tbody tr').first()).toBeVisible();
+    await expect(card.locator('.empty-state')).toHaveCount(0);
+    expect(await card.innerText()).not.toContain('Insufficient data');
+    if (relaxed) {
+      await expect(card).toContainText('smaller samples shown');
+      await expect(card.locator('.meta-line__relaxed')).toBeVisible();
+      await expect(card.locator('tbody tr.scn-low').first()).toContainText('low sample');
+    } else {
+      await expect(card.locator('.meta-line__relaxed')).toHaveCount(0);
+    }
+    expect(await sc.locator('.scn-results').innerText()).not.toContain('Insufficient data');
+  }
+});
+
 test('Teammate rate uses tournament sheets when there is no ladder data (M-C) and a row filters to the pair', async ({ page }) => {
   await page.goto('/#source=ladder');
   await waitForAllSections(page);

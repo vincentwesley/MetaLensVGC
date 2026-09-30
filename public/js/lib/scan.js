@@ -2,8 +2,7 @@
 // (matchups, item and team-comp suggestions). No DOM, no fetch; importable from Node.
 // Everything is counted from real team rows (`Team`, see aggregate.js#decode) and real
 // match results (`{a, b, result}` over `Team.i`). Nothing is modelled or invented:
-// when a sample is below its threshold the function returns null / an `insufficient`
-// marker and the UI says "Insufficient data".
+// when a sample is below its threshold the function still returns it, flagged `low`/`relaxed`, and the UI shows the real smaller samples flagged `low`; it is empty only when nothing exists.
 import { wilson } from './stats.js';
 import { effectiveness } from './types.js';
 import { classify, ARCHETYPES } from './archetypes.js';
@@ -119,39 +118,40 @@ export function similarGames(similar, base, matches) {
 
 /**
  * Best and worst opponent species for teams like yours. Candidates are species with
- * usage n >= minN in `base` and >= `matchGames` games. Best = highest Wilson lower bound,
- * worst = lowest Wilson upper bound.
- * @returns {{rows: object[], best: object[], worst: object[]}}
+ * usage n >= minN in `base` and >= `matchGames` games. When none qualifies, every opponent
+ * species with a real game is listed instead (`relaxed`, rows under `matchGames` carry `low`).
+ * Best = highest Wilson lower bound, worst = lowest Wilson upper bound.
+ * @returns {{rows: object[], best: object[], worst: object[], relaxed: boolean}}
  */
 export function speciesMatchups(games, base, minN = 20) {
   const meta = new Set(usage(base).filter((r) => r.n >= minN).map((r) => r.key));
-  const rows = [];
-  for (const [key, c] of games.bySpecies) {
-    if (!meta.has(key) || c.w + c.l < LIMITS.matchGames) continue;
-    rows.push({ key, w: c.w, l: c.l, ...verdict(c.w, c.l) });
-  }
+  const all = [...games.bySpecies].map(([key, c]) => ({ key, w: c.w, l: c.l, low: c.w + c.l < LIMITS.matchGames, ...verdict(c.w, c.l) }));
+  let rows = all.filter((r) => meta.has(r.key) && !r.low);
+  const relaxed = !rows.length && all.length > 0;
+  if (relaxed) rows = all;
   const best = rows.slice().sort((a, b) => b.ci[0] - a.ci[0]).slice(0, LIMITS.listSize);
   const seen = new Set(best.map((r) => r.key));
   const worst = rows.filter((r) => !seen.has(r.key)).sort((a, b) => a.ci[1] - b.ci[1]).slice(0, LIMITS.listSize);
-  return { rows, best, worst };
+  return { rows, best, worst, relaxed };
 }
 
 /**
  * Archetype matchups. From teams-like-yours games when there are enough, otherwise the
- * scanned team's own archetype row of the archetype matrix over `base`.
- * @returns {{source: 'similar'|'matrix'|null, rows: object[]}}  rows sorted by win % desc.
+ * scanned team's own archetype row of the archetype matrix over `base`. When neither has a
+ * row with `matchGames`, the real smaller samples are listed (`relaxed`, rows carry `low`).
+ * @returns {{source: 'similar'|'matrix'|null, rows: object[], relaxed: boolean}}  rows sorted by win % desc.
  */
 export function archetypeMatchups(games, base, matches, myArch) {
-  const toRows = (entries) => entries
-    .filter(([, c]) => c.w + c.l >= LIMITS.matchGames)
-    .map(([id, c]) => ({ id, label: archLabel(id), w: c.w, l: c.l, ...verdict(c.w, c.l) }))
+  const toRows = (entries, min = LIMITS.matchGames) => entries
+    .filter(([, c]) => c.w + c.l >= min)
+    .map(([id, c]) => ({ id, label: archLabel(id), w: c.w, l: c.l, low: c.w + c.l < LIMITS.matchGames, ...verdict(c.w, c.l) }))
     .sort((a, b) => b.winPct - a.winPct);
   if (games && games.w + games.l >= LIMITS.totalGames) {
     const rows = toRows([...games.byArch]);
-    if (rows.length) return { source: 'similar', rows };
+    if (rows.length) return { source: 'similar', rows, relaxed: false };
   }
   const mx = archetypeMatrix(base, matches, base);
-  if (mx) {
+  const matrixEntries = () => {
     const acc = new Map();
     const add = (id, w, l) => {
       const c = acc.get(id) || { w: 0, l: 0 };
@@ -163,16 +163,23 @@ export function archetypeMatchups(games, base, matches, myArch) {
       if (c.a === myArch) add(c.b, c.w, c.l);
       else if (c.b === myArch) add(c.a, c.l, c.w);
     }
-    const rows = toRows([...acc]);
-    if (rows.length) return { source: 'matrix', rows };
-  }
-  return { source: null, rows: [] };
+    return [...acc];
+  };
+  const mEntries = mx ? matrixEntries() : [];
+  const mRows = toRows(mEntries);
+  if (mRows.length) return { source: 'matrix', rows: mRows, relaxed: false };
+  // nothing reaches matchGames: the real smaller samples, teams-like-yours first
+  const sRows = games ? toRows([...games.byArch], 1) : [];
+  if (sRows.length) return { source: 'similar', rows: sRows, relaxed: true };
+  const xRows = toRows(mEntries, 1);
+  return xRows.length ? { source: 'matrix', rows: xRows, relaxed: true } : { source: null, rows: [], relaxed: false };
 }
 
 /**
  * Item check per scanned Pokémon against real item usage of that species in `base`.
  * Item clause: duplicate items on the pasted team are reported, and an item another
- * member already holds is never proposed (it is listed as `blockedBy` instead).
+ * member already holds is never proposed (it is listed as `blockedBy` instead). A species under
+ * `itemSlots` appearances is still compared, flagged `low`; `none` = no item recorded at all.
  * @returns {{duplicates: {item:string, keys:string[]}[], mons: object[]}}
  */
 export function itemSuggestions(mons, base) {
@@ -201,14 +208,14 @@ export function itemSuggestions(mons, base) {
   const rate = (key, item) => {
     const c = rec.get(`${key}|${item}`);
     const games = c ? c.w + c.l : 0;
-    if (games < LIMITS.itemGames) return { games, winPct: null, ci: null };
-    return { games, winPct: c.w / games, ci: wilson(c.w, games) };
+    if (!games) return { games, winPct: null, ci: null, low: true };
+    return { games, winPct: c.w / games, ci: wilson(c.w, games), low: games < LIMITS.itemGames };
   };
   const out = mons.map((m, idx) => {
     const sp = bySp.get(m.k);
-    const base0 = { key: m.k, item: m.item || null, slotN: sp ? sp.n : 0 };
+    const base0 = { key: m.k, item: m.item || null, slotN: sp ? sp.n : 0, low: !!sp && sp.n < LIMITS.itemSlots };
     if (m.mega) return { ...base0, status: 'fixed' };
-    if (!sp || sp.n < LIMITS.itemSlots || !sp.items.length) return { ...base0, status: 'insufficient' };
+    if (!sp || !sp.items.length) return { ...base0, status: 'none' };
     const top = sp.items.slice(0, 3);
     const mine = m.item ? sp.items.find((i) => i.name.toLowerCase() === m.item.toLowerCase()) : null;
     const others = mons.filter((_, j) => j !== idx);
@@ -266,7 +273,6 @@ export function teammatePicks(keys, base, dex, counts = sharedCounts(base, keys)
   const typesOf = (k) => dex.species[k]?.types || null;
   const picks = [];
   for (const [key, c] of acc) {
-    if (c.n < LIMITS.pickTeams) continue;
     const games = c.w + c.l;
     const ct = typesOf(key);
     const resists = ct ? (cover.weakTypes || []).filter((t) => effectiveness(t, ct) < 1) : [];
@@ -276,65 +282,79 @@ export function teammatePicks(keys, base, dex, counts = sharedCounts(base, keys)
     }) : [];
     picks.push({
       key, n: c.n, share: poolTeams ? c.n / poolTeams : 0, games,
-      winPct: games >= LIMITS.pickGames ? c.w / games : null,
-      ci: games >= LIMITS.pickGames ? wilson(c.w, games) : null,
+      winPct: games ? c.w / games : null,
+      ci: games ? wilson(c.w, games) : null,
+      low: c.n < LIMITS.pickTeams, lowWin: games < LIMITS.pickGames,
       resists, answers,
     });
   }
-  picks.sort((a, b) => ((b.resists.length + b.answers.length > 0) - (a.resists.length + a.answers.length > 0)) || b.n - a.n);
-  return { poolTeams, poolWinPct: pw + pl ? pw / (pw + pl) : null, poolGames: pw + pl, picks: picks.slice(0, LIMITS.pickSize) };
+  // picks on >= pickTeams teams when any exist; otherwise the real smaller ones, flagged `low`
+  const solid = picks.filter((p) => !p.low);
+  const shown = solid.length ? solid : picks;
+  shown.sort((a, b) => ((b.resists.length + b.answers.length > 0) - (a.resists.length + a.answers.length > 0)) || b.n - a.n);
+  return { poolTeams, poolWinPct: pw + pl ? pw / (pw + pl) : null, poolGames: pw + pl, relaxed: !solid.length && picks.length > 0, picks: shown.slice(0, LIMITS.pickSize) };
 }
 
 /**
- * Weakest link: for each member X, compare teams that share >= 3 of your OTHER species
- * and run X against those that do not (team W-L records). A row needs `linkGames` games
- * on both sides. `clear` is true when the two Wilson intervals do not overlap.
- * `replacement` is the most common outside species on the "without X" teams.
- * @returns {{rows: object[]}}  rows sorted by (without - with) win % desc.
+ * Weakest link: for each member X, compare teams that share >= `threshold` (3, else 2 when no
+ * member has games on both sides at 3) of your OTHER species and run X against those that do
+ * not (team W-L records). Every member with >= 1 game on both sides gets a row; `low` marks a
+ * side under `linkGames`, and such a row is never `clear`. `clear` = the Wilson intervals do not
+ * overlap. `replacement` is the most common outside species on the "without X" teams.
+ * @returns {{rows: object[], relaxed: boolean, threshold: number}}  rows that clear `linkGames`
+ *  first, then low ones, each by (without - with) win % desc; `relaxed` = no row cleared it.
  */
 export function weakestLink(keys, base, counts = sharedCounts(base, keys)) {
-  const rows = [];
-  if (keys.size < 4) return { rows };
-  for (const x of keys) {
-    const withR = { w: 0, l: 0, n: 0 };
-    const withoutR = { w: 0, l: 0, n: 0 };
-    const repl = new Map();
-    for (let i = 0; i < base.length; i++) {
-      const t = base[i];
-      const has = t.species.has(x);
-      if (counts[i] - (has ? 1 : 0) < LIMITS.simFallback) continue;
-      const r = has ? withR : withoutR;
-      r.w += t.w; r.l += t.l; r.n++;
-      if (!has) {
-        for (const k of t.species) {
-          if (keys.has(k)) continue;
-          const c = repl.get(k) || { n: 0, w: 0, l: 0 };
-          c.n++; c.w += t.w; c.l += t.l;
-          repl.set(k, c);
+  const build = (min) => {
+    const rows = [];
+    for (const x of keys) {
+      const withR = { w: 0, l: 0, n: 0 };
+      const withoutR = { w: 0, l: 0, n: 0 };
+      const repl = new Map();
+      for (let i = 0; i < base.length; i++) {
+        const t = base[i];
+        const has = t.species.has(x);
+        if (counts[i] - (has ? 1 : 0) < min) continue;
+        const r = has ? withR : withoutR;
+        r.w += t.w; r.l += t.l; r.n++;
+        if (!has) {
+          for (const k of t.species) {
+            if (keys.has(k)) continue;
+            const c = repl.get(k) || { n: 0, w: 0, l: 0 };
+            c.n++; c.w += t.w; c.l += t.l;
+            repl.set(k, c);
+          }
         }
       }
+      const gw = withR.w + withR.l;
+      const go = withoutR.w + withoutR.l;
+      if (!gw || !go) continue;
+      const a = verdict(withR.w, withR.l);
+      const b = verdict(withoutR.w, withoutR.l);
+      const low = gw < LIMITS.linkGames || go < LIMITS.linkGames;
+      let replacement = null;
+      for (const [key, c] of repl) {
+        if (c.n < LIMITS.pickTeams) continue;
+        if (!replacement || c.n > replacement.n) replacement = { key, n: c.n, w: c.w, l: c.l };
+      }
+      if (replacement) {
+        const g = replacement.w + replacement.l;
+        replacement = { key: replacement.key, n: replacement.n, games: g, winPct: g >= LIMITS.pickGames ? replacement.w / g : null };
+      }
+      rows.push({
+        key: x, with: { teams: withR.n, ...a, w: withR.w, l: withR.l }, without: { teams: withoutR.n, ...b, w: withoutR.w, l: withoutR.l },
+        diff: b.winPct - a.winPct, low,
+        clear: !low && (b.ci[0] > a.ci[1] || a.ci[0] > b.ci[1]),
+        replacement,
+      });
     }
-    if (withR.w + withR.l < LIMITS.linkGames || withoutR.w + withoutR.l < LIMITS.linkGames) continue;
-    const a = verdict(withR.w, withR.l);
-    const b = verdict(withoutR.w, withoutR.l);
-    let replacement = null;
-    for (const [key, c] of repl) {
-      if (c.n < LIMITS.pickTeams) continue;
-      if (!replacement || c.n > replacement.n) replacement = { key, n: c.n, w: c.w, l: c.l };
-    }
-    if (replacement) {
-      const g = replacement.w + replacement.l;
-      replacement = { key: replacement.key, n: replacement.n, games: g, winPct: g >= LIMITS.pickGames ? replacement.w / g : null };
-    }
-    rows.push({
-      key: x, with: { teams: withR.n, ...a, w: withR.w, l: withR.l }, without: { teams: withoutR.n, ...b, w: withoutR.w, l: withoutR.l },
-      diff: b.winPct - a.winPct,
-      clear: b.ci[0] > a.ci[1] || a.ci[0] > b.ci[1],
-      replacement,
-    });
-  }
-  rows.sort((x, y) => y.diff - x.diff);
-  return { rows };
+    return rows.sort((x, y) => (x.low - y.low) || (y.diff - x.diff));
+  };
+  if (keys.size < 4) return { rows: [], relaxed: false, threshold: LIMITS.simFallback };
+  let threshold = LIMITS.simFallback;
+  let rows = build(threshold);
+  if (!rows.length) { threshold = LIMITS.simFallback - 1; rows = build(threshold); }
+  return { rows, relaxed: rows.length > 0 && rows.every((r) => r.low), threshold };
 }
 
 /**
@@ -366,14 +386,14 @@ export const RARE_NATURE = 0.05;
  * @param mon    parsePaste Mon (`sp` array or null, `nature` or null)
  * @param entry  `{name, mon}` from rankedMon(season, key, dex) or null
  * @param field  `[{key, spe}]` meta speeds (own species is skipped)
- * @returns {{kind:'insufficient'|'assumed'|'exact'|'near', ...}}
+ * @returns {{kind:'none'|'assumed'|'exact'|'near', ...}}
  *  exact: `{rank, row}`; near: `{row, dist, diff: number[6], mySpe, commonSpe, changes:[{key, spe, mine, common}]}`;
- *  every kind but 'insufficient' also has `rows` and `rarity: null | {nature, share|null}`.
+ *  every kind but 'none' (no ranked spreads exist) also has `rows` and `rarity: null | {nature, share|null}`.
  */
 export function spCheck(mon, entry, dex, field = []) {
   const bs = (dex.species[mon.k] || dex.species[mon.s])?.bs;
   const rows = bs && entry ? rankedSpreadRows(entry.mon, bs) : [];
-  if (!rows.length) return { kind: 'insufficient' };
+  if (!rows.length) return { kind: 'none' };
   const natShare = rankedEntries(entry.mon.natures).find((n) => n.name === mon.nature)?.pct ?? null;
   const rarity = mon.nature && (natShare ?? 0) < RARE_NATURE ? { nature: mon.nature, share: natShare } : null;
   const out = { rows, rarity };

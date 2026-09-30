@@ -98,7 +98,9 @@ test('speciesMatchups: min games, best/worst by CI, no overlap', () => {
   const x = r.rows.find((y) => y.key === 'X');
   assert.equal(x.n, 54);
   const short = speciesMatchups({ bySpecies: new Map([['X', { w: 5, l: 5 }]]) }, base, 1);
-  assert.equal(short.rows.length, 0);
+  assert.equal(short.rows.length, 1); // nothing clears matchGames: the real small sample is shown, flagged
+  assert.equal(short.relaxed, true);
+  assert.equal(short.rows[0].low, true);
 });
 
 test('archetypeMatchups: similar games, fallback to matrix row, insufficient', () => {
@@ -135,8 +137,8 @@ test('itemSuggestions: top-3 check, item clause, blocked items, win rate gating'
   assert.equal(a.current.winPct, 0.6);
 
   // species with no items recorded: insufficient / missing species
-  assert.equal(r.mons[3].status, 'insufficient');
-  assert.equal(r.mons[2].status, 'insufficient'); // C has 40 slots but no recorded item at all
+  assert.equal(r.mons[3].status, 'none');
+  assert.equal(r.mons[2].status, 'none'); // C has 40 slots but no recorded item at all
 });
 
 test('sharedWeaknesses: >= 3 members weak', () => {
@@ -180,9 +182,46 @@ test('weakestLink: with/without, gating and replacement', () => {
   assert.equal(d.clear, true);
   assert.equal(d.replacement.key, 'X');
   assert.equal(d.with.teams, 30);
-  // too few games -> no rows
-  assert.equal(weakestLink(keys, base.slice(0, 5)).rows.length, 0);
-  assert.equal(weakestLink(new Set(['A', 'B', 'C']), base).rows.length, 0);
+  assert.equal(rows[0].low, false);
+  assert.equal(weakestLink(keys, base).relaxed, false);
+  assert.equal(weakestLink(keys, base).threshold, 3);
+  // few games: rows still returned, flagged low, never clear, relaxed
+  const few = weakestLink(keys, base.slice(0, 5).concat(base.slice(30, 35)));
+  assert.ok(few.rows.length > 0);
+  assert.equal(few.relaxed, true);
+  assert.ok(few.rows.every((r) => r.low && !r.clear));
+  assert.equal(weakestLink(new Set(['A', 'B', 'C']), base).rows.length, 0); // < 4 members
+});
+
+test('weakestLink: clearing rows sort before low rows; fallback to sharing 2; truly empty', () => {
+  const base = [];
+  // D: 120 games each side (clears); F appears only on 5 teams (low, but has a both-sides record)
+  for (let i = 0; i < 12; i++) base.push(team(i, ['A', 'B', 'C', 'D', 'E', 'G'], 3, 7));
+  for (let i = 12; i < 24; i++) base.push(team(i, ['A', 'B', 'C', 'X', 'E', 'G'], 7, 3));
+  for (let i = 24; i < 29; i++) base.push(team(i, ['A', 'B', 'C', 'F', 'E', 'G'], 9, 1));
+  const keys = new Set(mine);
+  const r = weakestLink(keys, base);
+  assert.equal(r.relaxed, false);
+  assert.equal(r.threshold, 3);
+  const lows = r.rows.map((x) => x.low);
+  assert.deepEqual(lows, [...lows].sort((x, y) => x - y)); // clearing first, then low
+  assert.equal(r.rows.find((x) => x.key === 'D').low, false);
+  const f = r.rows.find((x) => x.key === 'F');
+  assert.equal(f.low, true);
+  assert.equal(f.clear, false);
+  // teams share only 2 of the others: threshold 3 finds nothing, 2 does
+  const two = [];
+  for (let i = 0; i < 5; i++) two.push(team(i, ['A', 'B', 'D', 'X', 'G', 'H'], 3, 1));
+  for (let i = 5; i < 10; i++) two.push(team(i, ['A', 'B', 'X', 'G', 'H', 'E'], 1, 3));
+  const k4 = new Set(['A', 'B', 'D', 'E']);
+  const t2 = weakestLink(k4, two);
+  assert.equal(t2.threshold, 2);
+  assert.ok(t2.rows.length > 0);
+  assert.equal(t2.relaxed, true);
+  // nothing shares even 2 of the others -> truly empty
+  const none = weakestLink(k4, [team(0, ['X', 'G', 'H', 'A', 'F', 'C'], 1, 1)]);
+  assert.deepEqual(none.rows, []);
+  assert.equal(none.relaxed, false);
 });
 
 test('scanTeam: end to end on a small fixture, no NaN', () => {
@@ -232,7 +271,23 @@ test('spCheck: exact / near / assumed / insufficient / rare nature, real Rillabo
   assert.equal(spCheck(m(null, 'Adamant'), entry, rdex, field).rarity, null);
   assert.equal(spCheck(m(null, 'Serious'), entry, rdex, field).rarity.share, null); // not reported at all
 
-  assert.equal(spCheck(m([1, 2, 3, 4, 5, 6]), null, rdex, field).kind, 'insufficient');
-  assert.equal(spCheck({ ...m(null), k: 'Nope', s: 'Nope' }, entry, rdex, field).kind, 'insufficient');
+  assert.equal(spCheck(m([1, 2, 3, 4, 5, 6]), null, rdex, field).kind, 'none');
+  assert.equal(spCheck({ ...m(null), k: 'Nope', s: 'Nope' }, entry, rdex, field).kind, 'none');
   assert.doesNotMatch(JSON.stringify([exact, near, rare]), /NaN|Infinity|undefined/);
+});
+
+test('never blank: small samples are returned flagged (archetype matchups, picks, items)', () => {
+  const base = [team(0, ['A', 'B', 'C', 'X', 'G', 'H'], 3, 1), team(1, ['A', 'B', 'C', 'F', 'G', 'H'], 1, 2)];
+  const g = { w: 3, l: 2, bySpecies: new Map(), byArch: new Map([['sun', { w: 2, l: 1 }]]) };
+  const am = archetypeMatchups(g, base, [], 'tailwind');
+  assert.equal(am.relaxed, true);
+  assert.equal(am.rows[0].low, true);
+  const pk = teammatePicks(new Set(mine), base, dex);
+  assert.equal(pk.relaxed, true);
+  assert.ok(pk.picks.length > 0 && pk.picks.every((p) => p.low));
+  assert.equal(pk.picks[0].lowWin, true);
+  const it = itemSuggestions([mon('A', 'Leftovers')], [team(0, ['A', 'B'], 2, 1, 'other', { A: 'Life Orb' })]);
+  assert.equal(it.mons[0].low, true); // 1 slot < itemSlots, still compared
+  assert.equal(it.mons[0].top[0].winPct, 2 / 3);
+  assert.equal(it.mons[0].top[0].low, true);
 });
