@@ -150,6 +150,12 @@ export default {
       for (const k of keys) datalist.appendChild(new Option(k));
     }
 
+    // The previous regulation's ranked file, loaded once on first use (the promise is cached, so reopening never refetches).
+    const prevRankedPromises = new Map();
+    function prevRankedFor(reg) {
+      if (!prevRankedPromises.has(reg)) prevRankedPromises.set(reg, ctx.loadRanked(reg).catch((e) => { prevRankedPromises.delete(reg); throw e; }));
+      return prevRankedPromises.get(reg);
+    }
     let spSource = 'ranked'; // 'ranked' | 'smogon': the Spread explorer's source toggle
     let shiftSeq = 0;
 
@@ -208,7 +214,7 @@ export default {
         const isRanked = spSource === 'ranked';
         const rows = isRanked ? rankedRows : smogonRows;
         if (isRanked) {
-          const of = rm.name === key ? '' : ` · ${rm.name} data (Megas are tracked as base + stone)`;
+          const of = rm.name === key ? '' : ` · spreads are ${rm.name}'s ranked entry (Megas are tracked as base + stone); stats use ${key} base stats`;
           ctx.meta(metaEl, { source: `${rankedSource(season)} · sample size not published${of}` });
         } else {
           ctx.meta(metaEl, { source: `Smogon ${ladMerged.cutoff} ladder · ${lad.month} · ${ladMon.raw.toLocaleString('en-US')} ${key} entries`, n: ladMerged.battles, unit: 'battles' });
@@ -222,7 +228,7 @@ export default {
           if (!pReg) shift.textContent = shiftText(key, dex, bs, rows, null, null, view.reg);
           else {
             shift.textContent = `Shift ${pReg} -> ${view.reg}: loading…`;
-            ctx.loadRanked(pReg).then((pr) => { if (seq === shiftSeq) shift.textContent = shiftText(key, dex, bs, rows, pReg, pr, view.reg); })
+            prevRankedFor(pReg).then((pr) => { if (seq === shiftSeq) shift.textContent = shiftText(key, dex, bs, rows, pReg, pr, view.reg); })
               .catch(() => { if (seq === shiftSeq) shift.textContent = `Shift ${pReg} -> ${view.reg}: Insufficient data.`; });
           }
         }
