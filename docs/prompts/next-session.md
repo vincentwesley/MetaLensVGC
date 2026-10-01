@@ -1,52 +1,58 @@
-Continue work on **MetaLens VGC** (repo `vincentwesley/MetaLensVGC`, branch `claude/pokemon-vgc-metagame-dashboard-9whe1a`,
-live at https://metalensvgc.pages.dev). Handover from a cloud session, 2026-09-30.
+Continue work on **MetaLens VGC** (repo `vincentwesley/MetaLensVGC`, live at https://metalensvgc.pages.dev).
+Handover written 2026-10-01. The project is **feature-complete and in maintenance mode**: everything is live, tests are
+green, no open issues, and the data refreshes itself weekly. Only do what the owner asks in this session; the sections
+below say what state things are in and what typically needs doing.
 
-First `git pull --rebase`, then read `CLAUDE.md` in full (especially "Where the data is (and isn't)", "Chip semantics",
-"Invariants learned the hard way", "Working in a cloud session", "Skill triggers") and `docs/TESTING.md` (coverage ledger +
-"Not yet tested"). Don't re-verify what the ledger covers unless its code changed. Don't edit `.claude/settings.json`,
-`.gitattributes` or the graphify / skill-trigger parts of `CLAUDE.md`; the owner maintains those.
+## Before anything
+1. Local clone: `C:\Coding Projects\VGCMetaScope` (folder keeps the old name). `git pull --rebase` first: the weekly bot
+   (`metalensvgc-bot`, "chore: refresh data") pushes to the same branch.
+2. Read `CLAUDE.md` in full (hard rules, "Where the data is (and isn't)", "Chip semantics", "Invariants learned the hard
+   way", "Working in a cloud session") and `docs/TESTING.md` (coverage ledger + "Not yet tested"). Don't re-verify what
+   the ledger covers unless its code changed. Don't edit `.claude/settings.json`, `.gitattributes` or the graphify /
+   skill-trigger parts of `CLAUDE.md`; the owner maintains those.
 
-Ground rules: real data only (show "Insufficient data" + sample instead of inventing numbers); Champions builds are Stat
-Points (66 total, max 32 per stat) + nature, Mega instead of Tera, all stat math via `js/lib/stats.js`; in-game ranked data
-needs attribution, publishes ranks (never a usage % from it) and must not be redistributed as a data service. Orchestrate:
-coding to sonnet subagents, sweeps/test runs to haiku (sonnet for sweeps that must measure things), self-contained briefs;
-review their diffs and re-run `npm test` + `npm run e2e:cloud` yourself before committing. `git pull --rebase` before each
-commit (the owner and the weekly bot push to this branch too). Commit in logical steps and push (it deploys; no PR). Every
-bug fix gets a regression test.
+## How to work here
+- **One branch**: `claude/pokemon-vgc-metagame-dashboard-9whe1a` is the repo's default branch and Cloudflare Pages'
+  production branch. There is no `main`. Commit in logical steps and push to it (that deploys); no PR unless asked.
+- **Ground rules**: real data only, never invented or "calibrated" numbers. Never blank a chart or card: when nothing
+  clears a minimum sample, show the real smaller samples flagged "low sample" / "includes n < N"; an empty state only when
+  there is truly nothing, worded with what is missing (never "Insufficient data"). Champions builds are Stat Points
+  (66 total, max 32 per stat) + nature, Mega instead of Tera; all stat math through `js/lib/stats.js`. In-game ranked data
+  (championsbattledata.com) needs attribution, publishes ranks (never a usage % from it) and must not be redistributed.
+- **Owner preferences**: Claude orchestrates and reviews; coding goes to sonnet subagents, test runs/sweeps to haiku
+  (sonnet for sweeps that must measure), with self-contained briefs. Review every diff and re-run the tests yourself
+  before committing. Every bug fix gets a regression test (unit if pure logic, `e2e/app.spec.js` if it needs a browser).
+  After a non-trivial change run `code-review` (low) before pushing. Defaults: Pro skin, dark theme, green palettes,
+  "Made by Vin" credits.
+- **Tests**: `npm test` (155 unit) and the browser suite (52 checks): `npm run e2e:cloud` in a cloud session; on the
+  owner's Windows machine `E2E_OFFLINE=1 npx playwright test e2e/app.spec.js --workers=2 --timeout=120000` (slow box).
+  Never kill all `node.exe` on Windows (it takes down MCP servers); kill the PID you started.
 
-## Done in the last session (2026-09-30, second cloud session; all pushed to the live branch)
-- Cross-filters never blank a chart: `atMinN()` + "includes n < N" on the meta line; the quadrant plots one Pokémon.
-- Motion: drawer eases open and slides out, bars grow, skin/theme cross-fade, fireflies on the snapshot leader and on a
-  newly added chip, scroll-progress hairline. Then an audit trimmed it to a motion budget (CLAUDE.md), guarded by an
-  e2e allowlist. Chips no longer re-pop on every state change.
-- Owner calls, decided by Claude on the owner's request ("just do it"): item shares one decimal (never "0%"); sprite
-  scale 24/32/48/96; "Archetype share by week" (+ archetype colours follow the archetype); "Meta by country" section +
-  Country chip.
-- Fixes found on the way: Retro archetype table hid its numbers; slice-shots captured mid-render; grid sections grew to
-  fit wide tables on phones.
+## Current state (2026-10-01)
+- Live branch tip `ba3b610` (+ any later bot data commits). Sections, modules and invariants are in `CLAUDE.md`.
+- Recent work, all live: weekly refresh hardening + failure alert + stale-data notice; smoke-pass fixes (NEW vs +pt,
+  idle CPU, contrast, hints, aria); UX (section nav, tips strip, loading cue); Spread explorer (deep dive) + scanner SP
+  check; cross-filters never blank; motion budget; Meta by country; Archetype share by week; Library "Filter" scans the
+  team; leaderboard search + Change column; Copy link; scanner cards never say "Insufficient data" after a scan.
+- **Weekly refresh** (`.github/workflows/refresh-data.yml`, Mondays 06:00 UTC + manual "Run workflow"): verified twice
+  by hand (latest run 36710957061, 2026-09-30, success in 17.5 min with the restored `data-raw` cache; data commit
+  touched only `public/data`). On any failure it opens/comments the GitHub issue "Weekly data refresh failed" (run link,
+  failing step, log tail) and commits nothing, so the site keeps the last good data; the next success closes the issue.
+  The site shows a "data may be out of date" notice when `manifest.generated` is over 10 days old.
+  GitHub issue search via MCP 422s on this repo (renamed from VGCMetaScope); list issues instead, or use `gh`.
 
-State: 148 unit tests, 47 e2e checks, all green.
+## Open items (none block "done")
+1. **First scheduled run**: Monday 2026-10-05 06:00 UTC is the first time the cron itself fires (all runs so far were
+   manual). Check it ran and succeeded (`gh run list -R vincentwesley/MetaLensVGC --workflow refresh-data.yml`).
+2. **Smogon M-C month**: expected early October; picked up automatically. Once `ladder-M-C.json` has months, check
+   Ladder mode on M-C, Teammate rate "Ladder (Smogon)", the Spread explorer's Smogon option and the scanner's speed
+   position.
+3. **Next regulation** (M-C ends 2026-12-02): when it's announced, add it to `scripts/lib/regs.js` (window), `SUFFIX`
+   in `scripts/sources/ladder.js` (Smogon file suffix) and `current` in `scripts/build-data.js`, then run the workflow.
+   Until then the updater keeps working but skips the new regulation's ranked seasons (`reg: null`, warned).
+4. Optional: regenerate the committed `screenshots/*.png` with `npm run shot` on a machine with internet (they predate
+   the latest features); real-device checks from "Not yet tested" in `docs/TESTING.md`; delete the merged branch
+   `claude/ecstatic-babbage-wl3cor` if the owner agrees.
 
-## Done in the third batch (2026-09-30; finished from the WIP commit, see CLAUDE.md "Project status")
-Library Filter scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column,
-Copy link, `changeDir`. State: 151 unit tests, 51 e2e checks, all green.
-
-## The Updater (checked 2026-09-30)
-The "Refresh data" workflow was triggered manually after the third batch went live: run 36710957061 succeeded in
-17.5 min (the restored `data-raw` cache cut it from 45), data commit da05893 touched only public/data, no failure issue
-open. It has still never run on its cron (first: Mon 2026-10-05 06:00 UTC): confirm that one fired (step 1 below).
-ladder.js already maps M-C to `...regmc...`, so the Smogon M-C month is picked up when published.
-Note: GitHub issue search 422s on this repo name via MCP (repo renamed to MetaLensVGC); check issues by listing.
-
-## Next, in order (report after each)
-0. **Check the session setup**: list your skills; say whether graphify built its graph. Report, don't fix settings.
-1. **Weekly refresh + Smogon M-C month** (2026-10-05 08:00 UTC or later): check the latest "Refresh data" run and any
-   open "Weekly data refresh failed" issue. If `ladder-M-C.json` has months: verify Ladder mode on M-C, Teammate rate
-   "Ladder (Smogon)", the Spread explorer's Smogon option, the scanner's speed position. Else say Smogon hasn't published.
-2. **Real-network look** (needs sprites + fonts, so a machine with internet or `npm run shot`): the 96 px hero sprites,
-   24 px chip sprites, fireflies around a real sprite, the country table with real sprites. Regenerate the committed
-   screenshots with `npm run shot` there.
-3. Remaining "Not yet tested" items in `docs/TESTING.md`.
-
-When done, update `CLAUDE.md` (status, modules, invariants; leave the owner's sections alone) and `docs/TESTING.md`, then
-report: found, fixed/built (with commits), tested and fine, left open with reasons.
+When you finish a piece of work, update `CLAUDE.md` (status, modules, invariants) and `docs/TESTING.md`, then report:
+found, fixed/built (with commits), tested and fine, left open with reasons.

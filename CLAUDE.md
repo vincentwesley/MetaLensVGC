@@ -142,7 +142,7 @@ Background: pixel field canvas.
   teammates, checks/counters. M-A and M-B have 3 months; M-C has none until Smogon publishes (early October).
 - So any spread / stat analysis uses ranked (+ Smogon where present) and must say which, with its sample.
 
-## Project status (handover, 2026-09-30, after the third batch: Library scan, leaderboard search + Change, Copy link)
+## Project status (handover, 2026-10-01: feature-complete, maintenance mode)
 - Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
   `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
@@ -159,7 +159,8 @@ Background: pixel field canvas.
 - Owner decisions: ungendered official "Indeedee" counts as `Indeedee-F`. Orchestrate: `haiku` for fetch/validate/test runs, `sonnet` for coding. If a model keeps failing with 529/429, switch model instead of retrying.
 - Team-level sections show an explicit "not available" state under the ranked source (no per-team ranked data).
 - Third batch (2026-09-30): Library Filter also scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column, Copy link. 151 unit, 51 e2e green.
-- Next-session prompt: `docs/prompts/next-session.md`. Testing ledger: `docs/TESTING.md`.
+- Scanner cards never say "Insufficient data" after a scan (low samples flagged; empty states say what is missing). 155 unit, 52 e2e green.
+- Next-session prompt (fresh-start handover, open items): `docs/prompts/next-session.md`. Testing ledger: `docs/TESTING.md`.
 
 ### Invariants learned the hard way (keep them)
 - **Rendering** (`main.js`): sections update on-screen first, yielding between them; off-screen ones are marked dirty and
