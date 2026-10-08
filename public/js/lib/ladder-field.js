@@ -74,3 +74,31 @@ export function ladderMovers(ladder, from = '', to = '', floor = 0.01) {
     fallers: rows.filter((r) => r.delta < 0).sort((x, y) => x.delta - y.delta),
   };
 }
+
+/** Top-N species by usage plus teammate-share matrix: m[r][c] = share of keys[r]'s teammates that is keys[c] (null if not in its listed top teammates). */
+export function ladderCoMatrix(mons, n = 15) {
+  const top = [...mons].filter((m) => m.usage > 0).sort((a, b) => b.usage - a.usage).slice(0, n);
+  const keys = top.map((m) => m.key);
+  const m = top.map((a) => keys.map((k) => (k === a.key ? null : (a.teammates || []).find((t) => t.name === k)?.pct ?? null)));
+  return { keys, m };
+}
+
+/** Pairs ranked by usage(A)*share(B|A), averaged over both directions when both are listed. [{keys:[a,b] sorted, score}] */
+export function ladderPairs(mons, limit = 15) {
+  const by = new Map();
+  for (const a of mons) {
+    if (!(a.usage > 0)) continue;
+    for (const t of a.teammates || []) {
+      if (t.name === a.key || !(t.pct > 0)) continue;
+      const keys = [a.key, t.name].sort();
+      const id = keys.join('\u0000');
+      const e = by.get(id) || { keys, scores: [] };
+      e.scores.push(a.usage * t.pct);
+      by.set(id, e);
+    }
+  }
+  return [...by.values()]
+    .map((e) => ({ keys: e.keys, score: e.scores.reduce((x, y) => x + y, 0) / e.scores.length }))
+    .sort((x, y) => y.score - x.score || x.keys.join().localeCompare(y.keys.join()))
+    .slice(0, limit);
+}
