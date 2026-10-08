@@ -308,3 +308,15 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
   .cty-table .usage-bar { min-width: 0; }
 }
 .scn-low { opacity: .75; }
+
+/* deep dive additions: dex number, filter/form buttons, stat range, matchups, sparkline */
+.ddv-num { color: var(--muted); font-size: var(--fs-small); font-weight: normal; }
+.ddv-btn { align-self: flex-start; font: inherit; font-size: var(--fs-small); padding: 4px 10px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.ddv-btn:hover { border-color: var(--accent); }
+.ddv-forms { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ddv-range { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.ddv-matchrow { display: grid; grid-template-columns: 36px 1fr; gap: var(--space-2); align-items: center; }
+.ddv-matchrow__mult { font-family: var(--font-label); font-size: var(--fs-small); color: var(--muted); }
+.ddv-spark { width: 100%; max-width: 320px; height: 56px; }
+.ddv-spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.ddv-spark circle { fill: var(--accent); }

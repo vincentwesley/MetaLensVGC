@@ -1,0 +1,56 @@
+/* Settings panel, meta clock, What's new dialog. Colours via tokens only; no animation (motion budget). */
+.gear, .clock {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface-1); color: var(--ink-2); border: 2px solid var(--frame); border-radius: var(--radius);
+  height: 30px; padding: 0 8px; cursor: pointer; font-family: var(--font-label); font-size: var(--fs-small);
+}
+[data-skin="pro"] .gear, [data-skin="pro"] .clock { border: 1px solid var(--border); }
+.gear:hover, .clock:hover, .gear[aria-expanded="true"], .clock[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+.gear { width: 32px; padding: 0; }
+.gear__dot { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface-1); box-sizing: content-box; }
+.gear__dot[hidden] { display: none; }
+.clock { min-width: 9ch; font-variant-numeric: tabular-nums; white-space: nowrap; }
+:root[data-clock="off"] .clock { display: none; }
+
+.settings {
+  position: fixed; inset: auto; margin: 0; width: min(320px, calc(100vw - 16px)); max-height: calc(100vh - 80px); overflow: auto;
+  padding: var(--space-3); color: var(--ink); background: var(--surface-1);
+  border: 2px solid var(--frame); border-radius: var(--radius); font-family: var(--font-body); font-size: var(--fs-small);
+}
+[data-skin="pro"] .settings { border: 1px solid var(--border); box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
+.settings:not(:popover-open) { display: none; }
+.settings:popover-open { display: flex; flex-direction: column; gap: var(--space-3); }
+.settings__row { display: flex; flex-direction: column; gap: var(--space-1); }
+.settings__label { font-family: var(--font-label); font-size: var(--fs-label); color: var(--ink-2); text-transform: uppercase; }
+.settings .segmented { align-self: flex-start; max-width: 100%; }
+.swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.swatch {
+  width: 28px; height: 28px; padding: 0; cursor: pointer; background: var(--sw, var(--accent));
+  border: 2px solid var(--frame); border-radius: var(--radius);
+}
+[data-skin="pro"] .swatch { border: 1px solid var(--border); border-radius: 50%; }
+.swatch[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.swatch:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.settings__link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; text-align: left; }
+.settings__foot { color: var(--muted); border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.clock-panel p { margin: 0; }
+.clock-panel p[hidden] { display: none; }
+
+.changelog {
+  width: min(520px, calc(100vw - 16px)); max-height: min(80vh, 640px); padding: 0; flex-direction: column;
+  color: var(--ink); background: var(--surface-1); border: 2px solid var(--frame); border-radius: var(--radius);
+  font-family: var(--font-body); font-size: var(--fs-small);
+}
+[data-skin="pro"] .changelog { border: 1px solid var(--border); }
+.changelog[open] { display: flex; }
+.changelog::backdrop { background: rgb(0 0 0 / .55); }
+.changelog__head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.changelog__head h2 { margin: 0; font-family: var(--font-head); font-size: var(--fs-head-lg); text-transform: uppercase; }
+.changelog__close { background: none; border: 0; color: var(--ink-2); font-size: 24px; line-height: 1; cursor: pointer; padding: 0 var(--space-1); }
+.changelog__close:hover { color: var(--ink); }
+.changelog__body { overflow-y: auto; padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+.changelog h3 { display: inline; margin: 0 var(--space-2) 0 0; font-family: var(--font-head); font-size: var(--fs-head); }
+.changelog time { color: var(--muted); }
+.changelog ul { margin: var(--space-2) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
+.changelog .tag { font-family: var(--font-label); font-size: var(--fs-label); color: var(--accent); }
+.changelog .tag--fix { color: var(--warn); }

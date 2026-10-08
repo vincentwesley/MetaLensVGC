@@ -146,7 +146,7 @@ Background: pixel field canvas.
 - Live at **metalensvgc.pages.dev** (Cloudflare Pages, build command blank, output `public`) from branch
   `claude/pokemon-vgc-metagame-dashboard-9whe1a`, which is also the repo's default branch (no `main`). Commit and push
   to this branch in logical steps; no PR unless asked. Owner preferences: default skin **Pro**, default theme **dark**.
-- **Weekly refresh Action** (`.github/workflows/refresh-data.yml`, Mondays 06:00 UTC + manual): verified end to end
+- **Weekly refresh Action** (`.github/workflows/refresh-data.yml`, Mondays 00:00 UTC (08:00 GMT+8) + manual): verified end to end
   on 2026-09-29 (run 36573679607, 45.5 min, data commit touched only public/data). On any failed step it opens / comments
   on the issue "Weekly data refresh failed" (run link, step, log tail from `$RUNNER_TEMP/refresh.log`); the next success
   closes it. Build step has its own 300-min timeout (a job timeout would cancel and skip the alert). `data-raw/` is cached.

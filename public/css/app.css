@@ -313,8 +313,7 @@ html { scroll-padding-top: calc(var(--header-real, var(--header-h)) + var(--stic
 .filterbar__summary::after { content: " · " attr(data-sample); color: var(--muted); }
 .filterbar__summary:not([data-sample])::after, .filterbar__summary[data-sample=""]::after { content: none; }
 :root[data-filters-collapsed] .filterbar { padding-block: var(--space-1); }
-:root[data-filters-collapsed] .filterbar__body,
-:root[data-filters-collapsed] .header__controls { display: none; }
+:root[data-filters-collapsed] .filterbar__body { display: none; }
 :root[data-filters-collapsed] .filterbar__summary { display: block; }
 :root[data-filters-collapsed] .filterbar__toggle-btn { margin-left: auto; }
 

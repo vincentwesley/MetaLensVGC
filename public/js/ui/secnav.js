@@ -55,7 +55,7 @@ export function dismiss(storage) {
 export function mountHowto(el) {
   let st = null;
   try { st = localStorage; } catch { /* blocked: the strip just shows every visit */ }
+  el.querySelector('.howto__close').addEventListener('click', () => { el.hidden = true; if (st) dismiss(st); });
   if (st && isDismissed(st)) return;
   el.hidden = false;
-  el.querySelector('.howto__close').addEventListener('click', () => { el.hidden = true; if (st) dismiss(st); });
 }

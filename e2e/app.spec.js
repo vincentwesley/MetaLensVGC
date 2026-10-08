@@ -79,7 +79,7 @@ test('clicking a leaderboard Pokemon adds a chip and updates another section; sh
   const before = await teamsValue.textContent();
 
   await rows.first().click();
-  await waitForUsageRendered(page);
+  await waitForAllSections(page);
 
   const chip = page.locator('#chips .chip').filter({ hasText: key });
   await expect(chip).toHaveCount(1);
@@ -231,7 +231,7 @@ test('filter bar collapses to a summary line, remembers it, and F toggles it', a
   await toggle.click();
   await expect(html).toHaveAttribute('data-filters-collapsed', '');
   await expect(page.locator('[aria-label="Regulation"]')).toBeHidden();
-  await expect(page.locator('#header-controls')).toBeHidden();
+  await expect(page.locator('#header-controls .gear')).toBeVisible();
   await expect(page.locator('#filterbar-summary')).toContainText('M-C');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await page.reload();
@@ -519,6 +519,13 @@ test('Scanner never blanks a card after a scan: Weakest link shows flagged small
 });
 
 test('Teammate rate uses tournament sheets when there is no ladder data (M-C) and a row filters to the pair', async ({ page }) => {
+  await page.route('**/data/manifest.json', async (route) => {
+    const res = await route.fetch();
+    const m = await res.json();
+    m.regs = m.regs.map((r) => (r.id === m.current ? { ...r, ladderMonths: [] } : r)); // simulate "no ladder month" for the current reg
+    await route.fulfill({ response: res, json: m });
+  });
+  await page.route(/data\/ladder-M-C\.json/, (route) => route.fulfill({ json: { reg: 'M-C', source: 'smogon', cutoff: 1760, months: [] } }));
   await page.goto('/#source=ladder');
   await waitForAllSections(page);
   const card = page.locator('main [data-section="teammates"] .card').filter({ hasText: 'Teammate rate' });
@@ -598,6 +605,13 @@ test('Scanner: click hint shows with results; gibberish paste is rejected, not s
 });
 
 test('Items under Source=Ladder without data says "No ladder data"; teammate rate rows are buttons', async ({ page }) => {
+  await page.route('**/data/manifest.json', async (route) => {
+    const res = await route.fetch();
+    const m = await res.json();
+    m.regs = m.regs.map((r) => (r.id === m.current ? { ...r, ladderMonths: [] } : r)); // simulate "no ladder month" for the current reg
+    await route.fulfill({ response: res, json: m });
+  });
+  await page.route(/data\/ladder-M-C\.json/, (route) => route.fulfill({ json: { reg: 'M-C', source: 'smogon', cutoff: 1760, months: [] } }));
   await page.goto('/#source=ladder');
   await waitForAllSections(page);
   await expect(page.locator('[data-section="items"] .empty-state__title')).toHaveText(['No ladder data for this regulation yet', 'No ladder data for this regulation yet']);
@@ -621,7 +635,7 @@ test('section nav: a link scrolls to its section and aria-current follows the sc
   await page.goto('/');
   await waitForAllSections(page);
   const nav = page.locator('#secnav');
-  await expect(nav.locator('a')).toHaveCount(12);
+  await expect(nav.locator('a')).toHaveCount(13);
   await nav.locator('a[data-jump="speed"]').click();
   await expect(nav.locator('[aria-current="true"]')).toHaveText('Speed');
   const top = await page.locator('main [data-section="speed"]').evaluate((e) => e.getBoundingClientRect().top);
@@ -956,7 +970,8 @@ test('library Filter also loads that team into the Scanner and scans it against 
   // Reference field = everything but the team chip, not the one filtered team.
   const snapshotTeams = await teamsSampledValue(page).textContent();
   expect(snapshotTeams.trim()).toBe('1');
-  await expect(page.locator('[data-section="scanner"]')).toContainText(/n=3,\d{3} teams in view/);
+  const expectedTeams = (await (await page.request.get('/data/manifest.json')).json()).regs.find((r) => r.id === 'M-C').teams;
+  await expect(page.locator('[data-section="scanner"]')).toContainText(`n=${expectedTeams.toLocaleString('en-US')} teams in view`);
 });
 
 test('leaderboard search: "/" focuses it, finds any Pokémon with its real rank, Escape clears; change column when a previous period exists', async ({ page }) => {
@@ -967,9 +982,12 @@ test('leaderboard search: "/" focuses it, finds any Pokémon with its real rank,
   await page.keyboard.press('/');
   await page.keyboard.type('raichu mega');
   await expect(lb.locator('tbody tr')).toHaveCount(2);
-  await expect(lb.locator('tbody tr').first().locator('.col-rank')).toHaveText('7');
+  const foundRank = (await lb.locator('tbody tr').first().locator('.col-rank').innerText()).trim();
+  const foundName = (await lb.locator('tbody tr').first().locator('td').nth(1).innerText()).trim();
   await page.keyboard.press('Escape');
   await expect(lb.locator('tbody tr')).toHaveCount(30);
+  // the searched row's rank is its real rank in the unfiltered list
+  await expect(lb.locator('tbody tr').nth(Number(foundRank) - 1).locator('td').nth(1)).toHaveText(foundName);
   await lb.locator('input[type=search]').fill('zzzz');
   await expect(lb.locator('.empty-state__title')).toHaveText('No Pokémon matching “zzzz”');
   for (const t of await lb.locator('td.col-chg').allTextContents()) expect(t).not.toContain('-0.0');
@@ -999,4 +1017,110 @@ test('punctuation-only search ("-") matches nothing in both the leaderboard and 
     await sec.locator('input[type=search]').fill('-');
     await expect(sec.locator('.empty-state__title')).toHaveText('No Pokémon matching “-”');
   }
+});
+
+test('deep dive: Filter-dashboard adds one chip, Copy set pastes the species, new cards present', async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t) => { window.__copied = t; } }, configurable: true }); });
+  await openDeepDive(page, '/', 'Garchomp');
+  const key = await page.locator('#deepdive-title').textContent();
+  await expect(page.locator('#chips .chip')).toHaveCount(0); // opening never adds a chip
+  for (const t of ['Stat range (Lv50)', 'Type matchups', 'Usage by week', 'Common move sets']) {
+    await expect(page.locator('#deepdive .ddv-block').filter({ has: page.locator('h3', { hasText: t }) })).toHaveCount(1);
+  }
+  await expect(page.locator('#deepdive .ddv-matchrow')).toHaveCount(5);
+  await expect(page.locator('#deepdive')).not.toContainText('NaN');
+  await page.locator('#deepdive .ddv-btn', { hasText: 'Filter dashboard by' }).click();
+  await expect(page.locator('#chips .chip')).toHaveCount(1);
+  await expect(page.locator('#deepdive')).toHaveClass(/is-open/);
+  const copy = page.locator('#deepdive .ddv-copyset');
+  if (await copy.count()) {
+    await copy.click();
+    const base = key.split('-')[0];
+    await expect.poll(() => page.evaluate(() => window.__copied || '')).toContain(base);
+  }
+});
+
+test('settings panel: mode/style/palette change, persist on reload, never enter the hash; fits 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const html = page.locator('html');
+  await page.locator('.gear').click();
+  const panel = page.locator('#settings-panel');
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: 'Light' }).click();
+  await panel.getByRole('button', { name: 'Retro' }).click();
+  await panel.getByRole('button', { name: 'Ghost (Purple)' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(html).toHaveAttribute('data-skin', 'retro');
+  await expect(html).toHaveAttribute('data-palette', 'ghost');
+  await expect(panel.getByRole('button', { name: 'Ghost (Purple)' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => location.hash)).not.toMatch(/skin|theme|palette/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const box = await panel.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(page.locator('.gear')).toBeFocused();
+  await page.reload();
+  await expect(html).toHaveAttribute('data-palette', 'ghost');
+  await expect(html).toHaveAttribute('data-skin', 'retro');
+});
+
+test("What's new lists 1.1.0 and clears the gear dot; clock popover shows the refresh line", async ({ page }) => {
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  await expect(page.locator('.gear__dot')).toBeVisible();
+  await page.locator('.gear').click();
+  await expect(page.locator('#settings-panel .settings__foot')).toContainText('v1.1.0');
+  await page.getByRole('button', { name: 'What’s new' }).click();
+  const dlg = page.locator('dialog.changelog');
+  await expect(dlg).toBeVisible();
+  await expect(dlg).toContainText('v1.1.0');
+  await page.keyboard.press('Escape');
+  await expect(dlg).toBeHidden();
+  await expect(page.locator('.gear')).toBeFocused();
+  await expect(page.locator('.gear__dot')).toBeHidden();
+  await page.locator('.clock').click();
+  await expect(page.locator('#clock-panel')).toContainText('Next data refresh in');
+  await expect(page.locator('#clock-panel')).toContainText('Mon 08:00 GMT+8');
+  await expect(page.locator('#clock-panel')).toContainText('Data updated');
+  await page.keyboard.press('Escape');
+  await page.locator('.gear').click();
+  await page.locator('#settings-panel').getByText('Show clock').click();
+  await expect(page.locator('.clock')).toBeHidden();
+});
+
+test('Pokédex: card opens details without a chip; search and type filter narrow it; P focuses search', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sec = page.locator('[data-section="pokedex"]');
+  const cards = sec.locator('.dex-card');
+  await expect(cards.first()).toBeVisible();
+  const total = await cards.count();
+  expect(total).toBeGreaterThan(10);
+  await page.keyboard.press('p');
+  await expect(sec.locator('.dex-search')).toBeFocused();
+  await sec.locator('.dex-search').fill('zzzzqq');
+  await expect(sec.locator('.empty-state')).toContainText('No Pokémon match');
+  await sec.locator('.dex-search').fill('char');
+  await expect(cards.first()).toBeVisible();
+  expect(await cards.count()).toBeLessThan(total);
+  await sec.locator('.dex-search').fill('');
+  await expect(cards).toHaveCount(total);
+  await sec.locator('.dex-type', { hasText: 'Dragon' }).click();
+  await expect.poll(() => cards.count()).toBeLessThan(total);
+  expect(await page.locator('#chips .chip').count()).toBe(0);
+  await cards.first().click();
+  await expect(page.locator('#deepdive[aria-hidden="false"]')).toBeVisible();
+  expect(await page.locator('#chips .chip').count()).toBe(0);
+});
+
+test('Pokédex: no horizontal overflow at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/');
+  await waitForAllSections(page);
+  await expect(page.locator('[data-section="pokedex"] .dex-card').first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

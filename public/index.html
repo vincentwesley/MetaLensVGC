@@ -12,7 +12,9 @@
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/sections-a.css">
 <link rel="stylesheet" href="css/sections-b.css">
+<link rel="stylesheet" href="css/palettes.css">
 <link rel="stylesheet" href="css/sections-c.css">
+<link rel="stylesheet" href="css/settings.css">
 <script src="js/prefs-init.js"></script>
 </head>
 <body>
@@ -32,14 +34,14 @@
     <span class="brand__name"><b>MetaLens</b> VGC</span>
   </div>
   <div class="header__controls" id="header-controls">
-    <!-- populated by js/main.js: skin toggle, theme toggle, animated-sprites toggle -->
+    <!-- populated by js/ui/clock.js and js/ui/settings.js -->
   </div>
 </header>
 
 <p class="stale-notice" id="stale-notice" role="status" hidden></p>
 
 <div class="howto" id="howto" role="note" hidden>
-  <p class="howto__text"><b>Tips</b> <span>Click any bar, row or card to filter the whole dashboard</span> <span>Shift-click to exclude</span> <span><a href="#h-scanner" data-jump="scanner">Paste a team in the Scanner</a></span></p>
+  <p class="howto__text"><b>Tips</b> <span>Click any bar, row or card to filter the whole dashboard</span> <span>Shift-click to exclude</span> <span>Press / to find in the leaderboard, P or Ctrl+K in the Pokédex</span> <span><a href="#h-scanner" data-jump="scanner">Paste a team in the Scanner</a></span></p>
   <button type="button" class="howto__close" id="howto-close" aria-label="Dismiss tips">×</button>
 </div>
 
@@ -50,12 +52,13 @@
     <!-- populated by js/ui/filterbar.js -->
   </div>
   <button type="button" class="filterbar__toggle-btn filterbar__link-btn" id="copy-link" title="Copy a link to this exact view (filters and chips included)">Copy link</button>
-  <button type="button" class="filterbar__toggle-btn" id="filterbar-toggle" aria-expanded="true" aria-controls="filterbar-body header-controls">Hide</button>
+  <button type="button" class="filterbar__toggle-btn" id="filterbar-toggle" aria-expanded="true" aria-controls="filterbar-body">Hide</button>
 </div>
 
 <div class="chips" id="chips" role="region" aria-label="Active filters" aria-live="polite"></div>
 <nav class="secnav" id="secnav" aria-label="Jump to section">
   <a href="#h-snapshot" data-jump="snapshot">Snapshot</a>
+  <a href="#h-pokedex" data-jump="pokedex">Pokédex</a>
   <a href="#h-usage" data-jump="usage">Usage</a>
   <a href="#h-types" data-jump="types">Types</a>
   <a href="#h-items" data-jump="items">Items</a>
@@ -73,6 +76,10 @@
 <main id="main" class="grid">
   <section class="section span-12" data-section="snapshot" data-title="Meta Snapshot" aria-labelledby="h-snapshot">
     <h2 id="h-snapshot" class="sr-only">Meta Snapshot</h2>
+    <div class="section__mount"></div>
+  </section>
+  <section class="section span-12" data-section="pokedex" data-title="Pokédex" aria-labelledby="h-pokedex">
+    <h2 id="h-pokedex" class="sr-only">Pokédex</h2>
     <div class="section__mount"></div>
   </section>
   <section class="section span-6" data-section="usage" data-title="Usage Leaderboard" aria-labelledby="h-usage">

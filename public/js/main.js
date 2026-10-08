@@ -15,10 +15,11 @@ import { installKeyActivation } from './ui/keys.js';
 import { installPixelField } from './ui/pixelfield.js';
 import { isStale } from './lib/stale.js';
 import { mountSecnav, mountHowto } from './ui/secnav.js';
-import { crossfade } from './ui/motion.js';
+import { mountSettings } from './ui/settings.js';
+import { mountClock } from './ui/clock.js';
 
 const SECTION_IDS = [
-  'snapshot', 'usage', 'types', 'items', 'archetypes', 'quadrant',
+  'snapshot', 'pokedex', 'usage', 'types', 'items', 'archetypes', 'quadrant',
   'teammates', 'speed', 'trends', 'countries', 'library', 'scanner', 'methodology',
 ];
 
@@ -44,45 +45,6 @@ function safeEcharts(echarts) {
 
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-function buildHeaderControls() {
-  const host = document.getElementById('header-controls');
-
-  function segToggle(label, options, get, set) {
-    const wrap = document.createElement('div');
-    wrap.className = 'segmented';
-    wrap.setAttribute('role', 'radiogroup');
-    wrap.setAttribute('aria-label', label);
-    const btns = new Map();
-    for (const [value, text] of options) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = text;
-      b.addEventListener('click', () => set(value));
-      wrap.appendChild(b);
-      btns.set(value, b);
-    }
-    const sync = (s) => { for (const [v, b] of btns) b.setAttribute('aria-pressed', String(get(s) === v)); };
-    sync(store.get());
-    store.subscribe(sync);
-    return wrap;
-  }
-
-  host.appendChild(segToggle('Skin', [['retro', 'Retro'], ['pro', 'Pro']], (s) => s.skin, (v) => crossfade(() => store.set({ skin: v }))));
-  host.appendChild(segToggle('Theme', [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']], (s) => s.theme, (v) => crossfade(() => store.set({ theme: v }))));
-
-  const animLabel = document.createElement('label');
-  animLabel.className = 'toggle';
-  const animInput = document.createElement('input');
-  animInput.type = 'checkbox';
-  animInput.checked = store.get().anim;
-  animInput.addEventListener('change', () => store.set({ anim: animInput.checked }));
-  const animTrack = document.createElement('span');
-  animTrack.className = 'toggle__track';
-  animLabel.append(animInput, animTrack, document.createTextNode('Animated'));
-  store.subscribe((s) => { animInput.checked = s.anim; });
-  host.appendChild(animLabel);
 }
 
 function placeholderBox(el, title) {
@@ -133,8 +95,11 @@ async function boot() {
     ro.observe(stickybar);
     ro.observe(header);
   }
-  buildHeaderControls();
-  mountHowto(document.getElementById('howto'));
+  const howto = document.getElementById('howto');
+  mountHowto(howto);
+  const headerHost = document.getElementById('header-controls');
+  const clock = mountClock(headerHost, fmt);
+  mountSettings(headerHost, { howto });
   mountSecnav(document.getElementById('secnav'));
 
   let manifest, dex;
@@ -145,6 +110,7 @@ async function boot() {
     document.querySelectorAll('.section__mount').forEach((el) => placeholderBox(el, 'Data unavailable'));
     return;
   }
+  clock.setManifest(manifest);
   store.setRegs((manifest.regs || []).map((r) => r.id));
   if (isStale(manifest.generated)) {
     const note = document.getElementById('stale-notice');
@@ -331,7 +297,7 @@ async function boot() {
   // The previous regulation's file (up to ~9 MB) is only needed for the
   // "change vs previous period" deltas, so it is fetched after first paint
   // instead of blocking it. Sections that use view.prev refresh when it lands.
-  const PREV_USERS = ['snapshot', 'usage', 'trends'];
+  const PREV_USERS = ['snapshot', 'usage', 'trends', 'deepdive'];
   const prevLoading = new Set();
   function prevRegTeamsFor(state) {
     const pReg = prevRegId(state.reg);

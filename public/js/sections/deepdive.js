@@ -9,11 +9,15 @@
 // pinned to the top of the drawer body, always visible while the drawer is
 // open, so the intent (search species in the current view -> open drawer)
 // is still met without new markup outside owned files.
-import { speciesDetail, ladderMerge, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
+import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
 import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION } from '../ui/meta.js';
 import { TYPE_COLORS } from '../lib/types.js';
 import { inkOn } from '../lib/contrast.js';
+import { defensiveBuckets, MATCHUP_BUCKETS, statRange, allSpecies, topSetMon } from '../lib/species-info.js';
+import { toPaste } from '../lib/paste.js';
+import { copyText } from '../ui/clipboard.js';
+import { toast } from '../ui/toast.js';
 
 function elm(tag, className, text) {
   const e = document.createElement(tag);
@@ -132,6 +136,32 @@ function shiftText(key, dex, bs, cur, prevReg, prevRanked, curReg) {
   return `${head} (${prevReg} ${last.season} ranked → now): ${parts.join(' · ')}. Top spreads cover ${pctText(a.covered)} → ${pctText(b.covered)} of players.`;
 }
 
+function typePill(t) {
+  const pill = elm('span', 'pill', t);
+  pill.style.background = TYPE_COLORS[t] || 'var(--muted)';
+  if (TYPE_COLORS[t]) pill.style.color = inkOn(TYPE_COLORS[t]);
+  return pill;
+}
+
+/** Inline-SVG sparkline of weekly usage (no animation); values are fractions, needs 2+ points. */
+function sparkline(vals, weeks) {
+  const W = 240, H = 48, P = 4, max = Math.max(...vals, 0.0001);
+  const pts = vals.map((v, i) => `${(P + (i / (vals.length - 1)) * (W - 2 * P)).toFixed(1)},${(H - P - (v / max) * (H - 2 * P)).toFixed(1)}`);
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('class', 'ddv-spark');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `Weekly usage, ${weeks[0]} to ${weeks[weeks.length - 1]}: ${vals.map((v) => `${(v * 100).toFixed(1)}%`).join(', ')}`);
+  const line = document.createElementNS(ns, 'polyline');
+  line.setAttribute('points', pts.join(' '));
+  const [lx, ly] = pts[pts.length - 1].split(',');
+  const dot = document.createElementNS(ns, 'circle');
+  dot.setAttribute('cx', lx); dot.setAttribute('cy', ly); dot.setAttribute('r', '3');
+  svg.append(line, dot);
+  return svg;
+}
+
 export default {
   id: 'deepdive',
   title: 'Pokémon Deep Dive',
@@ -146,7 +176,7 @@ export default {
     search.type = 'search';
     search.id = 'ddv-picker-input';
     search.setAttribute('list', 'ddv-picker-list');
-    search.placeholder = 'Search species in current view…';
+    search.placeholder = 'Search species in this regulation…';
     const datalist = document.createElement('datalist');
     datalist.id = 'ddv-picker-list';
     search.addEventListener('change', () => {
@@ -170,7 +200,7 @@ export default {
     let isOpen = false;
 
     function updatePickerList(view) {
-      const keys = [...new Set((view?.teams || []).flatMap((t) => t.keys))].sort();
+      const keys = allSpecies(view?.base, view?.ranked, view?.ladder, view?.dex);
       datalist.innerHTML = '';
       for (const k of keys) datalist.appendChild(new Option(k));
     }
@@ -325,12 +355,12 @@ export default {
       const spriteWrap = elm('div', 'ddv-sprite-lg');
       spriteWrap.appendChild(ctx.sprite(key, { size: 'lg', animated: view.state.anim }));
       const info = elm('div', 'ddv-info');
-      info.appendChild(elm('h3', null, key));
+      const h = elm('h3', null, key);
+      if (sp.num) h.append(' ', elm('span', 'ddv-num', `#${String(sp.num).padStart(3, '0')}`));
+      info.appendChild(h);
       const types = elm('div', 'ddv-types');
       for (const t of sp.types) {
-        const pill = elm('span', 'pill', t);
-        pill.style.background = TYPE_COLORS[t] || 'var(--muted)';
-        if (TYPE_COLORS[t]) pill.style.color = inkOn(TYPE_COLORS[t]);
+        const pill = typePill(t);
         pill.addEventListener('click', (e) => ctx.chip('type', t, e));
         pill.style.cursor = 'pointer';
         pill.tabIndex = 0;
@@ -347,6 +377,24 @@ export default {
       winKpi.append(elm('span', 'kpi__label', 'Win % (with it)'), elm('span', 'kpi__value', ctx.fmt.pct(det.withWinPct)));
       kpis.append(usageKpi, winKpi);
       info.appendChild(kpis);
+      const filterBtn = elm('button', 'ddv-btn', `Filter dashboard by ${key}`);
+      filterBtn.type = 'button';
+      filterBtn.dataset.tip = 'Add this Pokémon as a filter chip (Shift-click to exclude it). The drawer stays open.';
+      filterBtn.addEventListener('click', (e) => ctx.chip('species', key, e)); // usage.js uses 'species' for every key, Megas included
+      info.appendChild(filterBtn);
+      const baseName = sp.base ?? key;
+      const forms = Object.keys(dex.species).filter((k) => k !== key && (k === baseName || dex.species[k].megaOf === baseName));
+      if (forms.length) {
+        const row = elm('div', 'ddv-forms');
+        row.appendChild(elm('span', 'ddv-note', 'Other forms:'));
+        for (const f of forms) {
+          const b = elm('button', 'ddv-btn', f);
+          b.type = 'button';
+          b.addEventListener('click', () => render(f)); // same path as the Jump box: re-render in place, no new history entry
+          row.appendChild(b);
+        }
+        info.appendChild(row);
+      }
       head.append(spriteWrap, info);
       content.appendChild(head);
 
@@ -366,6 +414,60 @@ export default {
         statsBody.appendChild(row);
       }
       content.appendChild(statsCard);
+
+      // Lv50 stat range
+      const { card: rangeCard, body: rangeBody } = sectionCard('Stat range (Lv50)');
+      const rangeGrid = elm('div', 'ddv-range');
+      statRange(bs).forEach((r, i) => {
+        const cell = elm('div', 'kpi');
+        cell.append(elm('span', 'kpi__label', statNames[i]), elm('span', 'kpi__value', `${r.min}–${r.max}`));
+        rangeGrid.appendChild(cell);
+      });
+      rangeBody.append(rangeGrid, elm('div', 'ddv-note', 'Min: 0 SP and a nature that lowers the stat. Max: 32 SP and a nature that raises it. HP has no nature.'));
+      content.appendChild(rangeCard);
+
+      // defensive type matchups
+      const { card: tmuCard, body: tmuBody } = sectionCard('Type matchups');
+      const buckets = defensiveBuckets(sp.types);
+      for (const { mult, label } of MATCHUP_BUCKETS) {
+        const row = elm('div', 'ddv-matchrow');
+        row.appendChild(elm('span', 'ddv-matchrow__mult', label));
+        const list = elm('span', 'ddv-types');
+        for (const t of buckets[mult]) list.appendChild(typePill(t));
+        if (!buckets[mult].length) list.appendChild(elm('span', 'ddv-note', 'none'));
+        row.appendChild(list);
+        tmuBody.appendChild(row);
+      }
+      tmuBody.appendChild(elm('div', 'ddv-note', 'Damage taken by attacking type. Abilities (e.g. Levitate) not applied.'));
+      content.appendChild(tmuCard);
+
+      // usage by week
+      const { card: wkCard, body: wkBody } = sectionCard('Usage by week');
+      const wkMeta = elm('div');
+      ctx.meta(wkMeta, { source: 'Tournaments', n: (view.ddTeams || view.monTeams).length, unit: 'teams' });
+      wkBody.appendChild(wkMeta);
+      const wk = weekly(view.ddTeams || view.monTeams, [key]);
+      if (wk.weeks.length < 2) {
+        wkBody.appendChild(elm('div', 'ddv-note', wk.weeks.length
+          ? `Only one qualifying week (${wk.weeks[0]}) in this view: a trend needs at least two.`
+          : 'No qualifying week in this view (weeks with too few teams are skipped): no trend to draw.'));
+      } else {
+        const vals = wk.series[key];
+        wkBody.appendChild(sparkline(vals, wk.weeks));
+        wkBody.appendChild(elm('div', 'ddv-note', `${wk.weeks[0]}: ${ctx.fmt.pct(vals[0])} → ${wk.weeks[wk.weeks.length - 1]}: ${ctx.fmt.pct(vals[vals.length - 1])} of teams`));
+      }
+      const chgEl = elm('div', 'ddv-note');
+      if (!view.prev?.length) chgEl.textContent = 'Change vs previous period: no previous period in this view.';
+      else {
+        const cur = usage(view.monTeams).find((r) => r.key === key);
+        const prevRow = usage(view.prev).find((r) => r.key === key);
+        const change = cur ? changeVsPrev(cur.pct, prevRow, view.state.minN) : null;
+        chgEl.textContent = 'Change vs previous period: ';
+        if (!change) chgEl.append('not in the current view.');
+        else chgEl.appendChild(elm('strong', `sb-stat--${changeDir(change)}`, changeText(change)));
+      }
+      wkBody.appendChild(chgEl);
+      content.appendChild(wkCard);
 
       // win rate with vs without
       const { card: wrCard, body: wrBody } = sectionCard('Win rate with vs. without');
@@ -406,6 +508,16 @@ export default {
       // exact 4-move sets
       const { card: setsCard, body: setsBody } = sectionCard('Common move sets');
       barList(setsBody, det.sets.map((r) => ({ name: r.name, pct: r.pct })));
+      const topSet = topSetMon(view.ddTeams || view.monTeams, key);
+      if (topSet) {
+        const copyBtn = elm('button', 'ddv-btn ddv-copyset', 'Copy most common set');
+        copyBtn.type = 'button';
+        copyBtn.addEventListener('click', async () => {
+          const ok = await copyText(toPaste({ mons: [topSet] }, dex));
+          toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
+        });
+        setsBody.appendChild(copyBtn);
+      }
       content.appendChild(setsCard);
 
       // mega usage

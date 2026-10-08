@@ -176,7 +176,7 @@ Useful pipeline flags: `node scripts/build-data.js --reg M-C` (one regulation) a
 
 ## How the data refresh works
 
-`.github/workflows/refresh-data.yml` runs every **Monday at 06:00 UTC**, and you can also start it by hand:
+`.github/workflows/refresh-data.yml` runs every **Monday at 00:00 UTC (08:00 GMT+8)**, and you can also start it by hand:
 **Actions → Refresh data → Run workflow**.
 
 **What it does:**
