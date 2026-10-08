@@ -69,9 +69,9 @@ export default {
     const heat = card('Teammate co-usage');
     const coresCard = card('Top cores');
     const ladderCard = card('Teammate rate');
-    heat.el.classList.add('sb-full');
-    coresCard.el.classList.add('sb-full');
-    ladderCard.el.classList.add('sb-full');
+    heat.el.classList.add('sb-full', 'tm-heat');
+    coresCard.el.classList.add('sb-full', 'tm-cores');
+    ladderCard.el.classList.add('sb-full', 'tm-rate');
     el.append(heat.el, coresCard.el, ladderCard.el);
 
     // --- heatmap: Raw % / Lift toggle -------------------------------------
