@@ -7,6 +7,7 @@ export const CHANGELOG = [
       { tag: 'NEW', text: 'Showdown stats use EVs at Lv100; deep dive gains a Tera types card and Smogon EV spreads.' },
       { tag: 'NEW', text: 'Type usage, monthly trends, risers and fallers, and speed tiers work from ladder data.' },
       { tag: 'IMPROVED', text: 'Pokédex opens A–Z by default; National Dex uses official Showdown tiers, NatDex Doubles tiers by usage.' },
+      { tag: 'IMPROVED', text: 'Pokédex list scrolls inside a fixed-height box (the section is much shorter); Showdown mode re-orders its sections so there are no empty gaps.' },
       { tag: 'IMPROVED', text: 'Showdown Pokédex opens by tier: National Dex uses Showdown’s tiers (AG, Uber, OU…); NatDex Doubles uses Showdown’s Doubles tiers (DUber, DOU, DUU…).' },
       { tag: 'IMPROVED', text: 'Pokédex now follows the dashboard filters (type, Pokémon, weak-to chips) but clicking it still never adds one.' },
       { tag: 'FIX', text: 'Showdown leaderboard shows and sorts by usage % only (Smogon usage is rating-weighted, so the raw count ranked differently and was misleading).' },

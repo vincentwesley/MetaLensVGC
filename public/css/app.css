@@ -869,3 +869,17 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
 [data-family="showdown"] :is(a[data-jump="archetypes"], a[data-jump="countries"], a[data-jump="library"], a[data-jump="scanner"]),
 [data-family="showdown"] :is([data-g="source"], [data-g="tier"], [data-g="place"], [data-g="dates"]) { display: none; }
 [data-family="showdown"] .howto__text span:has(a[data-jump="scanner"]) { display: none; }
+
+/* Showdown mode hides the team-sheet sections; reorder what is left so 6-wide sections pair up with no gaps:
+   snapshot / usage + teammates / pokédex / types / items / speed + trends / methodology. */
+[data-family="showdown"] main.grid .section[data-section] { order: 9; }
+[data-family="showdown"] main.grid .section[data-section="snapshot"] { order: 1; }
+[data-family="showdown"] main.grid .section[data-section="usage"] { order: 2; }
+[data-family="showdown"] main.grid .section[data-section="teammates"] { order: 3; }
+[data-family="showdown"] main.grid .section[data-section="pokedex"] { order: 4; }
+[data-family="showdown"] main.grid .section[data-section="types"] { order: 5; }
+[data-family="showdown"] main.grid .section[data-section="items"] { order: 6; }
+[data-family="showdown"] main.grid .section[data-section="speed"] { order: 7; }
+[data-family="showdown"] main.grid .section[data-section="trends"] { order: 8; }
+[data-family="showdown"] main.grid .section[data-section="methodology"] { order: 10; }
+[data-family="showdown"] main.grid .section.creator { order: 11; }
