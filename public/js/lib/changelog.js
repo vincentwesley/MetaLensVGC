@@ -1,6 +1,16 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.3.0', date: '2026-10-09', title: 'Showdown mode: National Dex',
+    notes: [
+      { tag: 'NEW', text: 'VGC | Showdown switch in the header: National Dex and NatDex Doubles from the Smogon ladder (cutoff 1760).' },
+      { tag: 'NEW', text: 'Showdown stats use EVs at Lv100; deep dive gains a Tera types card and Smogon EV spreads.' },
+      { tag: 'NEW', text: 'Type usage, monthly trends, risers and fallers, and speed tiers work from ladder data.' },
+      { tag: 'IMPROVED', text: 'Pokédex opens A–Z by default; National Dex uses official Showdown tiers, NatDex Doubles tiers by usage.' },
+      { tag: 'IMPROVED', text: 'Team-sheet sections (quadrant, archetypes, countries, library, scanner) are hidden in Showdown mode.' },
+    ],
+  },
+  {
     version: '1.2.0', date: '2026-10-09', title: 'Showdown-style Pokédex, more styles',
     notes: [
       { tag: 'NEW', text: 'Pokédex rebuilt like Pokémon Showdown’s teambuilder: tier rows, base stats, abilities, sort by tier, A–Z or any stat.' },

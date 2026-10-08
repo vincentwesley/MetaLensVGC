@@ -6,7 +6,7 @@
 // Sources: in-game ranked (`ranked-<REG>.json`: top ~10 `spreads` keyed "hp/atk/def/spa/spd/spe" and `natures`
 // as a SEPARATE distribution, so its stats assume the most common nature) and Smogon (joint
 // "Nature:hp/atk/def/spa/spd/spe" spreads). Ranked shares are shares of that species' own players, never usage.
-import { calcStats, parseSP } from './stats.js';
+import { calcStats, parsePoints, RULES } from './stats.js';
 import { rankedEntries, metaSpeed } from './aggregate.js';
 
 /**
@@ -18,21 +18,28 @@ import { rankedEntries, metaSpeed } from './aggregate.js';
 export const SPREAD_THRESHOLDS = { maxSpeed: 30, bulk: 44, offense: 30 };
 export const SPREAD_ARCHETYPES = [
   { id: 'nospeed', label: 'No Speed', desc: 'Speed SP = 0', test: (sp) => sp[5] === 0 },
-  { id: 'maxspeed', label: 'Max Speed', desc: `Speed SP >= ${SPREAD_THRESHOLDS.maxSpeed}`, test: (sp) => sp[5] >= SPREAD_THRESHOLDS.maxSpeed },
-  { id: 'bulk', label: 'Bulk-heavy', desc: `HP + Def + SpD SP >= ${SPREAD_THRESHOLDS.bulk}`, test: (sp) => sp[0] + sp[2] + sp[4] >= SPREAD_THRESHOLDS.bulk },
-  { id: 'offense', label: 'Offense', desc: `Atk or SpA SP >= ${SPREAD_THRESHOLDS.offense}`, test: (sp) => Math.max(sp[1], sp[3]) >= SPREAD_THRESHOLDS.offense },
+  { id: 'maxspeed', label: 'Max Speed', desc: `Speed SP >= ${SPREAD_THRESHOLDS.maxSpeed}`, test: (sp, t) => sp[5] >= t.maxSpeed },
+  { id: 'bulk', label: 'Bulk-heavy', desc: `HP + Def + SpD SP >= ${SPREAD_THRESHOLDS.bulk}`, test: (sp, t) => sp[0] + sp[2] + sp[4] >= t.bulk },
+  { id: 'offense', label: 'Offense', desc: `Atk or SpA SP >= ${SPREAD_THRESHOLDS.offense}`, test: (sp, t) => Math.max(sp[1], sp[3]) >= t.offense },
   { id: 'other', label: 'Other', desc: 'none of the above', test: () => true },
 ];
 
 /** Archetype id of an SP array. */
-export function spreadArchetype(sp) {
-  return SPREAD_ARCHETYPES.find((a) => a.test(sp)).id;
+export function spreadArchetype(sp, rules = RULES.sp) {
+  // Thresholds are fractions of the rules' max / total (identical to SPREAD_THRESHOLDS for sp).
+  const k = rules.max / 32;
+  const t = {
+    maxSpeed: Math.round(SPREAD_THRESHOLDS.maxSpeed * k),
+    offense: Math.round(SPREAD_THRESHOLDS.offense * k),
+    bulk: Math.round((SPREAD_THRESHOLDS.bulk * rules.total) / 66),
+  };
+  return SPREAD_ARCHETYPES.find((a) => a.test(sp, t)).id;
 }
 
 export const archetypeLabel = (id) => SPREAD_ARCHETYPES.find((a) => a.id === id)?.label ?? id;
 
-const mkRow = (sp, share, nature, natureShare, natureJoint, bs) => ({
-  sp, share, nature, natureShare, natureJoint, stats: calcStats(bs, sp, nature), arch: spreadArchetype(sp),
+const mkRow = (sp, share, nature, natureShare, natureJoint, bs, rules) => ({
+  sp, share, nature, natureShare, natureJoint, stats: calcStats(bs, sp, nature, rules), arch: spreadArchetype(sp, rules),
 });
 
 /**
@@ -40,26 +47,26 @@ const mkRow = (sp, share, nature, natureShare, natureJoint, bs) => ({
  * common ranked nature and `natureJoint` is false: ranked natures are not joint with the spread, so `stats`
  * assume that nature. Malformed spread keys are skipped.
  */
-export function rankedSpreadRows(mon, bs) {
+export function rankedSpreadRows(mon, bs, rules = RULES.sp) {
   if (!mon || !bs) return [];
   const top = rankedEntries(mon.natures)[0];
   const nature = top?.name ?? null;
   const rows = [];
   for (const { name, pct } of rankedEntries(mon.spreads)) {
-    const sp = parseSP(name);
-    if (sp) rows.push(mkRow(sp, pct, nature, top?.pct ?? null, false, bs));
+    const sp = parsePoints(name, rules);
+    if (sp) rows.push(mkRow(sp, pct, nature, top?.pct ?? null, false, bs, rules));
   }
   return rows;
 }
 
 /** Rows for one ladderMerge mon (`{spreads: [{name: "Nature:sp", pct}]}`), joint nature (`natureJoint: true`). */
-export function smogonSpreadRows(ladderMon, bs) {
+export function smogonSpreadRows(ladderMon, bs, rules = RULES.sp) {
   if (!ladderMon || !bs) return [];
   const rows = [];
   for (const { name, pct } of ladderMon.spreads || []) {
     const ci = name.indexOf(':');
-    const sp = ci > 0 ? parseSP(name.slice(ci + 1)) : null;
-    if (sp) rows.push(mkRow(sp, pct, name.slice(0, ci), null, true, bs));
+    const sp = ci > 0 ? parsePoints(name.slice(ci + 1), rules) : null;
+    if (sp) rows.push(mkRow(sp, pct, name.slice(0, ci), null, true, bs, rules));
   }
   return rows;
 }
@@ -101,10 +108,10 @@ export function nearestSpread(sp, rows) {
 }
 
 /** `[{key, spe}]` meta speeds (via metaSpeed) for a list of `{key, ...}` tiers; species without a real speed are dropped. */
-export function metaSpeedField(tiers, { season, merged }, dex) {
+export function metaSpeedField(tiers, { season, merged, rules }, dex) {
   const sheetByKey = new Map(tiers.map((t) => [t.key, t]));
   return tiers.flatMap((t) => {
-    const m = metaSpeed(t.key, { sheetByKey, season, merged }, dex);
+    const m = metaSpeed(t.key, { sheetByKey, season, merged, rules }, dex);
     return m && m.spe != null ? [{ key: t.key, spe: m.spe }] : [];
   });
 }

@@ -145,7 +145,7 @@ export default {
       copyBtn.title = 'Copy paste';
       copyBtn.setAttribute('aria-label', 'Copy paste');
       copyBtn.addEventListener('click', async () => {
-        const ok = await copyText(toPaste(t, dex));
+        const ok = await copyText(toPaste(t, dex, lastView?.rules));
         toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
       });
       const filterBtn = elm('button', 'lib-btn', 'Filter');
@@ -155,7 +155,7 @@ export default {
       filterBtn.addEventListener('click', (e) => {
         ctx.chip('team', t.id, e);
         if (e.shiftKey || e.altKey) return; // excluding a team: nothing to scan
-        ctx.scan(toPaste(t, dex));
+        ctx.scan(toPaste(t, dex, lastView?.rules));
         toast(`${t.player || 'This team'}'s team is loaded in the Team Scanner`, {
           duration: 6000, action: { label: 'View scan', onClick: () => jumpTo('scanner') },
         });
@@ -199,7 +199,7 @@ export default {
       if (!view || !currentTeams.length) return;
       const slice = currentTeams.slice(0, shown);
       const text = slice
-        .map((t) => `# ${t.player || 'Unknown'} — ${t.ev?.name || ''} (${ctx.fmt.date(t.date)})\n\n${toPaste(t, view.dex)}`)
+        .map((t) => `# ${t.player || 'Unknown'} — ${t.ev?.name || ''} (${ctx.fmt.date(t.date)})\n\n${toPaste(t, view.dex, view.rules)}`)
         .join('\n\n');
       const ok = await copyText(text);
       toast(ok ? `Copied ${slice.length} teams!` : 'Could not copy', { type: ok ? 'info' : 'error' });

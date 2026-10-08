@@ -15,7 +15,7 @@ const tierOf = (t) => {
   return t.replace(/^\((.*)\)$/, '$1'); // "(OU)" = OU by technicality -> OU
 };
 
-function build(dex, { natdex }) {
+export function build(dex, { natdex }) {
   const species = {};
   const learn = {};
   const moveNames = {};

@@ -42,24 +42,42 @@ export function natureMult(nature, statIdx) {
   return 1.0;
 }
 
-export function calcStat(base, sp, statIdx, nature) {
-  if (statIdx === 0) return base + 75 + sp;
-  return Math.floor((base + 20 + sp) * natureMult(nature, statIdx));
+// Stat rules. sp = Champions (Stat Points, Lv50); ev = Showdown classic (EVs, IV 31, Lv100).
+export const RULES = {
+  sp: { mode: 'sp', level: 50, max: 32, total: 66 },
+  ev: { mode: 'ev', level: 100, max: 252, total: 510 },
+};
+
+/** Rules for a manifest reg entry ({level, family}); anything else is the VGC SP rules. */
+export function rulesFor(reg) {
+  return reg && (reg.level === 100 || reg.family === 'showdown') ? RULES.ev : RULES.sp;
 }
 
-export function calcStats(bs, sp, nature) {
-  return bs.map((base, i) => calcStat(base, sp[i], i, nature));
+export function calcStat(base, pts, statIdx, nature, rules = RULES.sp) {
+  if (rules.mode === 'ev') {
+    const core = Math.floor(((2 * base + 31 + Math.floor(pts / 4)) * rules.level) / 100);
+    if (statIdx === 0) return core + rules.level + 10;
+    return Math.floor((core + 5) * natureMult(nature, statIdx));
+  }
+  if (statIdx === 0) return base + 75 + pts;
+  return Math.floor((base + 20 + pts) * natureMult(nature, statIdx));
+}
+
+export function calcStats(bs, pts, nature, rules = RULES.sp) {
+  return bs.map((base, i) => calcStat(base, pts[i], i, nature, rules));
 }
 
 // "0/32/0/0/2/32" -> [0,32,0,0,2,32], or null if malformed / out of range.
-export function parseSP(str) {
+export function parsePoints(str, rules = RULES.sp) {
   if (typeof str !== 'string') return null;
   const parts = str.split('/');
   if (parts.length !== 6) return null;
   const nums = parts.map(Number);
-  if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > 32)) return null;
+  if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > rules.max)) return null;
   return nums;
 }
+
+export const parseSP = (str) => parsePoints(str, RULES.sp);
 
 // Wilson score interval for a binomial proportion k/n, as [lo, hi] fractions.
 export function wilson(k, n, z = 1.96) {

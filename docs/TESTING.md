@@ -257,6 +257,11 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   each new style persists and fits 390px. Phone sticky bar stays under 15% of the screen with the tips strip.
 - Not verified: glass frame rate in a real browser, offline font fallbacks for Newsreader/Nunito.
 
+### v1.3.0 (Showdown mode), 2026-10-09
+- Unit: EV/SP stat rules, parsePoints, paste Tera, trimMon Tera, regs, ladder-field helpers, ladderMerge Tera (351 total).
+- e2e (63): mode switch round-trip (ND -> reload -> NDD -> VGC), team-sheet sections/filters hidden, no NaN in the 8 visible sections, deep dive Lv100; Pokédex default A-Z. Manual sweep ND/NDD at 1440 and 390: no console errors, no overflow.
+- Not verified: Showdown-mode hint wording ("teams"), real-device layout of the header switch.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

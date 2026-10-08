@@ -42,3 +42,34 @@ test('topSetMon: most common move set with its item/ability, pastes with the spe
   assert.ok(p.startsWith('Garchomp @ Life Orb') && p.includes('- Earthquake'));
   assert.equal(topSetMon([], 'Garchomp'), null);
 });
+
+import { test as t2 } from 'node:test';
+import { RULES, calcStat as cs, parsePoints, rulesFor } from '../public/js/lib/stats.js';
+import { parsePaste as pp, toPaste as tp } from '../public/js/lib/paste.js';
+import { statRange as sr } from '../public/js/lib/species-info.js';
+
+const GC = [108, 130, 95, 80, 85, 102];
+t2('EV rules: Garchomp Lv100', () => {
+  assert.equal(cs(GC[0], 252, 0, null, RULES.ev), 420);
+  assert.equal(cs(GC[5], 252, 5, 'Jolly', RULES.ev), 333);
+  assert.equal(cs(GC[5], 32, 5, 'Jolly'), 169); // SP default unchanged
+  assert.equal(sr(GC, RULES.ev)[5].max, 333);
+  assert.equal(rulesFor({ level: 100 }), RULES.ev);
+  assert.equal(rulesFor({ family: 'showdown' }), RULES.ev);
+  assert.equal(rulesFor({ family: 'vgc', level: 50 }), RULES.sp);
+});
+t2('parsePoints respects rules.max', () => {
+  assert.deepEqual(parsePoints('0/252/0/0/4/252', RULES.ev), [0, 252, 0, 0, 4, 252]);
+  assert.equal(parsePoints('0/253/0/0/0/0', RULES.ev), null);
+  assert.equal(parsePoints('0/252/0/0/4/252'), null);
+});
+t2('paste: Tera Type parsed, EV export in ev mode', () => {
+  const dex = { species: {}, items: {} };
+  const [m] = pp('Garchomp @ Scarf\nTera Type: Steel\nEVs: 252 Atk / 252 Spe\nJolly Nature\n- Earthquake', dex, RULES.ev);
+  assert.equal(m.tera, 'Steel');
+  assert.deepEqual(m.sp, [0, 252, 0, 0, 0, 252]);
+  const out = tp({ mons: [m] }, dex, RULES.ev);
+  assert.match(out, /Level: 100/);
+  assert.match(out, /Tera Type: Steel/);
+  assert.match(out, /EVs: 252 Atk \/ 252 Spe/);
+});

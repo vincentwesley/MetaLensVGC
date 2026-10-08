@@ -181,13 +181,19 @@ export default {
         }
         const megaKeys = merged.mons.filter((m) => ctx.dex.species[m.key]?.megaOf);
         const megaShare = megaKeys.reduce((a, m) => a + m.usage, 0);
-        const topMega = megaKeys.sort((a, b) => b.usage - a.usage)[0];
+        const topMega = megaKeys.slice().sort((a, b) => b.usage - a.usage)[0];
+        const ms = merged.months;
         kpiRow.appendChild(kpiTile('Battles sampled', ctx.fmt.n(merged.battles)));
+        kpiRow.appendChild(kpiTile('Months', ms.length > 1 ? `${ms.length} (${ms[0]} – ${ms[ms.length - 1]})` : ms[0]));
         kpiRow.appendChild(kpiTile('Unique species', ctx.fmt.n(merged.mons.length)));
         kpiRow.appendChild(kpiTile('Meta diversity', effectiveSpecies(merged.mons.map((m) => m.raw)).toFixed(1),
           { tip: 'Effective number of species: exp(Shannon entropy) of usage share. Higher = more balanced meta.' }));
-        kpiRow.appendChild(kpiTile('Mega share', ctx.fmt.pct(megaShare)));
-        kpiRow.appendChild(kpiTile('Most-used Mega', topMega ? topMega.key : '—', topMega ? { sprite: ctx.sprite(topMega.key, { size: 'xs', animated: anim }) } : {}));
+        if (top.length) kpiRow.appendChild(kpiTile('Most-used', top[0].key, { sprite: ctx.sprite(top[0].key, { size: 'xs', animated: anim }) }));
+        // Mega KPIs only where the format has Megas (not in Showdown National Dex tiers).
+        if (topMega) {
+          kpiRow.appendChild(kpiTile('Megas per team', megaShare.toFixed(2), { tip: 'Sum of Mega usage shares = average number of Megas on a ladder team.' }));
+          kpiRow.appendChild(kpiTile('Most-used Mega', topMega.key, { sprite: ctx.sprite(topMega.key, { size: 'xs', animated: anim }) }));
+        }
         return;
       }
 

@@ -859,3 +859,13 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
 [data-style="soft"] .segmented button { padding: 7px 14px; font-weight: 700; }
 [data-style="soft"] :is(.lib-btn, .spx-toggle, .filterbar__toggle-btn, .filterbar__multi label) { border-radius: 999px; }
 [data-style="soft"] :is(.snapshot__mon, .lib-card, .sprite-cell) { border-radius: 16px; }
+
+/* ---------- VGC | Showdown mode ---------- */
+.header__mode { display: flex; align-items: center; }
+.modeswitch button { padding: 5px 12px; font-weight: 700; }
+.segmented button[hidden] { display: none; }
+/* Showdown mode has ladder data only: team-sheet sections and tournament filters are hidden. */
+[data-family="showdown"] :is([data-section="quadrant"], [data-section="archetypes"], [data-section="countries"], [data-section="library"], [data-section="scanner"]),
+[data-family="showdown"] :is(a[data-jump="archetypes"], a[data-jump="countries"], a[data-jump="library"], a[data-jump="scanner"]),
+[data-family="showdown"] :is([data-g="source"], [data-g="tier"], [data-g="place"], [data-g="dates"]) { display: none; }
+[data-family="showdown"] .howto__text span:has(a[data-jump="scanner"]) { display: none; }

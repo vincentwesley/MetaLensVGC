@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { deriveSeasonMeta, currentSeasonOf, transformRows, parseRankingTable } from '../scripts/sources/ranked.js';
-import { REG_IDS } from '../scripts/lib/regs.js';
+import { VGC_IDS as REG_IDS } from '../scripts/lib/regs.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixture = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'ranked-sample.json'), 'utf8'));

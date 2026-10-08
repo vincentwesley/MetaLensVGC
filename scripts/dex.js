@@ -16,10 +16,10 @@ export function showdownDex() {
   return sdexCache;
 }
 
-function megaFormsOf(sp) {
+function megaFormsOf(sdex, sp) {
   // Every other species whose battleOnly base is `sp.name` and which is a Mega.
   const out = [];
-  for (const other of showdownDex().species.all()) {
+  for (const other of sdex.species.all()) {
     if (other.isMega && other.baseSpecies === sp.name) out.push(other.name);
   }
   return out;
@@ -29,13 +29,13 @@ function megaFormsOf(sp) {
  * @param {Set<string>|string[]} speciesNames battle species that appear in the data
  * @param {Set<string>|string[]} moveNames
  * @param {Set<string>|string[]} itemNames
+ * @param {object} [sdex] Showdown Dex to read from (default: Champions mod; pass base Dex for natdex)
  */
-export function buildDex(speciesNames, moveNames, itemNames) {
-  const sdex = showdownDex();
+export function buildDex(speciesNames, moveNames, itemNames, sdex = showdownDex()) {
   const wanted = new Set(speciesNames);
   for (const name of [...wanted]) {
     const sp = sdex.species.get(name);
-    if (sp && sp.exists) for (const mega of megaFormsOf(sp)) wanted.add(mega);
+    if (sp && sp.exists) for (const mega of megaFormsOf(sdex, sp)) wanted.add(mega);
   }
 
   const species = {};

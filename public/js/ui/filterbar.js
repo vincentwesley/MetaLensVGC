@@ -4,6 +4,7 @@
 import { rankedSeason } from '../lib/aggregate.js';
 import { copyText } from './clipboard.js';
 import { toast } from './toast.js';
+import { regFamily } from '../lib/state-core.js';
 
 const TIERS = [
   ['worlds', 'Worlds'],
@@ -92,6 +93,7 @@ export function mountFilterbar(root, ctx, manifest) {
   // Source
   const srcGroup = document.createElement('div');
   srcGroup.className = 'filterbar__group';
+  srcGroup.dataset.g = 'source';
   const srcLabel = document.createElement('span');
   srcLabel.className = 'filterbar__label';
   srcLabel.textContent = 'Source';
@@ -101,6 +103,7 @@ export function mountFilterbar(root, ctx, manifest) {
   // Event tiers
   const tierGroup = document.createElement('div');
   tierGroup.className = 'filterbar__group';
+  tierGroup.dataset.g = 'tier';
   const tierLabel = document.createElement('span');
   tierLabel.className = 'filterbar__label';
   tierLabel.textContent = 'Tier';
@@ -125,6 +128,7 @@ export function mountFilterbar(root, ctx, manifest) {
   // Placement
   const placeGroup = document.createElement('div');
   placeGroup.className = 'filterbar__group';
+  placeGroup.dataset.g = 'place';
   const placeLabel = document.createElement('span');
   placeLabel.className = 'filterbar__label';
   placeLabel.textContent = 'Placement';
@@ -134,6 +138,7 @@ export function mountFilterbar(root, ctx, manifest) {
   // Date range
   const dateGroup = document.createElement('div');
   dateGroup.className = 'filterbar__group';
+  dateGroup.dataset.g = 'dates';
   const dateLabel = document.createElement('span');
   dateLabel.className = 'filterbar__label';
   dateLabel.textContent = 'Dates';
@@ -179,7 +184,13 @@ export function mountFilterbar(root, ctx, manifest) {
   function regMeta(id) { return regs.find((r) => r.id === id); }
 
   function sync(state) {
-    for (const [id, btn] of reg.buttons) btn.setAttribute('aria-pressed', String(id === state.reg));
+    const fam = regFamily(state.reg);
+    for (const [id, btn] of reg.buttons) {
+      btn.setAttribute('aria-pressed', String(id === state.reg));
+      btn.hidden = regFamily(id) !== fam; // each mode shows only its own regulations
+      const r = regMeta(id);
+      if (r?.label && fam === 'showdown') btn.textContent = r.label; // VGC buttons keep the short id
+    }
     for (const [id, btn] of source.buttons) btn.setAttribute('aria-pressed', String(id === state.source));
     for (const [id, btn] of place.buttons) btn.setAttribute('aria-pressed', String(id === state.place));
     for (const [value, cb] of tierInputs) cb.checked = state.tiers.includes(value);
@@ -201,7 +212,7 @@ export function mountFilterbar(root, ctx, manifest) {
       if (!hasRanked) rankedBtn.setAttribute('data-tip', 'No in-game ranked data for this regulation');
       else rankedBtn.removeAttribute('data-tip');
     }
-    if (rm) { fromInput.min = toInput.min = rm.start; fromInput.max = toInput.max = rm.end; }
+    if (rm?.start) { fromInput.min = toInput.min = rm.start; fromInput.max = toInput.max = rm.end; }
     if (fromInput.value !== (state.from || '')) fromInput.value = state.from || '';
     if (toInput.value !== (state.to || '')) toInput.value = state.to || '';
     if (String(slider.value) !== String(state.minN)) slider.value = String(state.minN);
@@ -221,6 +232,14 @@ export function mountFilterbar(root, ctx, manifest) {
       sample.textContent = season
         ? `In-game ranked ${season.season} · snapshot ${season.snapshot} · ${Object.keys(season.mons).length.toLocaleString('en-US')} Pokémon · updated ${updated}`
         : `No in-game ranked season in range · updated ${updated}`;
+      return;
+    }
+    if (regFamily(view?.state?.reg) === 'showdown') {
+      const ms = view.ladder?.months || [];
+      const last = ms[ms.length - 1];
+      sample.textContent = last
+        ? `Smogon ladder ${last.month} (cutoff 1760) · ${(last.battles || 0).toLocaleString('en-US')} battles · ${Object.keys(last.mons).length.toLocaleString('en-US')} Pokémon · updated ${updated}`
+        : `No Smogon ladder data yet · updated ${updated}`;
       return;
     }
     sample.textContent = `${n.toLocaleString('en-US')} teams · ${events.toLocaleString('en-US')} events · updated ${updated}`;

@@ -275,6 +275,15 @@ test('ladderMerge weights months by battles and filters by date', async () => {
   assert.ok(Math.abs(a.usage - (0.5 * 0.25 + 0.1 * 0.75)) < 1e-9);
   assert.ok(Math.abs(a.items.find((i) => i.name === 'X').pct - 0.125 / 0.2) < 1e-9);
   assert.equal(ladderMerge(ladder, '2026-08-01').mons[0].key, 'B');
+  assert.deepEqual(a.tera, [], 'no teraTypes -> empty tera');
+  const tl = { cutoff: 1760, months: [
+    { month: '2026-07', battles: 100, url: 'a', mons: { A: { usage: 0.5, raw: 50, teraTypes: { Fire: 0.9, Water: 0.1 } } } },
+    { month: '2026-08', battles: 300, url: 'b', mons: { A: { usage: 0.1, raw: 30, teraTypes: { Water: 1 } } } },
+  ] };
+  const tera = ladderMerge(tl).mons[0].tera;
+  assert.equal(tera[0].name, 'Fire');
+  assert.ok(Math.abs(tera[0].pct - 0.1125 / 0.2) < 1e-9);
+  assert.ok(Math.abs(tera[1].pct - 0.0875 / 0.2) < 1e-9);
   assert.equal(ladderMerge(ladder, '2026-09-01'), null);
 });
 

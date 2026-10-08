@@ -171,7 +171,7 @@ export async function fetchOfficialEvents(dex, opts = {}) {
     withMatches: 0,
   };
   const byReg = { 'M-A': [], 'M-B': [], 'M-C': [] };
-  const earliestStart = Object.values(REGULATIONS).map((w) => w.start).sort()[0];
+  const earliestStart = Object.values(REGULATIONS).map((w) => w.start).filter(Boolean).sort()[0];
 
   let stop = false;
   for (let page = 1; page <= 30 && !stop; page++) {

@@ -1128,6 +1128,9 @@ test('Pokédex: tier bars, stat header sort, unused species opens the drawer cle
   await page.goto('/');
   await waitForAllSections(page);
   const sec = page.locator('[data-section="pokedex"]');
+  await expect(sec.locator('.dex-seg__btn', { hasText: 'A–Z' })).toHaveAttribute('aria-pressed', 'true'); // A–Z is the default
+  expect(await sec.locator('.dex-tierbar').count()).toBe(0);
+  await sec.locator('.dex-seg__btn', { hasText: 'Tier' }).click();
   expect(await sec.locator('.dex-tierbar').count()).toBeGreaterThan(1);
   const spe = sec.locator('.dex-sort', { hasText: 'Spe' });
   await spe.click();
@@ -1137,7 +1140,7 @@ test('Pokédex: tier bars, stat header sort, unused species opens the drawer cle
   expect(vals[0]).toBe(Math.max(...vals));
   expect(vals).toEqual([...vals].sort((a, b) => b - a));
   await spe.click();
-  await expect(sec.locator('.dex-tierbar').first()).toBeVisible();
+  await expect(spe).toHaveAttribute('aria-sort', 'none'); // back to the default A–Z
   // an unused species (usage "—") still opens a sane drawer
   await sec.locator('.dex-seg__btn', { hasText: 'A–Z' }).click();
   await sec.locator('.dex-row', { has: page.locator('.dex-row__use', { hasText: '—' }) }).first().click();
@@ -1238,4 +1241,41 @@ test('animated sprites keep their proportions (a tall 52x87 sprite is not stretc
   expect(m, 'an animated sprite from /ani/ loaded').not.toBeNull();
   expect(m.box[0]).toBe(m.box[1]); // footprint stays square
   expect(Math.abs(m.h / m.w - 87 / 52)).toBeLessThan(0.1); // content keeps the sprite's aspect
+});
+
+test('Showdown mode: switch, sections hidden, EV rules, reload keeps reg, back to VGC', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/');
+  await waitForAllSections(page);
+  await page.locator('.modeswitch button[data-mode="showdown"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'showdown');
+  await expect.poll(() => page.url()).toContain('reg=ND');
+  for (const id of ['quadrant', 'archetypes', 'countries', 'library', 'scanner']) {
+    await expect(page.locator(`main [data-section="${id}"]`)).toBeHidden();
+    await expect(page.locator(`#secnav a[data-jump="${id}"]`)).toBeHidden();
+  }
+  await expect(page.locator('.filterbar [data-g="source"]')).toBeHidden();
+  await expect(page.locator('.filterbar .segmented button', { hasText: 'Reg M-C' })).toBeHidden();
+  await expect(page.locator('main [data-section="snapshot"] .snap__card, main [data-section="snapshot"] .card').first()).toBeVisible();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'showdown');
+  await page.locator('.filterbar .segmented button', { hasText: 'NatDex Doubles' }).click();
+  await expect.poll(() => page.url()).toContain('reg=NDD');
+  await waitForAllSections(page);
+  for (const id of ['snapshot', 'usage', 'pokedex', 'types', 'items', 'teammates', 'speed', 'trends']) {
+    const text = await page.locator(`main [data-section="${id}"]`).innerText();
+    expect(text, id).not.toMatch(/NaN|undefined|Infinity|Insufficient/);
+  }
+  // deep dive: Tera card + Lv100 EV stat range
+  await page.locator('[data-section="pokedex"] .dex-row').first().click();
+  const dd = page.locator('#deepdive[aria-hidden="false"]');
+  await expect(dd).toBeVisible();
+  await expect(dd).toContainText('Stat range (Lv100)');
+  await page.keyboard.press('Escape');
+  await page.locator('.modeswitch button[data-mode="vgc"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-family', 'vgc');
+  await expect.poll(() => page.url()).not.toContain('reg=ND');
+  await expect(page.locator('main [data-section="scanner"]')).toBeVisible();
+  expect(errors).toEqual([]);
 });

@@ -14,6 +14,7 @@ import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, 
 import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
 import { defensiveBuckets, MATCHUP_BUCKETS, statRange, allSpecies, topSetMon } from '../lib/species-info.js';
 import { toPaste } from '../lib/paste.js';
+import { RULES } from '../lib/stats.js';
 import { copyText } from '../ui/clipboard.js';
 import { toast } from '../ui/toast.js';
 
@@ -218,20 +219,22 @@ export default {
       const metaEl = elm('div');
       const season = rankedSeason(view.ranked, view.state.from, view.state.to);
       const rm = rankedMon(season, key, dex);
-      const rankedRows = rm && bs ? rankedSpreadRows(rm.mon, bs) : [];
+      const rankedRows = rm && bs ? rankedSpreadRows(rm.mon, bs, (view.rules || RULES.sp)) : [];
       // Smogon: the latest month of the regulation (inside the date filter); the option exists only if it lists this Pokémon.
       const { from, to } = view.state;
       const lad = (view.ladder?.months || []).filter((m) => (!from || m.month >= from.slice(0, 7)) && (!to || m.month <= to.slice(0, 7)))
         .reduce((b, m) => (!b || m.month > b.month ? m : b), null);
       const ladMerged = lad ? ladderMerge({ ...view.ladder, months: [lad] }, '', '', dex) : null;
       const ladMon = ladMerged?.mons.find((m) => m.key === key);
-      const smogonRows = ladMon && bs ? smogonSpreadRows(ladMon, bs) : [];
+      const smogonRows = ladMon && bs ? smogonSpreadRows(ladMon, bs, (view.rules || RULES.sp)) : [];
       const avail = [];
       if (rankedRows.length) avail.push('ranked');
       if (smogonRows.length) avail.push('smogon');
       if (!avail.includes(spSource)) spSource = avail[0] || 'ranked';
 
-      const field = metaSpeedField(speedSpecies(view.state.source, view.monTeams, season, dex, 30), { season, merged }, dex)
+      // Showdown mode has no team sheets: the benchmark field is the ladder's 30 most-used species.
+      const tiers = view.family === 'natdex' ? (merged?.mons || []).slice(0, 31).map((m) => ({ key: m.key })) : speedSpecies(view.state.source, view.monTeams, season, dex, 30);
+      const field = metaSpeedField(tiers, { season, merged, rules: (view.rules || RULES.sp) }, dex)
         .filter((f) => f.key !== key);
 
       const toggle = elm('div', 'spx-toggle');
@@ -257,6 +260,7 @@ export default {
         const seq = ++shiftSeq;
         if (!avail.length) {
           ctx.meta(metaEl, { source: 'In-game ranked and Smogon spreads' });
+          if (view.family === 'natdex') { panel.appendChild(elm('div', 'ddv-note', 'No Smogon spreads recorded for this Pokémon in this format.')); return; }
           emptyState(panel, 'Insufficient data');
           panel.appendChild(elm('div', 'ddv-note', 'No in-game ranked or Smogon spreads for this Pokémon in this regulation (tournament sheets carry none).'));
           return;
@@ -290,7 +294,7 @@ export default {
 
         // One compact block per spread (the drawer is narrow): SP line + type + share bar, then Lv50 stats and speed.
         const head = elm('div', 'spx-head');
-        head.append(elm('span', '', 'SP: HP / Atk / Def / SpA / SpD / Spe'), elm('span', '', isRanked ? 'share of spreads' : 'share'));
+        head.append(elm('span', '', `${(view.rules || RULES.sp).mode === 'ev' ? 'EVs' : 'SP'}: HP / Atk / Def / SpA / SpD / Spe`), elm('span', '', isRanked ? 'share of spreads' : 'share'));
         panel.appendChild(head);
         const list = elm('ul', 'spx-rows');
         list.setAttribute('aria-label', 'Spreads, most common first');
@@ -306,14 +310,14 @@ export default {
           const mid = elm('div', 'spx-row__mid');
           if (!isRanked) mid.append(elm('span', 'spx-row__nat', r.nature || 'no nature reported'));
           else if (!r.nature) mid.append(elm('span', 'spx-row__nat', 'no nature reported'));
-          const stats = elm('span', 'spx-row__stats', `Lv50 ${r.stats.join(' / ')}`);
+          const stats = elm('span', 'spx-row__stats', `Lv${(view.rules || RULES.sp).level} ${r.stats.join(' / ')}`);
           mid.append(stats);
           if (isRanked && r.nature) stats.after(elm('span', 'spx-row__assume', `* ${r.nature}`));
           li.append(top, mid, elm('div', 'ddv-note spx-row__bench', field.length ? `Spe ${r.stats[5]}: ${benchText(r.stats[5], field)}` : `Spe ${r.stats[5]}`));
           list.appendChild(li);
         }
         panel.appendChild(list);
-        if (isRanked) panel.appendChild(elm('div', 'ddv-note', `* Ranked data reports natures separately from spreads, so Lv50 stats assume the most common nature (${rows[0]?.nature ?? '—'}).`));
+        if (isRanked) panel.appendChild(elm('div', 'ddv-note', `* Ranked data reports natures separately from spreads, so Lv${(view.rules || RULES.sp).level} stats assume the most common nature (${rows[0]?.nature ?? '—'}).`));
         panel.appendChild(elm('div', 'ddv-note', `Type describes the SP only (${SPREAD_ARCHETYPES.slice(0, 4).map((a) => `${a.label}: ${a.desc}`).join('; ')}; first match wins). Speed benchmark: the ${field.length} most-used Pokémon of this view with a known speed (Speed Tiers sources).`));
         if (isRanked) {
           const attr = elm('div', 'ddv-note');
@@ -340,10 +344,14 @@ export default {
       const titleEl = document.getElementById('deepdive-title');
       if (titleEl) titleEl.textContent = key;
 
+      const sd = view.family === 'natdex'; // Showdown mode: ladder only, no team sheets
+      const regLabel = view.regMeta?.label || view.reg;
+      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       const teams = view.ddTeams || view.monTeams;
       const det = speciesDetail(teams, key, dex);
       const metaLine = elm('div');
-      ctx.meta(metaLine, { source: view.state.source === 'ladder' ? 'Tournaments (base stats/usage) + Ladder (sets)' : 'Tournaments', n: det.n, unit: 'teams' });
+      if (sd) ctx.meta(metaLine, { source: `Smogon ${merged?.cutoff ?? ''} ladder · ${regLabel}`, n: merged?.battles, unit: 'battles' });
+      else ctx.meta(metaLine, { source: view.state.source === 'ladder' ? 'Tournaments (base stats/usage) + Ladder (sets)' : 'Tournaments', n: det.n, unit: 'teams' });
       content.appendChild(metaLine);
 
       // --- header: sprite, types, base stats, usage %, win % ---
@@ -368,10 +376,12 @@ export default {
 
       const kpis = elm('div', 'ddv-kpis');
       const usageKpi = elm('div', 'kpi');
-      usageKpi.append(elm('span', 'kpi__label', 'Usage'), elm('span', 'kpi__value', ctx.fmt.pct(det.pct)));
+      const useLadder = view.state.source === 'ladder';
+      const ladderRow = useLadder ? merged?.mons.find((m) => m.key === key) : null;
+      usageKpi.append(elm('span', 'kpi__label', 'Usage'), elm('span', 'kpi__value', sd ? (ladderRow ? ctx.fmt.pct(ladderRow.usage) : '—') : ctx.fmt.pct(det.pct)));
       const winKpi = elm('div', 'kpi');
       winKpi.append(elm('span', 'kpi__label', 'Win % (with it)'), elm('span', 'kpi__value', ctx.fmt.pct(det.withWinPct)));
-      kpis.append(usageKpi, winKpi);
+      if (sd) kpis.append(usageKpi); else kpis.append(usageKpi, winKpi);
       info.appendChild(kpis);
       const filterBtn = elm('button', 'ddv-btn', `Filter dashboard by ${key}`);
       filterBtn.type = 'button';
@@ -393,6 +403,7 @@ export default {
       }
       head.append(spriteWrap, info);
       content.appendChild(head);
+      if (sd && !ladderRow) content.appendChild(elm('div', 'ddv-note', `No recorded use in ${regLabel}.`));
 
       // base stats
       const { card: statsCard, body: statsBody } = sectionCard('Base stats');
@@ -412,14 +423,14 @@ export default {
       content.appendChild(statsCard);
 
       // Lv50 stat range
-      const { card: rangeCard, body: rangeBody } = sectionCard('Stat range (Lv50)');
+      const { card: rangeCard, body: rangeBody } = sectionCard(`Stat range (Lv${(view.rules || RULES.sp).level})`);
       const rangeGrid = elm('div', 'ddv-range');
-      statRange(bs).forEach((r, i) => {
+      statRange(bs, (view.rules || RULES.sp)).forEach((r, i) => {
         const cell = elm('div', 'kpi');
         cell.append(elm('span', 'kpi__label', statNames[i]), elm('span', 'kpi__value', `${r.min}–${r.max}`));
         rangeGrid.appendChild(cell);
       });
-      rangeBody.append(rangeGrid, elm('div', 'ddv-note', 'Min: 0 SP and a nature that lowers the stat. Max: 32 SP and a nature that raises it. HP has no nature.'));
+      rangeBody.append(rangeGrid, elm('div', 'ddv-note', `Min: 0 ${(view.rules || RULES.sp).mode === 'ev' ? 'EVs' : 'SP'} and a nature that lowers the stat. Max: ${(view.rules || RULES.sp).max} ${(view.rules || RULES.sp).mode === 'ev' ? 'EVs' : 'SP'} and a nature that raises it. HP has no nature.`));
       content.appendChild(rangeCard);
 
       // defensive type matchups
@@ -437,7 +448,8 @@ export default {
       tmuBody.appendChild(elm('div', 'ddv-note', 'Damage taken by attacking type. Abilities (e.g. Levitate) not applied.'));
       content.appendChild(tmuCard);
 
-      // usage by week
+      // usage by week (team sheets only)
+      if (!sd) {
       const { card: wkCard, body: wkBody } = sectionCard('Usage by week');
       const wkMeta = elm('div');
       ctx.meta(wkMeta, { source: 'Tournaments', n: teams.length, unit: 'teams' });
@@ -464,8 +476,10 @@ export default {
       }
       wkBody.appendChild(chgEl);
       content.appendChild(wkCard);
+      }
 
       // win rate with vs without
+      if (!sd) {
       const { card: wrCard, body: wrBody } = sectionCard('Win rate with vs. without');
       if (det.withWinPct == null && det.withoutWinPct == null) {
         emptyState(wrBody, 'Insufficient data');
@@ -479,44 +493,53 @@ export default {
         wrBody.appendChild(cmp);
       }
       content.appendChild(wrCard);
-
-      const useLadder = view.state.source === 'ladder';
-      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
-      const ladderRow = useLadder ? merged?.mons.find((m) => m.key === key) : null;
+      }
 
       // items
       const { card: itemsCard, body: itemsBody } = sectionCard('Items');
       barList(itemsBody, useLadder ? (ladderRow?.items || []).map((r) => ({ name: r.name, pct: r.pct })) : det.items.map((r) => ({ name: r.name, pct: r.pct })),
         { onClick: (name, e) => ctx.chip('item', name, e) });
-      content.appendChild(itemsCard);
+      if (!(sd && !ladderRow)) content.appendChild(itemsCard);
+
+      // Tera types (Showdown only; no chip kind exists for Tera, so informational)
+      if (ladderRow?.tera?.length) {
+        const { card: teraCard, body: teraBody } = sectionCard('Tera types');
+        barList(teraBody, ladderRow.tera.map((r) => ({ name: r.name, pct: r.pct })));
+        content.appendChild(teraCard);
+      }
 
       // abilities (no chip kind exists for abilities in state schema — informational only)
       const { card: abCard, body: abBody } = sectionCard('Abilities');
-      barList(abBody, useLadder ? (ladderRow?.abilities || []).map((r) => ({ name: r.name, pct: r.pct })) : det.abilities.map((r) => ({ name: r.name, pct: r.pct })));
+      if (sd && !ladderRow?.abilities?.length) {
+        const own = Object.values(sp.abilities || {});
+        abBody.appendChild(elm('div', 'ddv-note', own.length ? `Available: ${own.join(', ')} (no usage recorded).` : 'No usage recorded.'));
+      } else barList(abBody, useLadder ? (ladderRow?.abilities || []).map((r) => ({ name: r.name, pct: r.pct })) : det.abilities.map((r) => ({ name: r.name, pct: r.pct })));
       content.appendChild(abCard);
 
       // moves
       const { card: mvCard, body: mvBody } = sectionCard('Moves');
       barList(mvBody, useLadder ? (ladderRow?.moves || []).map((r) => ({ name: r.name, pct: r.pct })) : det.moves.map((r) => ({ name: r.name, pct: r.pct })),
         { onClick: (name, e) => ctx.chip('move', name, e) });
-      content.appendChild(mvCard);
+      if (!(sd && !ladderRow)) content.appendChild(mvCard);
 
-      // exact 4-move sets
+      // exact 4-move sets (team sheets only)
+      if (!sd) {
       const { card: setsCard, body: setsBody } = sectionCard('Common move sets');
       barList(setsBody, det.sets.map((r) => ({ name: r.name, pct: r.pct })));
       if (topSetMon(teams, key)) {
         const copyBtn = elm('button', 'ddv-btn ddv-copyset', 'Copy most common set');
         copyBtn.type = 'button';
         copyBtn.addEventListener('click', async () => {
-          const ok = await copyText(toPaste({ mons: [topSetMon(teams, key)] }, dex));
+          const ok = await copyText(toPaste({ mons: [topSetMon(teams, key)] }, dex, view.rules));
           toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
         });
         setsBody.appendChild(copyBtn);
       }
       content.appendChild(setsCard);
+      }
 
       // mega usage
-      if (hasMegaForm(dex, sp.base ?? key)) {
+      if (!sd && hasMegaForm(dex, sp.base ?? key)) {
         const { card: megaCard, body: megaBody } = sectionCard('Mega usage');
         const kpi = elm('div', 'kpi');
         kpi.append(elm('span', 'kpi__label', `Holds ${dex.species[key]?.stone ? 'its' : "a"} Mega Stone`), elm('span', 'kpi__value', ctx.fmt.pct(det.megaPct)));
@@ -544,7 +567,7 @@ export default {
         }
         tmBody.appendChild(grid);
       }
-      content.appendChild(tmCard);
+      if (!(sd && !ladderRow)) content.appendChild(tmCard);
 
       // in-game ranked ladder (shown whenever it has this species, regardless of source)
       const season = rankedSeason(view.ranked, view.state.from, view.state.to);
@@ -599,7 +622,7 @@ export default {
         }
         ccBody.appendChild(list);
       }
-      content.appendChild(ccCard);
+      if (!(sd && !ladderRow)) content.appendChild(ccCard);
     }
 
     el.addEventListener('deepdive:open', (e) => { isOpen = true; render(e.detail?.key); });

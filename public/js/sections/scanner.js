@@ -64,14 +64,14 @@ function mySpeedOf(m, dex, src) {
   const bs = baseStatsOf(m, dex);
   if (!bs) return null;
   if (m.sp) {
-    return { spe: calcStat(bs[5], m.sp[5], 5, m.nature || 'Hardy'), note: m.nature ? '' : ' (neutral nature assumed)' };
+    return { spe: calcStat(bs[5], m.sp[5], 5, m.nature || 'Hardy', src.rules), note: m.nature ? '' : ' (neutral nature assumed)' };
   }
   const meta = metaSpeed(dex.species[m.k] ? m.k : m.s, src, dex);
   if (meta && meta.spe != null) {
     const nature = m.nature || meta.nature;
-    return { spe: calcStat(bs[5], meta.sp, 5, nature), note: ` (${nature}, ${meta.sp} SP: most common ${SPEED_SOURCE[meta.source]} spread)` };
+    return { spe: calcStat(bs[5], meta.sp, 5, nature, src.rules), note: ` (${nature}, ${meta.sp} SP: most common ${SPEED_SOURCE[meta.source]} spread)` };
   }
-  return { spe: calcStat(bs[5], 0, 5, m.nature || 'Hardy'), note: ' (assumed 0 SP)' };
+  return { spe: calcStat(bs[5], 0, 5, m.nature || 'Hardy', src.rules), note: ' (assumed 0 SP)' };
 }
 
 // Frequency of damaging (bp > 0) move types across the current view — the
@@ -221,7 +221,7 @@ export default {
       const view = lastView;
       if (!view || !view.teams.length) { toast('No teams in the current view to sample from', { type: 'error' }); return; }
       const t = view.teams[Math.floor(Math.random() * view.teams.length)];
-      textarea.value = toPaste(t, view.dex);
+      textarea.value = toPaste(t, view.dex, view.rules);
     });
 
     function renderResults() {
@@ -232,7 +232,7 @@ export default {
       if (!text) { emptyState(results, 'Paste a team and hit Scan'); return; }
       if (!view) { emptyState(results, 'Data still loading'); return; }
       const dex = view.dex;
-      const mons = parsePaste(text, dex);
+      const mons = parsePaste(text, dex, view.rules);
       if (!anyKnownSpecies(mons, dex)) { emptyState(results, 'Could not parse that paste: no recognised Pokémon'); return; }
       results.appendChild(clickHint('Click a Pokémon name: show only teams with it. Shift-click to exclude.', { auto: false }));
 
@@ -318,7 +318,7 @@ export default {
       const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       const sheetTiers = speedTiers(view.field, dex, 99999);
       const sheetTiersByKey = new Map(sheetTiers.map((r) => [r.key, r]));
-      const speedSrc = { sheetByKey: sheetTiersByKey, season: rankedSeason(view.ranked, view.state.from, view.state.to), merged };
+      const speedSrc = { sheetByKey: sheetTiersByKey, season: rankedSeason(view.ranked, view.state.from, view.state.to), merged, rules: view.rules };
       const mySpeeds = mons.map((m) => mySpeedOf(m, dex, speedSrc)?.spe).filter((v) => v != null);
       const myMaxSpe = mySpeeds.length ? Math.max(...mySpeeds) : null;
 
@@ -388,7 +388,7 @@ export default {
           const copyBtn = elm('button', 'lib-btn', 'Copy paste');
           copyBtn.type = 'button';
           copyBtn.addEventListener('click', async () => {
-            const ok = await copyText(toPaste(c.team, dex));
+            const ok = await copyText(toPaste(c.team, dex, view.rules));
             toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
           });
           row.appendChild(copyBtn);

@@ -17,6 +17,8 @@ async function fetchJSON(path) {
 
 export function loadManifest() { return fetchJSON('data/manifest.json'); }
 export function loadDex() { return fetchJSON('data/dex.json'); }
+/** Base-game dex for the Showdown family (dex-natdex.json); the Champions one is data/dex.json. */
+export function loadDexFile(family) { return fetchJSON(`data/dex-${family}.json`); }
 export function loadTeamsFile(reg) { return fetchJSON(`data/teams-${reg}.json`); }
 export function loadLadderFile(reg) {
   return fetchJSON(`data/ladder-${reg}.json`).catch(() => ({ reg, source: 'smogon', cutoff: null, months: [] }));
