@@ -107,3 +107,10 @@ test('usageMap ranks by pct, or by ranking order', () => {
   assert.deepEqual(m.get('A'), { pct: 1, rank: 2 });
   assert.deepEqual(usageMap([], ['X', 'Y']).get('Y'), { pct: null, rank: 2 });
 });
+
+test('dexRows chipTest narrows the roster (dashboard chips)', async () => {
+  const { dexRows } = await import('../public/js/lib/pokedex.js');
+  const roster = { tierOrder: ['OU'], species: { A: { num: 1, types: ['Fire'], bs: [1, 1, 1, 1, 1, 1], tier: 'OU' }, B: { num: 2, types: ['Water'], bs: [1, 1, 1, 1, 1, 1], tier: 'OU' } } };
+  assert.deepEqual(dexRows(roster, { chipTest: (n) => n === 'B' }).rows.map((r) => r.name), ['B']);
+  assert.equal(dexRows(roster, {}).rows.length, 2);
+});

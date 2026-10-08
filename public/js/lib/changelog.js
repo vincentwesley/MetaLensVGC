@@ -7,6 +7,7 @@ export const CHANGELOG = [
       { tag: 'NEW', text: 'Showdown stats use EVs at Lv100; deep dive gains a Tera types card and Smogon EV spreads.' },
       { tag: 'NEW', text: 'Type usage, monthly trends, risers and fallers, and speed tiers work from ladder data.' },
       { tag: 'IMPROVED', text: 'Pokédex opens A–Z by default; National Dex uses official Showdown tiers, NatDex Doubles tiers by usage.' },
+      { tag: 'IMPROVED', text: 'Pokédex now follows the dashboard filters (type, Pokémon, weak-to chips) but clicking it still never adds one.' },
       { tag: 'FIX', text: 'Showdown leaderboard shows and sorts by usage % only (Smogon usage is rating-weighted, so the raw count ranked differently and was misleading).' },
       { tag: 'FIX', text: 'VGC ladder leaderboard column renamed "Raw uses": Smogon usage % is weighted by player rating, so it can rank differently from the raw count.' },
       { tag: 'IMPROVED', text: 'Team-sheet sections (quadrant, archetypes, countries, library, scanner) are hidden in Showdown mode.' },
