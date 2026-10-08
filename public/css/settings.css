@@ -33,6 +33,7 @@
 .swatch:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 .settings__link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; text-align: left; }
 .settings__foot { color: var(--muted); border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.clock-panel { width: max-content; max-width: min(20rem, calc(100vw - 2rem)); }
 .clock-panel p { margin: 0; }
 .clock-panel p[hidden] { display: none; }
 
@@ -43,6 +44,7 @@
 }
 [data-skin="pro"] .changelog { border: 1px solid var(--border); }
 .changelog[open] { display: flex; }
+.changelog { max-height: min(85dvh, 640px); margin: auto; }
 .changelog::backdrop { background: rgb(0 0 0 / .55); }
 .changelog__head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
 .changelog__head h2 { margin: 0; font-family: var(--font-head); font-size: var(--fs-head-lg); text-transform: uppercase; }

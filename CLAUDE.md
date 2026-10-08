@@ -81,6 +81,7 @@ state = {
   from: "" | "YYYY-MM-DD", to: "" | "YYYY-MM-DD", minN: 20,
   chips: [ { kind: "species"|"mega"|"core"|"type"|"weak"|"item"|"move"|"movetype"|"archetype"|"team"|"country", value: string | string[], neg: false } ],
   skin: "pro" | "retro", theme: "dark" | "light" | "auto", anim: false,   // defaults: pro, dark
+  palette: "grass"|"ghost"|"water"|"fire"|"fairy"|"electric"|"steel",        // look prefs: localStorage `metalens.prefs`, NOT in the hash
 }
 store.get(), store.set(patch), store.addChip(chip), store.removeChip(i), store.clearChips(), store.subscribe(fn)
 ```
@@ -122,7 +123,7 @@ Creator credits (owner's request): the "Credits" card at the end of `index.html`
 and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white keyed out); the footer links vwesley.dev.
 
 ## Sections at a glance (page order)
-Header (skin/theme/animated toggles) -> sticky filter bar + active-filter chips -> Meta Snapshot (top cards + KPIs) ->
+Header (gear settings panel + meta clock) -> sticky filter bar + active-filter chips -> Meta Snapshot (top cards + KPIs) -> Pokédex (every species; a card opens the deep dive, never filters) ->
 Usage leaderboard (Wilson CI, top item) | Usage x Win-rate quadrant -> Type landscape (type usage | move types the field
 is weak to, by real multiplier) -> Item usage | Most common items by Pokémon -> Archetype split + matchup heatmap |
 Archetype share by week |
@@ -161,6 +162,20 @@ Background: pixel field canvas.
 - Third batch (2026-09-30): Library Filter also scans the team in the Scanner (`view.field`, `ctx.scan`), named team chips, leaderboard search + Change column, Copy link. 151 unit, 51 e2e green.
 - Scanner cards never say "Insufficient data" after a scan (low samples flagged; empty states say what is missing). 155 unit, 52 e2e green.
 - Next-session prompt (fresh-start handover, open items): `docs/prompts/next-session.md`. Testing ledger: `docs/TESTING.md`.
+
+### v1.1.0 additions (2026-10-08)
+- **Look prefs** (skin, theme, anim, palette) live in localStorage `metalens.prefs`, not the URL (`PREF_KEYS` in state-core.js;
+  `toHash` omits them; legacy `#skin=`/`#theme=` still apply once and are rewritten away). `js/prefs-init.js` (sync, in `<head>`)
+  sets the `data-*` attributes before first paint. Palettes are CSS in `css/palettes.css` (grass = the base tokens, no rules);
+  `test/contrast.test.js` checks all 28 skin x theme x palette combos. Series/pill/status colours are never palette-tinted.
+- **Settings gear** (`ui/settings.js`, native popover) holds mode/style/palette/animated/clock/tips/What's new. The gear and clock
+  stay visible when the filter bar collapses. **Meta clock** (`ui/clock.js`, `lib/clock.js`): local time + next refresh + regulation end.
+- **Version + update log**: `lib/changelog.js` (`CHANGELOG`, `VERSION`); `package.json` version must equal `VERSION` (unit test).
+  **Every shipped batch bumps the version and adds a changelog entry.**
+- **Pokédex** (`sections/pokedex.js`, `lib/pokedex.js`, `lib/species-info.js#allSpecies`): sprite/card = details (drawer, no chip),
+  row/bar = filter. `P` or Ctrl/Cmd+K focuses its search. Deep dive also has type matchups, Lv50 stat ranges, weekly usage,
+  copy-set, form switch and an explicit "Filter dashboard" button.
+- **Weekly refresh** runs Mondays 00:00 UTC = 08:00 GMT+8.
 
 ### Invariants learned the hard way (keep them)
 - **Rendering** (`main.js`): sections update on-screen first, yielding between them; off-screen ones are marked dirty and

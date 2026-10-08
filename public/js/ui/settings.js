@@ -3,6 +3,7 @@
 import { store } from '../state.js';
 import { crossfade } from './motion.js';
 import { wirePopover } from './popover.js';
+import { undismiss } from './secnav.js';
 import { VERSION } from '../lib/changelog.js';
 import { openChangelog, hasUnseen } from './changelog-dialog.js';
 
@@ -13,7 +14,6 @@ function clockOn() {
   try { return localStorage.getItem(CLOCK) !== '0'; } catch { return true; }
 }
 function setClock(on) {
-  try { localStorage.setItem(CLOCK, on ? '1' : '0'); } catch { /* not saved */ }
   document.documentElement.setAttribute('data-clock', on ? 'on' : 'off');
 }
 
@@ -101,7 +101,11 @@ export function mountSettings(host, { howto } = {}) {
     swBtns.set(id, b);
   }
   const root = document.documentElement;
+  let painted = '';
   function paintSwatches() {
+    const key = `${root.getAttribute('data-skin')}|${root.getAttribute("data-theme")}|${matchMedia("(prefers-color-scheme: dark)").matches}`;
+    if (key === painted) return;
+    painted = key;
     const cur = root.getAttribute('data-palette');
     for (const [id, b] of swBtns) { // tokens are scoped to :root, so read each palette by switching the attribute synchronously
       root.setAttribute('data-palette', id);
@@ -116,14 +120,17 @@ export function mountSettings(host, { howto } = {}) {
 
   const anim = toggle('Animated sprites', store.get().anim, (v) => store.set({ anim: v }));
   store.subscribe((s) => { anim.input.checked = s.anim; });
-  const clock = toggle('Show clock', clockOn(), setClock);
+  const clock = toggle('Show clock', clockOn(), (on) => {
+    try { localStorage.setItem(CLOCK, on ? '1' : '0'); } catch { /* not saved */ }
+    setClock(on);
+  });
   setClock(clockOn());
   const tips = document.createElement('button');
   tips.type = 'button';
   tips.className = 'settings__link';
   tips.textContent = 'Show tips again';
   tips.addEventListener('click', () => {
-    try { localStorage.removeItem('metalens.howtoDismissed'); } catch { /* ignore */ }
+    try { undismiss(localStorage); } catch { /* storage blocked */ }
     if (howto) howto.hidden = false;
     pop.hidePopover();
   });

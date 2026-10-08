@@ -1124,3 +1124,13 @@ test('Pokédex: no horizontal overflow at 390px', async ({ page }) => {
   await expect(page.locator('[data-section="pokedex"] .dex-card').first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('Pokédex: empty search hides the Show all button', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sec = page.locator('[data-section="pokedex"]');
+  await expect(sec.locator('.dex-more')).toBeVisible();
+  await sec.locator('.dex-search').fill('zzzzqq');
+  await expect(sec.locator('.dex-card')).toHaveCount(0);
+  await expect(sec.locator('.dex-more')).toBeHidden();
+});

@@ -23,7 +23,7 @@ export function mountClock(host, fmt) {
     const reg = manifest?.regs?.find((r) => r.id === manifest.current);
     const d = reg?.end ? daysLeft(reg.end, now) : 0;
     l2.hidden = d <= 0;
-    l2.textContent = `${reg?.id} ends in ${d} day${d === 1 ? '' : 's'}`;
+    if (d > 0) l2.textContent = `${reg?.id} ends in ${d} day${d === 1 ? '' : 's'}`;
     l3.hidden = !manifest?.generated;
     l3.textContent = `Data updated ${fmt.date(manifest?.generated)}`;
   }

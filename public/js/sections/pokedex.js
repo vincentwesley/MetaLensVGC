@@ -3,9 +3,8 @@
 import { usage, ladderMerge, rankedSeason } from '../lib/aggregate.js';
 import { allSpecies } from '../lib/species-info.js';
 import { dexList } from '../lib/pokedex.js';
-import { TYPES, TYPE_COLORS } from '../lib/types.js';
-import { inkOn } from '../lib/contrast.js';
-import { rankedSource, clickHint } from '../ui/meta.js';
+import { TYPES } from '../lib/types.js';
+import { rankedSource, clickHint, typePill } from '../ui/meta.js';
 
 const SHOWN = 60;
 const SORTS = [['usage', 'Usage'], ['name', 'Name'], ['dex', 'Dex #'], ['speed', 'Base Speed']];
@@ -39,10 +38,12 @@ export default {
     typeBar.setAttribute('aria-label', 'Filter by type');
     const types = new Set();
     for (const t of TYPES) {
-      const b = el('button', 'pill dex-type', t);
+      const b = el('button', null, t);
+      const pill = typePill(t);
+      b.className = 'pill dex-type';
       b.type = 'button';
-      b.style.background = TYPE_COLORS[t];
-      b.style.color = inkOn(TYPE_COLORS[t]);
+      b.style.background = pill.style.background;
+      b.style.color = pill.style.color;
       b.setAttribute('aria-pressed', 'false');
       b.addEventListener('click', () => {
         if (types.delete(t)) b.setAttribute('aria-pressed', 'false'); else { types.add(t); b.setAttribute('aria-pressed', 'true'); }
@@ -59,7 +60,7 @@ export default {
     card.append(head, body);
     root.appendChild(card);
 
-    let view = null, keys = [], use = new Map(), label = () => '—', all = false, timer = null;
+    let view = null, reg = null, keys = [], use = new Map(), label = () => '—', all = false, timer = null;
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { all = false; render(); }, 120); });
     search.addEventListener('keydown', (e) => { if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; render(); } });
     sort.addEventListener('change', render);
@@ -99,12 +100,7 @@ export default {
         c.setAttribute('aria-label', `Open details for ${key}`);
         c.addEventListener('click', () => ctx.openDrawer(key));
         const pills = el('span', 'dex-card__types');
-        for (const t of sp.types || []) {
-          const p = el('span', 'pill', t);
-          p.style.background = TYPE_COLORS[t] || 'var(--muted)';
-          if (TYPE_COLORS[t]) p.style.color = inkOn(TYPE_COLORS[t]);
-          pills.appendChild(p);
-        }
+        for (const t of sp.types || []) pills.appendChild(typePill(t));
         c.append(ctx.sprite(key, { size: 'sm', animated: view.state.anim }), el('span', 'dex-card__name', key), pills,
           el('span', 'dex-card__use', label(key)), el('span', 'dex-card__num muted', sp.num ? `#${sp.num}` : ''));
         grid.appendChild(c);
@@ -139,11 +135,10 @@ export default {
           label = (k) => (use.has(k) ? ctx.fmt.pct(use.get(k)) : '—');
         }
         ctx.meta(meta, { source, n, unit });
-        all = false;
+        if (v.reg !== reg) { reg = v.reg; all = false; } // keep "Show all" across chip changes
         render();
         hint.hidden = !grid.children.length;
       },
-      highlight() {},
     };
   },
 };
