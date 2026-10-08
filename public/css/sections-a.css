@@ -241,3 +241,7 @@ main.grid .section[data-section="quadrant"] {
   .dex-row__tier { display: none; }
   .dex-row__types { padding: 2px 0; }
 }
+
+/* The Pokédex list scrolls inside a fixed-height box so the section stays short; tier bars stick to its top. */
+.dex-list { max-height: min(62vh, 560px); overflow-y: auto; overscroll-behavior: contain; }
+.dex-tierbar { position: sticky; top: 0; z-index: 1; }
