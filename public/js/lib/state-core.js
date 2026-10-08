@@ -12,7 +12,11 @@ export const DEFAULT_STATE = {
   skin: 'pro',
   theme: 'dark',
   anim: false,
+  palette: 'grass',
 };
+
+// Look prefs live in localStorage, not the URL.
+export const PREF_KEYS = ['skin', 'theme', 'anim', 'palette'];
 
 function sameArray(a, b) {
   return a.length === b.length && [...a].sort().every((v, i) => v === [...b].sort()[i]);
@@ -40,7 +44,7 @@ function decodeChip(token) {
 export function toHash(state, defaults = DEFAULT_STATE) {
   const parts = [];
   for (const key of Object.keys(defaults)) {
-    if (key === 'chips') continue;
+    if (key === 'chips' || PREF_KEYS.includes(key)) continue;
     const v = state[key];
     const d = defaults[key];
     if (Array.isArray(d)) {
@@ -61,6 +65,7 @@ const ENUMS = {
   place: ['all', 'topcut', 'top8', 'winner'],
   skin: ['pro', 'retro'],
   theme: ['dark', 'light', 'auto'],
+  palette: ['grass', 'ghost', 'water', 'fire', 'fairy', 'electric', 'steel'],
 };
 const TIER_IDS = DEFAULT_STATE.tiers;
 export const MIN_N_MAX = 200;
@@ -126,7 +131,7 @@ export function fromHash(hash, defaults = DEFAULT_STATE) {
     try {
       const key = decodeURIComponent(part.slice(0, eq));
       const raw = part.slice(eq + 1);
-      if (!(key in defaults)) continue;
+      if (!(key in defaults) || key === 'anim' || key === 'palette') continue; // legacy links only carry skin/theme
       if (key === 'chips') {
         state.chips = raw.split(',').filter(Boolean).map(decodeChip).filter(Boolean);
       } else if (Array.isArray(defaults[key])) {

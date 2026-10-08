@@ -94,3 +94,19 @@ test('sanitizeState: country chips are ISO-2 codes (uppercased); anything else i
   const back = sanitizeState(fromHash(toHash(s), DEFAULT_STATE), {});
   assert.deepEqual(back.chips, s.chips);
 });
+
+test('toHash never emits look prefs', () => {
+  const h = toHash({ ...DEFAULT_STATE, skin: 'retro', theme: 'light', anim: true, palette: 'fire', reg: 'M-B' });
+  assert.equal(h, 'reg=M-B');
+});
+
+test('fromHash still parses legacy skin/theme', () => {
+  const s = fromHash('skin=retro&theme=light');
+  assert.equal(s.skin, 'retro');
+  assert.equal(s.theme, 'light');
+});
+
+test('palette: bad value -> grass, valid round-trips', () => {
+  assert.equal(sanitizeState({ ...DEFAULT_STATE, palette: 'neon' }).palette, 'grass');
+  assert.equal(sanitizeState({ ...DEFAULT_STATE, palette: 'steel' }).palette, 'steel');
+});

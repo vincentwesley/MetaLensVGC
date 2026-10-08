@@ -1,20 +1,44 @@
 // Central state store. Round-trips through location.hash via js/lib/state-core.js.
 // See CLAUDE.md "State" contract.
 
-import { DEFAULT_STATE, toHash, fromHash, sanitizeState } from './lib/state-core.js';
+import { DEFAULT_STATE, PREF_KEYS, toHash, fromHash, sanitizeState } from './lib/state-core.js';
 
 // Known regulation ids, once the manifest has loaded (store.setRegs).
 let regs = null;
 // Every state (hand-edited hash, back/forward, UI) goes through sanitizeState,
 // so sections only ever see valid values.
 const clean = (s) => sanitizeState(s, { regs });
-let state = clean(fromHash(location.hash.slice(1), DEFAULT_STATE));
+const PREFS_KEY = 'metalens.prefs';
+
+function loadPrefs() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { /* storage off or corrupt */ }
+  return clean({ ...DEFAULT_STATE, ...saved });
+}
+
+function savePrefs(s) {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(Object.fromEntries(PREF_KEYS.map((k) => [k, s[k]])))); } catch { /* ignore */ }
+}
+
+// Hash gives filters (+ legacy skin/theme); look prefs come from `base` unless the hash has a legacy value.
+function parseHash(base) {
+  const h = location.hash.slice(1);
+  const parsed = fromHash(h, DEFAULT_STATE);
+  const legacy = ['skin', 'theme'].filter((k) => new RegExp(`(^|&)${k}=`).test(h));
+  for (const k of PREF_KEYS) if (!legacy.includes(k)) parsed[k] = base[k];
+  const next = clean(parsed);
+  if (legacy.length) savePrefs(next);
+  return next;
+}
+
+let state = parseHash(loadPrefs());
 const subs = new Set();
 
 function applyDom(s) {
   const root = document.documentElement;
   root.setAttribute('data-skin', s.skin);
   root.setAttribute('data-theme', s.theme);
+  root.setAttribute('data-palette', s.palette);
   root.setAttribute('data-anim', s.anim ? 'on' : 'off');
 }
 
@@ -39,6 +63,7 @@ export const store = {
   set(patch, opts = {}) {
     state = clean({ ...state, ...patch });
     applyDom(state);
+    if (PREF_KEYS.some((k) => k in patch)) savePrefs(state);
     pushHash(!!opts.replace);
     subs.forEach((fn) => fn(state));
   },
@@ -74,7 +99,7 @@ export const store = {
 };
 
 window.addEventListener('hashchange', () => {
-  state = clean(fromHash(location.hash.slice(1), DEFAULT_STATE));
+  state = parseHash(state);
   applyDom(state);
   pushHash(true); // canonical form of a hand-edited hash
   subs.forEach((fn) => fn(state));
