@@ -3,6 +3,7 @@
 // picked species: tournament team sheets by default, Smogon's ladder teammate %
 // when Source = Ladder and that period has ladder data.
 import { usage, atMinN, coUsage, cores, ladderMerge, rankedSeason, speciesDetail } from '../lib/aggregate.js';
+import { ladderCoMatrix, ladderPairs } from '../lib/ladder-field.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
@@ -111,7 +112,7 @@ export default {
     heatChart.on('click', (p) => {
       if (p.seriesIndex == null || !p.data) return;
       const [c, r] = p.data.value;
-      if (r === c || !lastKeys[r] || !lastKeys[c]) return;
+      if (r === c || p.data.value[2] == null || !lastKeys[r] || !lastKeys[c]) return;
       ctx.chip('core', [lastKeys[r], lastKeys[c]], p.event?.event);
     });
 
@@ -186,18 +187,25 @@ export default {
       heatTitle.textContent = 'Teammate co-usage';
       heatHint.textContent = 'How often two Pokémon share a team. Click a cell: show only teams with both. Shift-click to exclude.';
       if (view.state.source === 'ranked') { renderRankedTeammates(view); return; }
+      const merged = view.state.source === 'ladder' ? ladderMerge(view.ladder, view.state.from, view.state.to, view.dex) : null;
+      const lad = merged ? ladderCoMatrix(merged.mons) : null;
       if (view.state.source === 'ladder') {
-        heatChartEl.style.display = 'none';
-        heatEmptyEl.textContent = '';
-        heatEmptyEl.appendChild(emptyState('Switch Source to Tournaments to see teammate co-usage.', 'Tournament-only view'));
-        lastKeys = [];
-        ctx.meta(heat.meta, { source: 'Tournaments', n: 0, unit: 'teams' });
-        return;
+        controls.style.display = 'none';
+        heatTitle.textContent = 'Teammate co-usage (Smogon ladder)';
+        heatHint.textContent = 'Each cell is the row Pokémon’s teammate share of the column Pokémon (ladder data lists each Pokémon’s top 20 teammates). Grey = not in its top 20. Click a cell: show only teams with both.';
+        ctx.meta(heat.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
+        if (!lad || lad.keys.length < 2) {
+          heatChartEl.style.display = 'none';
+          heatEmptyEl.textContent = '';
+          heatEmptyEl.appendChild(emptyState('No Smogon ladder data for this period.'));
+          lastKeys = [];
+          return;
+        }
       }
       // A grid needs two Pokémon: below that, smaller samples come in (flagged in the meta line).
-      const { rows, relaxed } = atMinN(usage(view.teams), view.state.minN, 2);
-      ctx.meta(heat.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams', relaxed });
-      if (rows.length < 2) {
+      const { rows, relaxed } = lad ? { rows: [], relaxed: false } : atMinN(usage(view.teams), view.state.minN, 2);
+      if (!lad) ctx.meta(heat.meta, { source: 'Tournaments', n: view.teams.length, unit: 'teams', relaxed });
+      if (!lad && rows.length < 2) {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';
         heatEmptyEl.appendChild(emptyState('Insufficient data'));
@@ -206,9 +214,10 @@ export default {
       }
       heatChartEl.style.display = '';
       heatEmptyEl.textContent = '';
-      const keys = rows.slice(0, 15).map((r) => r.key);
+      const keys = lad ? lad.keys : rows.slice(0, 15).map((r) => r.key);
       lastKeys = keys;
-      const co = coUsage(view.teams, keys);
+      const co = lad ? null : coUsage(view.teams, keys);
+      const md = lad ? 'raw' : mode;
       const div = theme.diverging;
       // First pass: raw values, so raw mode's colour scale (rawMax) is known
       // before we can compute each cell's luminance-aware label style.
@@ -216,26 +225,27 @@ export default {
       for (let r = 0; r < keys.length; r++) {
         for (let c = 0; c < keys.length; c++) {
           if (r === c) continue;
-          cellVals.push({ r, c, n: co.n[r][c], val: mode === 'lift' ? co.lift[r][c] : co.pct[r][c] * 100 });
+          cellVals.push(lad ? { r, c, n: null, val: lad.m[r][c] == null ? null : lad.m[r][c] * 100 } : { r, c, n: co.n[r][c], val: md === 'lift' ? co.lift[r][c] : co.pct[r][c] * 100 });
         }
       }
-      const rawMax = Math.max(1, ...cellVals.map((d) => d.val));
-      const stops = mode === 'lift' ? [div.neg2, div.neg1, div.mid, div.pos1, div.pos2] : theme.sequential;
+      const rawMax = Math.max(1, ...cellVals.map((d) => d.val ?? 0));
+      const stops = md === 'lift' ? [div.neg2, div.neg1, div.mid, div.pos1, div.pos2] : theme.sequential;
       const good = [];
       const bad = [];
       // Render every off-diagonal cell (real co-usage data, even 0% —
       // that's still a real "never seen together" fact). Only the diagonal
       // (a species paired with itself) is excluded from the colour scale.
       for (const { r, c, n, val } of cellVals) {
+        if (val == null) { bad.push({ value: [c, r, null, n] }); continue; }
         // Per-item static label colour, NOT a series-level label.color
         // callback: this vendored ECharts silently drops the label for most
         // points when label.color is a function on a heatmap series
         // (confirmed by direct canvas pixel sampling in dev). A plain
         // per-item override renders reliably.
-        const style = cellLabelStyle(stops, mode === 'lift' ? val / 2 : val / rawMax);
+        const style = cellLabelStyle(stops, md === 'lift' ? val / 2 : val / rawMax);
         good.push({ value: [c, r, val, n], label: { color: style.fill, textBorderColor: style.halo } });
       }
-      for (let i = 0; i < keys.length; i++) bad.push({ value: [i, i, null, co.n[i][i]] });
+      for (let i = 0; i < keys.length; i++) bad.push({ value: [i, i, null, co ? co.n[i][i] : null] });
       // At 15 columns, a narrow (mobile) container can't fit full-size
       // sprites + in-cell percentage text without everything colliding —
       // shrink the icons and drop the in-cell numbers (still on the
@@ -251,6 +261,7 @@ export default {
           textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           formatter: (p) => {
             const [c, r, val, n] = p.data.value;
+            if (lad) return r === c ? `<b>${keys[r]}</b>` : val == null ? `<b>${keys[r]}</b> + <b>${keys[c]}</b><br/>not in top 20` : `<b>${keys[c]}</b> is ${val.toFixed(1)}% of <b>${keys[r]}</b>'s teammates`;
             if (r === c) return `<b>${keys[r]}</b><br/>solo usage n=${n}`;
             if (val == null) return `<b>${keys[r]}</b> + <b>${keys[c]}</b><br/>insufficient data (n=${n})`;
             const label = mode === 'lift' ? `lift ${val.toFixed(2)}×` : `${val.toFixed(1)}% of teams together`;
@@ -263,7 +274,7 @@ export default {
         // dimension must be explicit: this ECharts build doesn't auto-pick the
         // value dim (index 2) for heatmap series, and silently paints every
         // cell the same fallback color without it. Reported upstream.
-        visualMap: mode === 'lift'
+        visualMap: md === 'lift'
           ? {
             min: 0, max: 2, dimension: 2, seriesIndex: 0, show: true, calculable: false,
             orient: 'horizontal', left: 'center', bottom: 0, itemWidth: 12, itemHeight: 80,
@@ -274,7 +285,7 @@ export default {
           : {
             min: 0, max: rawMax, dimension: 2, seriesIndex: 0, show: true, calculable: false,
             orient: 'horizontal', left: 'center', bottom: 0, itemWidth: 12, itemHeight: 80,
-            text: [`${rawMax.toFixed(0)}% together`, '0% together'],
+            text: [`${rawMax.toFixed(0)}%${lad ? '' : ' together'}`, `0%${lad ? '' : ' together'}`],
             textStyle: { color: theme.muted, fontFamily: theme.fontFamily, fontSize: 10 },
             inRange: { color: theme.sequential },
           },
@@ -283,7 +294,7 @@ export default {
             type: 'heatmap', data: good,
             label: {
               show: !narrow,
-              formatter: (p) => (mode === 'lift' ? p.data.value[2].toFixed(1) : `${p.data.value[2].toFixed(0)}%`),
+              formatter: (p) => (md === 'lift' ? p.data.value[2].toFixed(1) : `${p.data.value[2].toFixed(0)}%`),
               textBorderWidth: 1.2,
               // The body font (VT323 in retro) is a thin display face meant
               // for large text; at small sizes the label font (Silkscreen/
@@ -303,10 +314,43 @@ export default {
 
     // --- top cores ---------------------------------------------------------
     const coresWrap = document.createElement('div');
-    coresCard.body.append(clickHint('Most common trios of Pokémon. Click a row: show only teams running all three.'), coresWrap);
+    const coresHint = clickHint('Most common trios of Pokémon. Click a row: show only teams running all three.');
+    const coresTitle = coresCard.el.querySelector('h3');
+    coresCard.body.append(coresHint, coresWrap);
+    function renderLadderCores(view) {
+      const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
+      coresTitle.textContent = 'Top pairs (Smogon ladder)';
+      coresHint.textContent = 'Derived from Smogon teammate data, not counted teams: pair score = usage of one × its teammate share of the other, averaged both ways. Click a row: show only teams with both.';
+      ctx.meta(coresCard.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
+      const pairs = merged ? ladderPairs(merged.mons) : [];
+      if (!pairs.length) { coresWrap.appendChild(emptyState('No Smogon ladder data for this period.', 'No pairs')); return; }
+      for (const r of pairs) {
+        const row = document.createElement('div');
+        row.className = 'sb-row sb-row--clickable';
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+        const sprites = document.createElement('div');
+        sprites.className = 'sb-sprites';
+        for (const k of r.keys) sprites.appendChild(ctx.sprite(k, { size: 'sm', animated: view.state.anim }));
+        const names = document.createElement('div');
+        names.className = 'sb-names sb-names--wrap';
+        names.textContent = r.keys.join(' + ');
+        const pct = document.createElement('div');
+        pct.className = 'sb-stat';
+        pct.textContent = `${ctx.fmt.pct(r.score)} pair score`;
+        row.append(sprites, names, pct);
+        const act = (e) => ctx.chip('core', r.keys, e);
+        row.addEventListener('click', act);
+        row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(e); } });
+        coresWrap.appendChild(row);
+      }
+    }
 
     function renderCores(view) {
       coresWrap.textContent = '';
+      if (view.state.source === 'ladder') { renderLadderCores(view); return; }
+      coresTitle.textContent = 'Top cores';
+      coresHint.textContent = 'Most common trios of Pokémon. Click a row: show only teams running all three.';
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
         coresWrap.appendChild(emptyState(ranked ? RANKED_NA : 'Switch Source to Tournaments to see top cores.', 'Tournament-only view'));

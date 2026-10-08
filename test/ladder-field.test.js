@@ -38,3 +38,26 @@ test('movers: NEW when absent previously, floor drops noise, fallers incl. vanis
   assert.deepEqual(m.fallers.map((r) => r.key), ['B']);
   assert.equal(ladderMovers({ months: [ladder.months[0]] }), null);
 });
+
+import { ladderPairs, ladderCoMatrix } from '../public/js/lib/ladder-field.js';
+
+test('ladder pairs: sorted key, both directions averaged, one-sided kept', () => {
+  const mons = [
+    { key: 'B', usage: 0.2, teammates: [{ name: 'A', pct: 0.5 }, { name: 'C', pct: 0.1 }] },
+    { key: 'A', usage: 0.4, teammates: [{ name: 'B', pct: 0.3 }] },
+  ];
+  const p = ladderPairs(mons);
+  assert.deepEqual(p[0].keys, ['A', 'B']);
+  assert.ok(Math.abs(p[0].score - (0.4 * 0.3 + 0.2 * 0.5) / 2) < 1e-9);
+  assert.deepEqual(p[1].keys, ['B', 'C']);
+  assert.ok(Math.abs(p[1].score - 0.02) < 1e-9);
+});
+
+test('ladder co-matrix: null for self and unlisted', () => {
+  const { keys, m } = ladderCoMatrix([
+    { key: 'A', usage: 0.4, teammates: [{ name: 'B', pct: 0.3 }] },
+    { key: 'B', usage: 0.2, teammates: [] },
+  ]);
+  assert.deepEqual(keys, ['A', 'B']);
+  assert.deepEqual(m, [[null, 0.3], [null, null]]);
+});

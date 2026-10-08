@@ -1291,3 +1291,15 @@ test('Pokédex follows the dashboard filters, but clicking it adds none', async 
   await rows.first().click();
   await expect(page.locator('#chips .chip')).toHaveCount(1); // still just the Dragon chip
 });
+
+test('Showdown teammates: heatmap and top pairs are filled from ladder data; a pair adds a core chip', async ({ page }) => {
+  await page.goto('/#reg=ND');
+  await waitForAllSections(page);
+  const sec = page.locator('[data-section="teammates"]');
+  await expect(sec).not.toContainText('Tournament-only view');
+  await expect(sec).toContainText('Top pairs');
+  const rows = sec.locator('.sb-row--clickable');
+  expect(await rows.count()).toBeGreaterThan(5);
+  await rows.first().click();
+  await expect(page.locator('#chips .chip')).toHaveCount(1);
+});
