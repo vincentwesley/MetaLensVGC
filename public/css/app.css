@@ -662,6 +662,11 @@ button[data-tip] { cursor: pointer; }
   font-family: var(--font-body); font-size: var(--fs-small); line-height: 1.4;
 }
 .howto[hidden] { display: none; }
+/* pinned with the filter bar, so on a phone it is one line: first tip only */
+@media (max-width: 700px) {
+  .howto__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .howto__text span:nth-of-type(n+2) { display: none; }
+}
 .howto__text { margin: 0; flex: 1; min-width: 0; }
 .howto__text b { color: var(--ink); font-family: var(--font-label); font-weight: 700; text-transform: uppercase; margin-right: var(--space-1); }
 .howto__text span + span::before { content: "·"; margin: 0 var(--space-2); color: var(--muted); }
@@ -764,3 +769,93 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
   content: ""; display: inline-block; width: 4px; height: 4px; margin: 0 10px 2px 0; vertical-align: middle;
   background: var(--ff-core); box-shadow: var(--ff-glow);
 }
+
+/* ---------- extra styles: glass / paper / terminal / soft ----------
+   These render with data-skin="pro" (so Pro tokens, palettes and sections-*.css apply); data-style picks the look. They only change
+   type, radii, borders, shadows. Paper also warms the neutral surfaces (palettes still win). */
+
+/* glass: frosted translucent cards */
+[data-style="glass"] {
+  --font-head: Inter, system-ui, -apple-system, sans-serif; --font-label: var(--font-head);
+  --radius: 14px; --glass-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 8px 24px rgb(0 0 0 / .10), 0 24px 48px rgb(0 0 0 / .06);
+  --glass-edge: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+[data-style="glass"] body {
+  background: radial-gradient(60rem 36rem at 12% -8%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+              radial-gradient(48rem 30rem at 100% 20%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 70%), var(--surface-0);
+}
+[data-style="glass"] .card, [data-style="glass"] .settings, [data-style="glass"] .changelog {
+  background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+  border: 1px solid var(--glass-edge); border-radius: 16px; box-shadow: var(--glass-shadow);
+}
+[data-style="glass"] :is(.settings, .changelog, .drawer__panel, .clock-panel) { background: color-mix(in srgb, var(--surface-1) 80%, transparent); }
+@supports (backdrop-filter: blur(1px)) {
+  /* blur only small/overlay surfaces: blurring every large card is costly */
+  [data-style="glass"] :is(.filterbar, .stickybar, .chip, .pill) { backdrop-filter: blur(10px) saturate(1.3); }
+  [data-style="glass"] :is(.drawer__panel, .settings, .clock-panel, .changelog) { backdrop-filter: blur(20px) saturate(1.4); }
+}
+[data-style="glass"] .card__head { border-bottom: 1px solid var(--glass-edge); }
+[data-style="glass"] .chip, [data-style="glass"] .pill { border-radius: 999px; }
+[data-style="glass"] .toggle__track { border-radius: 999px; } [data-style="glass"] .toggle__track::after { border-radius: 50%; }
+
+/* paper: editorial, hairline rules instead of boxed cards */
+[data-style="paper"] {
+  --font-head: Newsreader, Georgia, 'Times New Roman', serif; --font-label: Inter, system-ui, -apple-system, sans-serif;
+  --fs-head: 16px; --fs-head-lg: 20px; --ls-head: 0; --radius: 4px;
+  --surface-0: #f6f1e7; --surface-1: #fbf8f1; --surface-2: #fffdf8;
+  --ink: #221e16; --ink-2: #453e31; --muted: #5c5444;
+  --grid: #e6dfd0; --axis: #d3cab6; --border: rgba(34,30,22,.18); --tooltip-bg: #fffdf8;
+}
+[data-style="paper"][data-theme="dark"] {
+  --surface-0: #15130f; --surface-1: #1b1813; --surface-2: #211e18;
+  --ink: #efe9dc; --ink-2: #bdb4a2; --muted: #9a917f;
+  --grid: #2c2820; --axis: #3a352b; --border: rgba(239,233,220,.16); --tooltip-bg: #211e18;
+}
+@media (prefers-color-scheme: dark) {
+  [data-style="paper"]:not([data-theme="light"]) {
+    --surface-0: #15130f; --surface-1: #1b1813; --surface-2: #211e18;
+    --ink: #efe9dc; --ink-2: #bdb4a2; --muted: #9a917f;
+    --grid: #2c2820; --axis: #3a352b; --border: rgba(239,233,220,.16); --tooltip-bg: #211e18;
+  }
+}
+[data-style="paper"] h1, [data-style="paper"] h2, [data-style="paper"] h3, [data-style="paper"] .brand { font-weight: 600; }
+[data-style="paper"] h2.section__title, [data-style="paper"] .brand, [data-style="paper"] .changelog__head h2 { text-transform: none; }
+[data-style="paper"] .card { background: transparent; border: 0; border-top: 1px solid var(--ink-2); border-radius: 0; }
+[data-style="paper"] .card__head { border-bottom: 1px solid var(--border); }
+[data-style="paper"] .card__head h2::before, [data-style="paper"] .card__head h3::before { display: none; }
+[data-style="paper"] :is(.kpi__label, .settings__label, .chips__title, th, .lib-badge) { font-variant-caps: all-small-caps; text-transform: none; letter-spacing: .08em; font-size: calc(var(--fs-small) + 1px); }
+[data-style="paper"] .settings, [data-style="paper"] .changelog { background: var(--surface-1); }
+
+/* terminal: monospace, sharp, no shadows */
+[data-style="terminal"] {
+  --font-head: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace; --font-label: var(--font-head); --font-body: var(--font-head);
+  --fs-head: 12px; --fs-head-lg: 14px; --fs-label: 11px; --fs-body: 13px; --fs-small: 11px; --ls-head: 0;
+  --radius: 0px; --space-3: 10px; --space-4: 12px;
+}
+[data-style="terminal"] :is(.card, .settings, .changelog, .chip, .pill, .segmented, .gear, .clock, .toggle__track, .toggle__track::after, .swatch, .chips__count) { border-radius: 0; box-shadow: none; }
+[data-style="terminal"] .card { border-style: dashed; }
+[data-style="terminal"] .card__head h2::before, [data-style="terminal"] .card__head h3::before {
+  content: "> "; width: auto; height: auto; background: none; margin: 0 .5ch 0 0; color: var(--accent); font-weight: 700; white-space: pre;
+}
+[data-style="terminal"] .card__head :is(h2, h3) { color: var(--accent); text-transform: lowercase; }
+
+/* soft: friendly, round, pillowy */
+[data-style="soft"] {
+  --font-head: Nunito, 'Segoe UI', system-ui, -apple-system, sans-serif; --font-label: var(--font-head); --font-body: var(--font-head);
+  --fs-head: 15px; --fs-head-lg: 19px; --fs-label: 12px; --fs-body: 15px; --fs-small: 13px; --ls-head: 0;
+  --radius: 18px; --space-3: 14px; --space-4: 20px;
+}
+[data-style="soft"] :is(h1, h2, h3, .brand) { font-weight: 800; }
+[data-style="soft"] h2.section__title { text-transform: none; }
+[data-style="soft"] .card, [data-style="soft"] .settings, [data-style="soft"] .changelog {
+  border-radius: 22px; border-color: color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow: 0 2px 4px rgb(0 0 0 / .04), 0 10px 28px rgb(0 0 0 / .07);
+}
+[data-style="soft"] .card__head { border-bottom-color: color-mix(in srgb, var(--ink) 7%, transparent); }
+[data-style="soft"] .card__head h2::before, [data-style="soft"] .card__head h3::before { width: 8px; height: 8px; border-radius: 50%; margin-top: -2px; }
+[data-style="soft"] :is(.chip, .pill, .segmented, .chips__clear, .toggle__track) { border-radius: 999px; }
+[data-style="soft"] .toggle__track::after { border-radius: 50%; }
+[data-style="soft"] .chip { padding: 5px 6px 5px 12px; }
+[data-style="soft"] .segmented button { padding: 7px 14px; font-weight: 700; }
+[data-style="soft"] :is(.lib-btn, .spx-toggle, .filterbar__toggle-btn, .filterbar__multi label) { border-radius: 999px; }
+[data-style="soft"] :is(.snapshot__mon, .lib-card, .sprite-cell) { border-radius: 16px; }

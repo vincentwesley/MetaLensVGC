@@ -26,18 +26,22 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
 // Resolve tokens like the cascade: :root -> skin -> theme -> palette (palettes.css), by exact selector.
 // grass (the default palette) has no rules, so it resolves to the app.css tokens.
 const PALETTES = ['grass', 'ghost', 'water', 'fire', 'fairy', 'electric', 'steel'];
-const tokens = (skin, theme, pal) => {
+// Glass/paper/terminal/soft render as data-skin="pro"; only paper adds its own tokens via [data-style="paper"].
+const tokens = (style, theme, pal) => {
   const p = `:root[data-palette="${pal}"]`;
+  const g = style === 'retro' ? '[data-skin="retro"]' : '[data-skin="pro"]';
+  const own = `[data-style="${style}"]`; // beats the skin, loses to palettes
+  const dark = theme === 'dark';
   return {
-    ...block(':root'), ...block(`[data-skin="${skin}"]`),
-    ...(theme === 'dark' ? { ...block(':root[data-theme="dark"]'), ...block(`[data-skin="${skin}"][data-theme="dark"]`) } : {}),
-    ...block(p), ...block(`${p}[data-skin="${skin}"]`),
-    ...(theme === 'dark' ? block(`${p}[data-skin="${skin}"][data-theme="dark"]`) : {}),
+    ...block(':root'), ...block(g), ...(dark ? { ...block(':root[data-theme="dark"]'), ...block(`${g}[data-theme="dark"]`) } : {}),
+    ...block(own), ...(dark ? block(`${own}[data-theme="dark"]`) : {}),
+    ...block(p), ...block(`${p}${g}`),
+    ...(dark ? block(`${p}${g}[data-theme="dark"]`) : {}),
   };
 };
 
 for (const pal of PALETTES) {
-  for (const skin of ['pro', 'retro']) {
+  for (const skin of ['pro', 'retro', 'glass', 'paper', 'terminal', 'soft']) {
     for (const theme of ['light', 'dark']) {
       const name = `${pal} ${skin} ${theme}`;
       const t = tokens(skin, theme, pal);

@@ -249,6 +249,14 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   Data-dependent checks (ladder-less M-C, team counts, ranks) now read the manifest/data instead of literals.
 - Visual sweep (1440/390, 7 palettes, drawer, popovers) done once; items fixed. Not re-reviewed by eye: pro-light fire/ghost pills, 390px What's new.
 
+### v1.2.0 (2026-10-09)
+- Unit: Pokédex logic (tier order, stat sort, AND filters, usage tiers incl. ranked, suggest grouping, forme split), generated roster/learnset
+  files (`test/pokedex-data.test.js`), contrast for 6 styles x 2 themes x 7 palettes, style enum.
+- e2e: Pokédex (tier bars, stat sort, search suggestions -> filter tags, row opens details with 0 chips, unused species opens cleanly, empty state,
+  no overflow at 390, `P` focus); tips strip pinned on scroll + Pokédex after the quadrant; animated sprite keeps a 52x87 aspect (stubbed image);
+  each new style persists and fits 390px. Phone sticky bar stays under 15% of the screen with the tips strip.
+- Not verified: glass frame rate in a real browser, offline font fallbacks for Newsreader/Nunito.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

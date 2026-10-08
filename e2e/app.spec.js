@@ -1068,16 +1068,18 @@ test('settings panel: mode/style/palette change, persist on reload, never enter 
   await expect(html).toHaveAttribute('data-skin', 'retro');
 });
 
-test("What's new lists 1.1.0 and clears the gear dot; clock popover shows the refresh line", async ({ page }) => {
+test("What's new lists the current version and clears the gear dot; clock popover shows the refresh line", async ({ page }) => {
+  const { readFileSync } = await import('node:fs');
+  const ver = JSON.parse(readFileSync('package.json', 'utf8')).version;
   await page.goto('/');
   await waitForUsageRendered(page);
   await expect(page.locator('.gear__dot')).toBeVisible();
   await page.locator('.gear').click();
-  await expect(page.locator('#settings-panel .settings__foot')).toContainText('v1.1.0');
+  await expect(page.locator('#settings-panel .settings__foot')).toContainText('v' + ver);
   await page.getByRole('button', { name: 'What’s new' }).click();
   const dlg = page.locator('dialog.changelog');
   await expect(dlg).toBeVisible();
-  await expect(dlg).toContainText('v1.1.0');
+  await expect(dlg).toContainText('v' + ver);
   await page.keyboard.press('Escape');
   await expect(dlg).toBeHidden();
   await expect(page.locator('.gear')).toBeFocused();
@@ -1092,45 +1094,148 @@ test("What's new lists 1.1.0 and clears the gear dot; clock popover shows the re
   await expect(page.locator('.clock')).toBeHidden();
 });
 
-test('Pokédex: card opens details without a chip; search and type filter narrow it; P focuses search', async ({ page }) => {
+test('Pokédex: row opens details without a chip; search suggestions, filter tags and P focus work', async ({ page }) => {
   await page.goto('/');
   await waitForAllSections(page);
   const sec = page.locator('[data-section="pokedex"]');
-  const cards = sec.locator('.dex-card');
-  await expect(cards.first()).toBeVisible();
-  const total = await cards.count();
+  const rows = sec.locator('.dex-row');
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
   expect(total).toBeGreaterThan(10);
   await page.keyboard.press('p');
   await expect(sec.locator('.dex-search')).toBeFocused();
-  await sec.locator('.dex-search').fill('zzzzqq');
-  await expect(sec.locator('.empty-state')).toContainText('No Pokémon match');
-  await sec.locator('.dex-search').fill('char');
-  await expect(cards.first()).toBeVisible();
-  expect(await cards.count()).toBeLessThan(total);
-  await sec.locator('.dex-search').fill('');
-  await expect(cards).toHaveCount(total);
-  await sec.locator('.dex-type', { hasText: 'Dragon' }).click();
-  await expect.poll(() => cards.count()).toBeLessThan(total);
+  await sec.locator('.dex-search').fill('fake');
+  await expect(sec.locator('.dex-sug__head', { hasText: 'Moves' })).toBeVisible();
+  await sec.locator('.dex-sug__opt', { hasText: 'Fake Out' }).first().click();
+  const tag = sec.locator('.dex-tag[aria-label="Remove filter Fake Out"]');
+  await expect(tag).toBeVisible();
+  await expect.poll(() => rows.count()).toBeLessThan(total);
+  await tag.click();
+  await sec.locator('.dex-search').fill('drag');
+  await sec.locator('.dex-sug__opt', { hasText: /^Dragon$/ }).first().click();
+  await expect(sec.locator('.dex-tag[aria-label="Remove filter Dragon"]')).toBeVisible();
   expect(await page.locator('#chips .chip').count()).toBe(0);
-  await cards.first().click();
+  await sec.locator('.dex-tag').first().click();
+  await expect(sec.locator('.dex-tag')).toHaveCount(0);
+  await rows.first().click();
   await expect(page.locator('#deepdive[aria-hidden="false"]')).toBeVisible();
   expect(await page.locator('#chips .chip').count()).toBe(0);
+});
+
+test('Pokédex: tier bars, stat header sort, unused species opens the drawer cleanly', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sec = page.locator('[data-section="pokedex"]');
+  expect(await sec.locator('.dex-tierbar').count()).toBeGreaterThan(1);
+  const spe = sec.locator('.dex-sort', { hasText: 'Spe' });
+  await spe.click();
+  await expect(spe).toHaveAttribute('aria-sort', 'descending');
+  await expect(sec.locator('.dex-tierbar')).toHaveCount(0);
+  const vals = await sec.locator('.dex-row').evaluateAll((els) => els.slice(0, 30).map((e) => +e.querySelectorAll('.dex-stat b')[5].textContent));
+  expect(vals[0]).toBe(Math.max(...vals));
+  expect(vals).toEqual([...vals].sort((a, b) => b - a));
+  await spe.click();
+  await expect(sec.locator('.dex-tierbar').first()).toBeVisible();
+  // an unused species (usage "—") still opens a sane drawer
+  await sec.locator('.dex-seg__btn', { hasText: 'A–Z' }).click();
+  await sec.locator('.dex-row', { has: page.locator('.dex-row__use', { hasText: '—' }) }).first().click();
+  await expect(page.locator('#deepdive[aria-hidden="false"]')).toBeVisible();
+  expect(await page.locator('#deepdive').innerText()).not.toMatch(/NaN|undefined/);
+  expect(errors).toEqual([]);
 });
 
 test('Pokédex: no horizontal overflow at 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto('/');
   await waitForAllSections(page);
-  await expect(page.locator('[data-section="pokedex"] .dex-card').first()).toBeVisible();
+  await expect(page.locator('[data-section="pokedex"] .dex-row').first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('Pokédex: empty search hides the Show all button', async ({ page }) => {
+test('Pokédex: no match shows an empty state and hides Show more', async ({ page }) => {
   await page.goto('/');
   await waitForAllSections(page);
   const sec = page.locator('[data-section="pokedex"]');
   await expect(sec.locator('.dex-more')).toBeVisible();
-  await sec.locator('.dex-search').fill('zzzzqq');
-  await expect(sec.locator('.dex-card')).toHaveCount(0);
+  await sec.locator('.dex-search').fill('fire');
+  await sec.locator('.dex-sug__opt', { hasText: /^Fire$/ }).first().click();
+  await sec.locator('.dex-search').fill('water');
+  await sec.locator('.dex-sug__opt', { hasText: /^Water$/ }).first().click();
+  await sec.locator('.dex-search').fill('ice');
+  await sec.locator('.dex-sug__opt', { hasText: /^Ice$/ }).first().click();
+  await expect(sec.locator('.empty-state')).toContainText('No Pokémon match');
+  await expect(sec.locator('.dex-row')).toHaveCount(0);
   await expect(sec.locator('.dex-more')).toBeHidden();
+});
+
+test('extra styles: each is selectable in settings, persists on reload, no overflow at 390px, no console errors', async ({ page }) => {
+  const errors = [];
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const html = page.locator('html');
+  for (const [skin, label] of [['glass', 'Glass'], ['paper', 'Paper'], ['terminal', 'Terminal'], ['soft', 'Soft']]) {
+    await page.locator('.gear').click();
+    const panel = page.locator('#settings-panel');
+    await panel.getByRole('button', { name: label, exact: true }).click();
+    await expect(html).toHaveAttribute('data-style', skin);
+    await expect(html).toHaveAttribute('data-skin', 'pro');
+    await expect(panel.getByRole('button', { name: label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const box = await panel.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    await page.keyboard.press('Escape');
+    await page.reload();
+    await waitForUsageRendered(page);
+    await expect(html).toHaveAttribute('data-style', skin);
+    await expect(html).toHaveAttribute('data-skin', 'pro');
+    await waitForAllSections(page);
+    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(sw, `${skin} overflows at 390px (scrollWidth=${sw})`).toBeLessThanOrEqual(390);
+  }
+  expect(errors.filter((e) => !/Failed to load resource/.test(e))).toEqual([]);
+});
+
+test('tips strip stays pinned while scrolling; Pokédex sits after the usage + quadrant pair', async ({ page }) => {
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  await expect(page.locator('#howto')).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 2500));
+  await page.waitForTimeout(300);
+  const top = await page.locator('#howto').evaluate((e) => e.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(0);
+  expect(top).toBeLessThan(200);
+  const ids = await page.locator('main > section[data-section]').evaluateAll((els) => els.map((e) => e.dataset.section));
+  expect(ids.indexOf('pokedex')).toBe(ids.indexOf('quadrant') + 1);
+  const nav = await page.locator('#secnav a').evaluateAll((els) => els.map((e) => e.dataset.jump));
+  expect(nav.indexOf('pokedex')).toBe(nav.indexOf('usage') + 1);
+});
+
+test('animated sprites keep their proportions (a tall 52x87 sprite is not stretched into a square)', async ({ page }) => {
+  const { deflateSync, crc32 } = await import('node:zlib');
+  const png = (w, h) => {
+    const chunk = (t, d) => { const b = Buffer.alloc(12 + d.length); b.writeUInt32BE(d.length, 0); b.write(t, 4); d.copy(b, 8); b.writeUInt32BE(crc32(b.subarray(4, 8 + d.length)) >>> 0, 8 + d.length); return b; };
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+    const raw = Buffer.alloc((w * 3 + 1) * h, 120);
+    for (let y = 0; y < h; y++) raw[y * (w * 3 + 1)] = 0;
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+  };
+  await page.route(/sprites\/ani\/.*\.gif$/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: png(52, 87) }));
+  await page.addInitScript(() => localStorage.setItem('metalens.prefs', JSON.stringify({ skin: 'pro', theme: 'dark', anim: true, palette: 'grass' })));
+  await page.goto('/');
+  await waitForUsageRendered(page);
+  const isAni = `(x) => x.src.includes('/ani/') && x.naturalWidth === 52 && x.style.height`;
+  await page.waitForFunction(`[...document.querySelectorAll('img.sprite')].some(${isAni})`, null, { timeout: 30000 });
+  const m = await page.evaluate(`(() => {
+    const i = [...document.querySelectorAll('img.sprite')].find(${isAni});
+    const bb = i.getBoundingClientRect(), cs = getComputedStyle(i);
+    return { box: [Math.round(bb.width), Math.round(bb.height)], w: parseFloat(cs.width), h: parseFloat(cs.height) };
+  })()`);
+  expect(m, 'an animated sprite from /ani/ loaded').not.toBeNull();
+  expect(m.box[0]).toBe(m.box[1]); // footprint stays square
+  expect(Math.abs(m.h / m.w - 87 / 52)).toBeLessThan(0.1); // content keeps the sprite's aspect
 });

@@ -19,7 +19,7 @@ import { mountSettings } from './ui/settings.js';
 import { mountClock } from './ui/clock.js';
 
 const SECTION_IDS = [
-  'snapshot', 'pokedex', 'usage', 'types', 'items', 'archetypes', 'quadrant',
+  'snapshot', 'usage', 'quadrant', 'pokedex', 'types', 'items', 'archetypes',
   'teammates', 'speed', 'trends', 'countries', 'library', 'scanner', 'methodology',
 ];
 
@@ -153,6 +153,8 @@ async function boot() {
       const t = lastView?.regTeams.find((x) => x.id === id);
       return t ? `${t.player || 'Unknown'} · ${t.ev?.name || t.date || ''}` : null;
     },
+    loadPokedex: (family) => data.loadPokedexFile(family || 'vgc'), // lazy: the Pokédex section loads its roster after first paint
+    loadLearnsets: (family) => data.loadLearnsetsFile(family || 'vgc'), // lazy: only when a Pokédex move filter first needs it
     loadRanked: (reg) => getRanked(reg), // lazy: the deep dive's regulation shift loads the previous reg's ranked file
     prevReg: prevRegId,
     chip: (kind, value, event) => store.addChip({ kind, value, neg: !!(event && (event.shiftKey || event.altKey)) }),

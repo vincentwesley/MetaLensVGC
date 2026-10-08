@@ -8,7 +8,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Newsreader:wght@600&family=Nunito:wght@500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/sections-a.css">
 <link rel="stylesheet" href="css/sections-b.css">
@@ -40,12 +40,11 @@
 
 <p class="stale-notice" id="stale-notice" role="status" hidden></p>
 
+<div class="stickybar" id="stickybar">
 <div class="howto" id="howto" role="note" hidden>
   <p class="howto__text"><b>Tips</b> <span>Click any bar, row or card to filter the whole dashboard</span> <span>Shift-click to exclude</span> <span>Press / to find in the leaderboard, P or Ctrl+K in the Pokédex</span> <span><a href="#h-scanner" data-jump="scanner">Paste a team in the Scanner</a></span></p>
   <button type="button" class="howto__close" id="howto-close" aria-label="Dismiss tips">×</button>
 </div>
-
-<div class="stickybar" id="stickybar">
 <div class="filterbar" id="filterbar" role="region" aria-label="Filters">
   <button type="button" class="filterbar__summary" id="filterbar-summary" title="Show filters and settings (F)"></button>
   <div class="filterbar__body" id="filterbar-body">
@@ -58,8 +57,8 @@
 <div class="chips" id="chips" role="region" aria-label="Active filters" aria-live="polite"></div>
 <nav class="secnav" id="secnav" aria-label="Jump to section">
   <a href="#h-snapshot" data-jump="snapshot">Snapshot</a>
-  <a href="#h-pokedex" data-jump="pokedex">Pokédex</a>
   <a href="#h-usage" data-jump="usage">Usage</a>
+  <a href="#h-pokedex" data-jump="pokedex">Pokédex</a>
   <a href="#h-types" data-jump="types">Types</a>
   <a href="#h-items" data-jump="items">Items</a>
   <a href="#h-archetypes" data-jump="archetypes">Archetypes</a>
@@ -78,16 +77,16 @@
     <h2 id="h-snapshot" class="sr-only">Meta Snapshot</h2>
     <div class="section__mount"></div>
   </section>
-  <section class="section span-12" data-section="pokedex" data-title="Pokédex" aria-labelledby="h-pokedex">
-    <h2 id="h-pokedex" class="sr-only">Pokédex</h2>
-    <div class="section__mount"></div>
-  </section>
   <section class="section span-6" data-section="usage" data-title="Usage Leaderboard" aria-labelledby="h-usage">
     <h2 id="h-usage" class="sr-only">Usage Leaderboard</h2>
     <div class="section__mount"></div>
   </section>
   <section class="section span-6" data-section="quadrant" data-title="Usage × Win Rate Quadrant" aria-labelledby="h-quadrant">
     <h2 id="h-quadrant" class="sr-only">Usage × Win Rate Quadrant</h2>
+    <div class="section__mount"></div>
+  </section>
+  <section class="section span-12" data-section="pokedex" data-title="Pokédex" aria-labelledby="h-pokedex">
+    <h2 id="h-pokedex" class="sr-only">Pokédex</h2>
     <div class="section__mount"></div>
   </section>
   <section class="section span-12" data-section="types" data-title="Type Landscape" aria-labelledby="h-types">

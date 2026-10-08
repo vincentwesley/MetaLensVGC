@@ -53,6 +53,26 @@ export function sprite(key, dex, { size = 'sm', animated = false } = {}) {
   img.decoding = 'async';
   img.alt = key || '';
   img.style.imageRendering = 'pixelated';
+  // Animated GIFs are tight crops of every shape (Sneasler is 52x87), so they must never be stretched
+  // into the square box: scale by the natural size, centre inside the same px x px footprint.
+  // gen5ani is 1x gen5 pixel scale; ani/ sprites are drawn ~1.35x larger (measured).
+  img.addEventListener('load', () => {
+    const m = /\/(gen5ani|ani)\/[^/]+\.gif$/.exec(img.currentSrc || img.src);
+    if (!m || !img.naturalWidth) {
+      img.removeAttribute('style');
+      img.style.imageRendering = 'pixelated';
+      return;
+    }
+    const s = (px / 96) / (m[1] === 'ani' ? 1.35 : 1);
+    let w = img.naturalWidth * s, h = img.naturalHeight * s;
+    const f = Math.min(1, px / w, px / h);
+    w = Math.max(1, Math.round(w * f));
+    h = Math.max(1, Math.round(h * f));
+    const padX = Math.floor((px - w) / 2), padY = Math.floor((px - h) / 2);
+    img.style.cssText = `box-sizing:content-box;width:${w}px;height:${h}px;`
+      + `padding:${padY}px ${px - w - padX}px ${px - h - padY}px ${padX}px;`
+      + `image-rendering:${s >= 1 ? 'pixelated' : 'auto'}`; // nearest-neighbour shimmers when a GIF is shrunk by a fraction
+  });
   let i = 0;
   img.addEventListener('error', () => {
     i += 1;

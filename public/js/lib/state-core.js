@@ -63,7 +63,7 @@ export const CHIP_KINDS = ['species', 'mega', 'core', 'type', 'weak', 'item', 'm
 const ENUMS = {
   source: ['tournaments', 'ladder', 'ranked'],
   place: ['all', 'topcut', 'top8', 'winner'],
-  skin: ['pro', 'retro'],
+  skin: ['pro', 'retro', 'glass', 'paper', 'terminal', 'soft'],
   theme: ['dark', 'light', 'auto'],
   palette: ['grass', 'ghost', 'water', 'fire', 'fairy', 'electric', 'steel'],
 };

@@ -161,3 +161,15 @@ Mon = { s, k, item, ability, moves: string[], nature, sp: number[6]|null, mega: 
 // s = battle species as listed; k = display key = Mega form name when holding its own stone, else s.
 ```
 Usage is always counted by `k` (so `Charizard-Mega-Y` and `Floette-Mega` are separate entries, matching Smogon/Pikalytics).
+
+## pokedex-vgc.json / pokedex-natdex.json (full species lists, from the pokemon-showdown package; `scripts/build-pokedex.js`, no network)
+`{ generated, tierOrder: [tier...], species: { "Display Name": { num, types: [..], bs: [hp,atk,def,spa,spd,spe], abilities: { "0", "1", "H" (missing slots omitted) }, tier } } }`.
+- vgc: every species of `Dex.mod('champions')` that is not `isNonstandard` and has a tier (Megas included). Tier is the champions-mod `tier`; `(OU)` maps to `OU`. Species with tier `Illegal` (battle-only formes such as Meloetta-Pirouette, Ogerpon-*-Tera) are skipped. tierOrder: Uber, OU, UUBL, UU, ... NFE, LC (only those present).
+- natdex: base `Dex` (gen9) species with `natDexTier` != `Illegal`, excluding CAP/Custom/Future/LGPE; Past species are included. tier = natDexTier, `(OU)` (OU by technicality) -> `OU`. tierOrder: AG, Uber, OU, UUBL, UU, RUBL, RU, NUBL, NU, PUBL, PU, ZUBL, ZU, NFE, LC (only those present).
+- Every species has a tier, so `tier` is always present in practice; consumers should still tolerate it missing.
+
+## learnsets-vgc.json / learnsets-natdex.json
+`{ moves: { moveId: "Display Name" }, learn: { speciesId: [moveId, ...] } }`, ids sorted, no whitespace. speciesId = Showdown id of a species in the matching pokedex file.
+- vgc: `species.getMovePool(id)` of the champions mod (formes without own learnset fall back to base/prevo like Showdown; champions Megas have their own learnset); non-standard moves dropped.
+- natdex: `Dex.species.getMovePool(id, true)` (any gen); CAP/Custom/Future/LGPE/Unobtainable moves dropped.
+- Not index-compressed: learnsets-natdex.json is under the 1.5MB budget.

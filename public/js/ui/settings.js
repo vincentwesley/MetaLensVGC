@@ -17,9 +17,9 @@ function setClock(on) {
   document.documentElement.setAttribute('data-clock', on ? 'on' : 'off');
 }
 
-function segToggle(label, options, get, set) {
+function segToggle(label, options, get, set, cls = '') {
   const wrap = document.createElement('div');
-  wrap.className = 'segmented';
+  wrap.className = ('segmented ' + cls).trim();
   wrap.setAttribute('role', 'radiogroup');
   wrap.setAttribute('aria-label', label);
   const btns = new Map();
@@ -81,7 +81,7 @@ export function mountSettings(host, { howto } = {}) {
   const look = (patch) => crossfade(() => store.set(patch));
   pop.append(
     row('Mode', segToggle('Mode', [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']], (s) => s.theme, (v) => look({ theme: v }))),
-    row('Style', segToggle('Style', [['pro', 'Pro'], ['retro', 'Retro']], (s) => s.skin, (v) => look({ skin: v }))),
+    row('Style', segToggle('Style', [['pro', 'Pro'], ['retro', 'Retro'], ['glass', 'Glass'], ['paper', 'Paper'], ['terminal', 'Terminal'], ['soft', 'Soft']], (s) => s.skin, (v) => look({ skin: v }), 'segmented--grid')),
   );
 
   // Palette swatches: each colour is that palette's own --accent, read from the CSS tokens.
@@ -103,7 +103,7 @@ export function mountSettings(host, { howto } = {}) {
   const root = document.documentElement;
   let painted = '';
   function paintSwatches() {
-    const key = `${root.getAttribute('data-skin')}|${root.getAttribute("data-theme")}|${matchMedia("(prefers-color-scheme: dark)").matches}`;
+    const key = `${root.getAttribute('data-style')}|${root.getAttribute("data-theme")}|${matchMedia("(prefers-color-scheme: dark)").matches}`;
     if (key === painted) return;
     painted = key;
     const cur = root.getAttribute('data-palette');
