@@ -883,3 +883,22 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
 [data-family="showdown"] main.grid .section[data-section="trends"] { order: 8; }
 [data-family="showdown"] main.grid .section[data-section="methodology"] { order: 10; }
 [data-family="showdown"] main.grid .section.creator { order: 11; }
+
+/* Showdown, wide screens: the teammates cards join the main grid so they pair with the leaderboard
+   (usage | pairs, then teammate rate | heatmap) with row heights that match, instead of one tall column. */
+@media (min-width: 1100px) {
+  [data-family="showdown"] main.grid .section[data-section="teammates"],
+  [data-family="showdown"] main.grid .section[data-section="teammates"] > .section__mount { display: contents; }
+  [data-family="showdown"] main.grid :is(.tm-heat, .tm-cores, .tm-rate) { grid-column: span 6; min-width: 0; }
+  [data-family="showdown"] main.grid .section[data-section="usage"] { order: 2; }
+  [data-family="showdown"] main.grid .tm-cores { order: 3; }
+  [data-family="showdown"] main.grid .tm-rate { order: 4; }
+  [data-family="showdown"] main.grid .tm-heat { order: 5; }
+  [data-family="showdown"] main.grid .section[data-section="pokedex"] { order: 6; }
+  [data-family="showdown"] main.grid .section[data-section="types"] { order: 7; }
+  [data-family="showdown"] main.grid .section[data-section="items"] { order: 8; }
+  [data-family="showdown"] main.grid .section[data-section="speed"] { order: 9; }
+  [data-family="showdown"] main.grid .section[data-section="trends"] { order: 10; }
+  [data-family="showdown"] main.grid .section[data-section="methodology"] { order: 11; }
+  [data-family="showdown"] main.grid .section.creator { order: 12; }
+}
