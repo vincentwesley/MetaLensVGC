@@ -24,6 +24,10 @@ const COLS_LADDER = [
   { key: 'n', label: 'N (battles)', sortable: true },
 ];
 
+// Showdown formats: Smogon's usage % is rating-weighted and ranks differently from the raw count,
+// so the leaderboard shows (and sorts by) usage % only; the raw count stays in the deep dive.
+const COLS_SHOWDOWN = COLS_LADDER.filter((c) => c.key !== 'n');
+
 function emptyState(el, title) {
   el.innerHTML = '';
   const box = document.createElement('div');
@@ -128,7 +132,7 @@ export default {
 
       if (state.source === 'ladder') {
         const merged = ladderMerge(view.ladder, state.from, state.to, view.dex);
-        cols = COLS_LADDER; unit = 'battles'; source = 'Ladder (Smogon)';
+        cols = view.family === 'natdex' ? COLS_SHOWDOWN : COLS_LADDER; unit = 'battles'; source = 'Ladder (Smogon)';
         if (!merged) {
           n = 0;
           ctx.meta(meta, { source, n, unit });
@@ -158,7 +162,7 @@ export default {
 
       // Sorted by a column this mode doesn't show (win in ladder mode, change without a
       // previous period): fall back to N.
-      if (!cols.some((c) => (c.sortKey || c.key) === sortKey)) { sortKey = 'n'; sortDir = 'desc'; }
+      if (!cols.some((c) => (c.sortKey || c.key) === sortKey)) { sortKey = cols === COLS_SHOWDOWN ? 'pct' : 'n'; sortDir = 'desc'; }
 
       // Usage rank is fixed before sorting / searching, so a found row keeps its real place.
       const usageRank = new Map([...rows].sort((a, b) => b.n - a.n).map((r, i) => [r.key, i + 1]));
@@ -182,7 +186,7 @@ export default {
       const ladderCols = lastView?.state.source === 'ladder';
       for (const c0 of cols) {
         // Smogon usage % is rating-weighted, so it need not follow the unweighted raw count.
-        const c = ladderCols && c0.key === 'n' ? { ...c0, label: 'Raw uses' } : c0;
+        const c = ladderCols && cols === COLS_LADDER && c0.key === 'n' ? { ...c0, label: 'Raw uses' } : c0;
         const th = document.createElement('th');
         if (ladderCols && c.key === 'usage') th.setAttribute('data-tip', 'Smogon usage is weighted by player rating, so it can differ from the raw count.');
         th.className = `col-${c.key}${c.key === 'rank' || c.key === 'win' || c.key === 'n' ? ' num' : ''}`;
@@ -252,7 +256,7 @@ export default {
 
         tr.append(tdRank, tdSprite, tdName, tdUsage);
 
-        if (cols !== COLS_LADDER) {
+        if (cols !== COLS_LADDER && cols !== COLS_SHOWDOWN) {
           const tdWin = document.createElement('td');
           tdWin.className = 'num col-win';
           if (r.winPct != null && r.ci) {
@@ -287,7 +291,7 @@ export default {
             tdChg.dataset.tip = r.change.isNew ? `Not used (or under min n) ${prevLabel(view)}` : `Usage change ${prevLabel(view)}, in percentage points`;
             tr.appendChild(tdChg);
           }
-        } else {
+        } else if (cols === COLS_LADDER) {
           const tdN = document.createElement('td');
           tdN.className = 'num col-n';
           tdN.textContent = ctx.fmt.n(r.n);
