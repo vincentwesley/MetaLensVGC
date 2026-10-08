@@ -1,6 +1,6 @@
 // Core aggregation: every function takes Team[] (see decode()) and returns
 // plain data. No DOM, no fetch.
-import { parseSP, wilson, effectiveSpecies, calcStats, calcStat } from './stats.js';
+import { parseSP, parsePoints, RULES, wilson, effectiveSpecies, calcStats, calcStat } from './stats.js';
 import { TYPES, effectiveness } from './types.js';
 import { classify } from './archetypes.js';
 import { displayName, normalizeTerm } from './names.js';
@@ -916,6 +916,17 @@ export function toCSV(teams) {
 /** Pass `dex` to get display names ("Life Orb") instead of Smogon ids ("lifeorb")
  *  in the items / abilities / moves tables. */
 export function ladderMerge(ladder, from = '', to = '', dex = null) {
+  // Memoized per ladder object + range: every section merges the same months on each update (callers must not mutate the result).
+  if (!ladder || typeof ladder !== 'object') return mergeMonths(ladder, from, to, dex);
+  let byRange = mergeCache.get(ladder);
+  if (!byRange) mergeCache.set(ladder, (byRange = new Map()));
+  const k = `${from}|${to}|${dex ? 1 : 0}`;
+  if (!byRange.has(k)) byRange.set(k, mergeMonths(ladder, from, to, dex));
+  return byRange.get(k);
+}
+const mergeCache = new WeakMap();
+
+function mergeMonths(ladder, from, to, dex) {
   const months = (ladder?.months || []).filter((m) => (!from || m.month >= from.slice(0, 7)) && (!to || m.month <= to.slice(0, 7)));
   if (!months.length) return null;
   const battles = months.reduce((a, m) => a + m.battles, 0);
@@ -927,7 +938,7 @@ export function ladderMerge(ladder, from = '', to = '', dex = null) {
       if (!o) acc.set(key, (o = { key, usage: 0, raw: 0, tables: {} }));
       o.usage += d.usage * w;
       o.raw += d.raw;
-      for (const t of ['items', 'abilities', 'moves', 'spreads', 'teammates']) {
+      for (const t of ['items', 'abilities', 'moves', 'spreads', 'teammates', 'teraTypes']) {
         const dst = (o.tables[t] ||= {});
         for (const [name, v] of Object.entries(d[t] || {})) dst[name] = (dst[name] || 0) + v * d.usage * w;
       }
@@ -942,7 +953,7 @@ export function ladderMerge(ladder, from = '', to = '', dex = null) {
       return dex ? rows.map((r) => ({ ...r, name: displayName(r.name, dex) })) : rows;
     };
     return { key: o.key, usage: o.usage, raw: o.raw, items: named(o.tables.items), abilities: named(o.tables.abilities), moves: named(o.tables.moves),
-      spreads: norm(o.tables.spreads), teammates: norm(o.tables.teammates),
+      tera: norm(o.tables.teraTypes), spreads: norm(o.tables.spreads), teammates: norm(o.tables.teammates),
       counters: Object.entries(o.tables.counters).map(([name, [score, dev]]) => ({ name, score, dev })).sort((a, b) => b.score - a.score) };
   }).sort((a, b) => b.usage - a.usage);
   return { battles, months: months.map((m) => m.month), cutoff: ladder.cutoff, urls: months.map((m) => m.url), mons };
@@ -984,13 +995,13 @@ export function rankedMegaKey(name, mon, dex) {
  * Speed from the top ranked spread's Spe SP + the top nature. The game reports those two as separate
  * marginals, so this is "most common SP with most common nature", labelled as such by callers.
  */
-export function rankedSpeed(mon, bs) {
+export function rankedSpeed(mon, bs, rules = RULES.sp) {
   const spread = rankedEntries(mon?.spreads)[0];
   const nat = rankedEntries(mon?.natures)[0];
   if (!spread || !nat || !bs) return null;
-  const sp = parseSP(spread.name);
+  const sp = parsePoints(spread.name, rules);
   if (!sp) return null;
-  return { spe: calcStat(bs[5], sp[5], 5, nat.name), nature: nat.name, naturePct: nat.pct, sp: sp[5], spreadPct: spread.pct };
+  return { spe: calcStat(bs[5], sp[5], 5, nat.name, rules), nature: nat.name, naturePct: nat.pct, sp: sp[5], spreadPct: spread.pct };
 }
 
 /**
@@ -1000,24 +1011,24 @@ export function rankedSpeed(mon, bs) {
  * (0 SP -Spe .. 32 SP +Spe). Shared by the Speed Tiers section and the Team Scanner.
  * Returns { source: 'sheet'|'ranked'|'ladder'|'bounds', spe (null for bounds), min, max, nature, sp, pct, of } or null (no base stats).
  */
-export function metaSpeed(key, { sheetByKey, season, merged } = {}, dex) {
+export function metaSpeed(key, { sheetByKey, season, merged, rules = RULES.sp } = {}, dex) {
   const bs = dex?.species?.[key]?.bs;
   if (!bs) return null;
   const t = sheetByKey?.get(key);
   if (t && t.spe != null) return { source: 'sheet', spe: t.spe, min: t.spe, max: t.spe, nature: t.nature, sp: t.sp, pct: t.share };
   const rm = rankedMon(season, key, dex);
-  const rs = rm && rankedSpeed(rm.mon, bs);
+  const rs = rm && rankedSpeed(rm.mon, bs, rules);
   if (rs) {
     return { source: 'ranked', spe: rs.spe, min: rs.spe, max: rs.spe, nature: rs.nature, sp: rs.sp,
       pct: rs.spreadPct, naturePct: rs.naturePct, of: rm.name === key ? null : rm.name };
   }
   const spread = merged?.mons?.find((m) => m.key === key)?.spreads?.[0];
   const ci = spread ? spread.name.indexOf(':') : -1;
-  const sp = ci > 0 ? parseSP(spread.name.slice(ci + 1)) : null;
+  const sp = ci > 0 ? parsePoints(spread.name.slice(ci + 1), rules) : null;
   if (sp) {
     const nature = spread.name.slice(0, ci);
-    const spe = calcStat(bs[5], sp[5], 5, nature);
+    const spe = calcStat(bs[5], sp[5], 5, nature, rules);
     return { source: 'ladder', spe, min: spe, max: spe, nature, sp: sp[5], pct: spread.pct };
   }
-  return { source: 'bounds', spe: null, min: calcStat(bs[5], 0, 5, 'Sassy'), max: calcStat(bs[5], 32, 5, 'Timid') };
+  return { source: 'bounds', spe: null, min: calcStat(bs[5], 0, 5, 'Sassy', rules), max: calcStat(bs[5], rules.max, 5, 'Timid', rules) };
 }

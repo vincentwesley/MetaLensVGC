@@ -15,6 +15,10 @@ export const DEFAULT_STATE = {
   palette: 'grass',
 };
 
+// Showdown-ladder regulations (the "Showdown" mode); every other reg is VGC. Mirrors scripts/lib/regs.js.
+export const SHOWDOWN_REGS = ['ND', 'NDD'];
+export const regFamily = (id) => (SHOWDOWN_REGS.includes(id) ? 'showdown' : 'vgc');
+
 // Look prefs live in localStorage, not the URL.
 export const PREF_KEYS = ['skin', 'theme', 'anim', 'palette'];
 
@@ -88,6 +92,7 @@ export function sanitizeState(state, { regs } = {}, defaults = DEFAULT_STATE) {
   for (const [key, allowed] of Object.entries(ENUMS)) if (!allowed.includes(s[key])) s[key] = defaults[key];
   if (regs?.length && !regs.includes(s.reg)) s.reg = regs.includes(defaults.reg) ? defaults.reg : regs[regs.length - 1];
   if (typeof s.reg !== 'string') s.reg = defaults.reg;
+  if (regFamily(s.reg) === 'showdown') s.source = 'ladder'; // Smogon ladder is the only source there
   s.tiers = TIER_IDS.filter((t) => Array.isArray(state.tiers) && state.tiers.includes(t));
   s.from = validDate(s.from) ? s.from : '';
   s.to = validDate(s.to) ? s.to : '';

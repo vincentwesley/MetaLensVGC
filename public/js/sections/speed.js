@@ -6,7 +6,7 @@
 // against the field.
 import { usage, ladderMerge, rankedSeason, metaSpeed, speedSpecies } from '../lib/aggregate.js';
 import { rankedSource } from '../ui/meta.js';
-import { calcStat } from '../lib/stats.js';
+import { calcStat, RULES } from '../lib/stats.js';
 
 function card(title) {
   const el = document.createElement('div');
@@ -77,12 +77,15 @@ function applyMods(v, mods) {
 // Real most-common speed per species: team sheets -> in-game ranked spread -> Smogon ladder -> bounds.
 function buildRows(view, dex) {
   const season = rankedSeason(view.ranked, view.state.from, view.state.to);
-  const tiers = speedSpecies(view.state.source, view.monTeams, season, dex, 20);
   const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
+  // Showdown mode has no team sheets: the 20 most-used species on the Smogon ladder.
+  const tiers = view.family === 'natdex'
+    ? (merged?.mons || []).slice(0, 20).map((m) => ({ key: m.key, n: m.raw }))
+    : speedSpecies(view.state.source, view.monTeams, season, dex, 20);
   const rows = [];
   const sheetByKey = new Map(tiers.map((t) => [t.key, t]));
   for (const t of tiers) {
-    const m = metaSpeed(t.key, { sheetByKey, season, merged }, dex);
+    const m = metaSpeed(t.key, { sheetByKey, season, merged, rules: view.rules || RULES.sp }, dex);
     if (!m) continue;
     const base = { key: t.key, n: t.n, rank: t.rank, source: m.source, min: m.min, max: m.max };
     if (m.source === 'sheet') {
@@ -91,7 +94,7 @@ function buildRows(view, dex) {
       const of = m.of ? ` (${m.of} data, all sets)` : '';
       rows.push({ ...base, detail: `${season.season}: top nature ${m.nature} (${Math.round(m.naturePct * 100)}%), top spread ${m.sp} Spe SP (${Math.round(m.pct * 100)}%)${of}` });
     } else if (m.source === 'ladder') {
-      rows.push({ ...base, detail: `${m.nature}, ${m.sp} SP (${Math.round(m.pct * 100)}% of ladder sets)` });
+      rows.push({ ...base, detail: `${m.nature}, ${m.sp} ${view.rules?.mode === 'ev' ? 'EVs' : 'SP'} (${Math.round(m.pct * 100)}% of ladder sets)` });
     } else {
       rows.push({ ...base, detail: 'no open-sheet, ranked or ladder spread — theoretical range' });
     }
@@ -172,6 +175,7 @@ export default {
     spLabel.textContent = 'Speed SP';
     const spSlider = document.createElement('input');
     spSlider.type = 'range'; spSlider.min = '0'; spSlider.max = '32'; spSlider.step = '1'; spSlider.value = '32';
+    const benchRules = () => lastView?.rules || RULES.sp;
     const spVal = document.createElement('span');
     spVal.className = 'filterbar__label';
     spVal.textContent = '32';
@@ -187,6 +191,13 @@ export default {
     speciesInput.addEventListener('change', render);
     natureSelect.addEventListener('change', render);
     spSlider.addEventListener('input', () => { spVal.textContent = spSlider.value; render(); });
+    // Slider range follows the view's rules (EV mode: 0-252); re-synced on every render.
+    function syncSlider() {
+      const r = benchRules();
+      if (spSlider.max === String(r.max)) return;
+      spSlider.max = String(r.max); spSlider.value = String(r.max); spVal.textContent = spSlider.value;
+      spLabel.textContent = r.mode === 'ev' ? 'Speed EVs' : 'Speed SP';
+    }
 
     let lastView = null;
     let lastDex = null;
@@ -196,18 +207,21 @@ export default {
       const sp = lastDex?.species?.[key];
       if (!sp) return null;
       const nature = BENCH_NATURES[natureSelect.value];
-      const base = calcStat(sp.bs[5], Number(spSlider.value), 5, nature);
+      const base = calcStat(sp.bs[5], Number(spSlider.value), 5, nature, benchRules());
       return { key, base, modded: applyMods(base, mods) };
     }
 
     function render() {
       const view = lastView;
+      if (view) syncSlider();
       if (!view) return;
       lastDex = view.dex;
       const rows = buildRows(view, view.dex);
       const season = rankedSeason(view.ranked, view.state.from, view.state.to);
       if (view.state.source === 'ranked' && season?.ranking) {
         ctx.meta(main.meta, { source: `${rankedSource(season)} · top 20 by in-game rank · speeds: sheets > ranked > Smogon > bounds` });
+      } else if (view.family === 'natdex') {
+        ctx.meta(main.meta, { source: 'Smogon ladder (top 20 by usage) + bounds', n: view.ladder?.months?.at(-1)?.battles ?? 0, unit: 'battles' });
       } else {
         const rankedTxt = season ? ` + ranked ladder ${season.season} (Pokémon Champions Battle Data)` : '';
         ctx.meta(main.meta, { source: `Team sheets${rankedTxt} + Smogon ladder + bounds (per species)`, n: view.monTeams.length, unit: 'teams' });

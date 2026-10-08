@@ -276,3 +276,11 @@ These skills are available in every session. The user never types slash commands
 - Need to see a change working in the real app, not just tests → `run`.
 - User asks for recurring or scheduled work → `loop` (in-session) or `schedule` (cloud).
 - Repo feels bloated or user asks to clean up → `ponytail-audit`; before wrapping up a long project phase → `ponytail-debt`.
+
+## v1.3.0 additions (Showdown mode)
+- **Mode = family of `state.reg`**: `SHOWDOWN_REGS = ['ND','NDD']` in `lib/state-core.js` (`regFamily`); the header `ui/modeswitch.js` switches reg (`manifest.current` / `currentShowdown`), clears chips, and sets `<html data-family>`. `sanitizeState` forces `source='ladder'` for Showdown regs. `prevRegId` stays in-family.
+- **Data**: `ladder-ND/NDD.json` (Smogon `gen9nationaldex[doubles]`, cutoff 1760, rolling 3 months, mons >=0.1% usage, `teraTypes`), `dex-natdex.json` (base Dex, covers the whole Pokédex roster), no teams/ranked files (`teams: 0`). `main.js#ensureDex` swaps `dex.species/moves/items` in place per family.
+- **Stat rules**: `lib/stats.js` `RULES.sp` (Champions) / `RULES.ev` (Lv100, EVs, IV31); `view.rules = rulesFor(reg)`; every caller takes `rules` (default sp).
+- **Hidden in Showdown mode** (CSS `[data-family="showdown"]` + skipped in updates, `TEAM_ONLY` in main.js): quadrant, archetypes, countries, library, scanner; source/tier/placement/date filters. Ladder branches added to types, trends, snapshot, speed (`lib/ladder-field.js`); deep dive gets a Tera card and hides team-sheet cards. `view.family` = 'natdex'|'vgc', `view.officialTiers` (ND only; NDD tiers by usage).
+- Pokédex opens A-Z by default.
+- Out of scope: Champions OU/BSS, Showdown scanner, Showdown win rates. Known: some hint strings still say "teams" in ladder views; Smogon months list only what Smogon has published (current month appears once published).

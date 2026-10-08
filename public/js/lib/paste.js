@@ -1,4 +1,5 @@
 // Showdown import/export text <-> decoded Mon.
+import { RULES } from './stats.js';
 // Mon = { s, k, item, ability, moves, nature, sp, mega } (see aggregate.js#decode).
 
 const STAT_LABELS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
@@ -10,14 +11,15 @@ function keyOf(species, item, dex) {
   return species;
 }
 
-export function toPaste(team, dex) {
-  return team.mons.map((m) => monToPaste(m, dex)).join('\n\n');
+export function toPaste(team, dex, rules = RULES.sp) {
+  return team.mons.map((m) => monToPaste(m, rules)).join('\n\n');
 }
 
-function monToPaste(m) {
+function monToPaste(m, rules) {
   const lines = [m.item ? `${m.s} @ ${m.item}` : m.s];
   if (m.ability) lines.push(`Ability: ${m.ability}`);
-  lines.push('Level: 50');
+  lines.push(`Level: ${rules.level}`);
+  if (m.tera) lines.push(`Tera Type: ${m.tera}`);
   if (m.sp) {
     const parts = m.sp
       .map((v, i) => (v > 0 ? `${v} ${STAT_LABELS[i]}` : null))
@@ -39,7 +41,7 @@ function parseHeader(line) {
   return { species, item };
 }
 
-function parseStatLine(rest) {
+function parseStatLine(rest, max) {
   const sp = [0, 0, 0, 0, 0, 0];
   let overflow = false;
   for (const chunk of rest.split('/')) {
@@ -48,38 +50,40 @@ function parseStatLine(rest) {
     const val = Number(m[1]);
     const idx = STAT_INDEX[m[2]];
     if (idx == null) continue;
-    if (val > 32) overflow = true;
+    if (val > max) overflow = true;
     sp[idx] = val;
   }
   return overflow ? null : sp;
 }
 
-function parseMonBlock(block, dex) {
+function parseMonBlock(block, dex, rules) {
   const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
   const { species, item } = parseHeader(lines[0]);
   let ability = null;
   let nature = null;
   let sp = null;
+  let tera = null;
   const moves = [];
   for (const line of lines.slice(1)) {
     if (/^Ability:/i.test(line)) ability = line.replace(/^Ability:/i, '').trim();
-    else if (/^(EVs|SPs):/i.test(line)) sp = parseStatLine(line.replace(/^(EVs|SPs):/i, ''));
-    else if (/^Level:/i.test(line) || /^IVs:/i.test(line) || /^Tera Type:/i.test(line) || /^Shiny:/i.test(line)) {
+    else if (/^Tera Type:/i.test(line)) tera = line.replace(/^Tera Type:/i, '').trim();
+    else if (/^(EVs|SPs):/i.test(line)) sp = parseStatLine(line.replace(/^(EVs|SPs):/i, ''), rules.max);
+    else if (/^Level:/i.test(line) || /^IVs:/i.test(line) || /^Shiny:/i.test(line)) {
       // ignored
     } else if (/\sNature$/i.test(line)) nature = line.replace(/\s*Nature$/i, '').trim();
     else if (line.startsWith('-')) moves.push(line.replace(/^-\s*/, '').trim());
   }
   const k = keyOf(species, item, dex);
-  return { s: species, k, item, ability, moves, nature, sp, mega: k !== species };
+  return { s: species, k, item, ability, moves, nature, sp, mega: k !== species, ...(tera ? { tera } : {}) };
 }
 
-export function parsePaste(text, dex) {
+export function parsePaste(text, dex, rules = RULES.sp) {
   return text
     .trim()
     .split(/\n\s*\n/)
     .map((b) => b.trim())
     .filter(Boolean)
-    .map((block) => parseMonBlock(block, dex));
+    .map((block) => parseMonBlock(block, dex, rules));
 }
 
 /** True when at least one parsed mon is a species the dex knows (gibberish parses to one unknown mon). */

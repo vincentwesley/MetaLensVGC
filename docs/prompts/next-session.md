@@ -28,7 +28,7 @@ below say what state things are in and what typically needs doing.
   owner's Windows machine `E2E_OFFLINE=1 npx playwright test e2e/app.spec.js --workers=2 --timeout=120000` (slow box).
   Never kill all `node.exe` on Windows (it takes down MCP servers); kill the PID you started.
 
-## Current state (2026-10-08): v1.1.0 shipped (settings gear + 7 palettes, Pokédex, richer deep dive, meta clock, update log; see CLAUDE.md "v1.1.0 additions"). Next planned: Showdown National Dex + National Dex Doubles tabs (Smogon-ladder only, EV/Tera rules; needs its own plan).
+## Current state (2026-10-09): v1.3.0 shipped (VGC | Showdown mode: National Dex + NatDex Doubles; see CLAUDE.md "v1.3.0 additions"). Earlier: v1.1.0 shipped (settings gear + 7 palettes, Pokédex, richer deep dive, meta clock, update log; see CLAUDE.md "v1.1.0 additions"). Next planned: Showdown National Dex + National Dex Doubles tabs (Smogon-ladder only, EV/Tera rules; needs its own plan).
 
 ## Previous state (2026-10-01)
 - Live branch tip `ba3b610` (+ any later bot data commits). Sections, modules and invariants are in `CLAUDE.md`.

@@ -173,3 +173,10 @@ Usage is always counted by `k` (so `Charizard-Mega-Y` and `Floette-Mega` are sep
 - vgc: `species.getMovePool(id)` of the champions mod (formes without own learnset fall back to base/prevo like Showdown; champions Megas have their own learnset); non-standard moves dropped.
 - natdex: `Dex.species.getMovePool(id, true)` (any gen); CAP/Custom/Future/LGPE/Unobtainable moves dropped.
 - Not index-compressed: learnsets-natdex.json is under the 1.5MB budget.
+
+## Showdown regs (ND, NDD) and dex-natdex.json
+- `lib/regs.js` regs carry `family` ('vgc' | 'showdown'), `format` (Smogon stats format id), `level` (50 vgc, 100 showdown), `label`. Showdown regs (`ND` = gen9nationaldex, `NDD` = gen9nationaldexdoubles) have no `start`/`end`, and tournaments never map to them.
+- manifest reg entries gain `family, format, level, label`; showdown entries have `teams: 0, events: 0, matches: 0, rankedSeasons: []` and no `start`/`end`. Manifest also has `currentShowdown: 'ND'` (`current` stays the latest VGC reg).
+- Showdown regs have only `ladder-<REG>.json` (no teams-/ranked- files). Months are a rolling last 3 (current + 2 before; missing ones skipped), mons under 0.1% usage dropped.
+- Every ladder mon gains `teraTypes`: top 12 `"Tera Types"` as fractions of that mon's total (`{}` for Champions files).
+- `dex-natdex.json`: same shape as dex.json, built from the base (non-Champions) Showdown `Dex` for species/moves/items seen in the ND/NDD ladders. The app does not load it yet (`data.js` only reads `data/dex.json`); B3 should load it for showdown regs.

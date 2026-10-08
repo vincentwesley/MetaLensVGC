@@ -3,7 +3,7 @@
 // anchors. Read-only; does not write any files.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { REG_IDS } from './lib/regs.js';
+import { VGC_IDS as REG_IDS } from './lib/regs.js';
 import { megaKey } from '../public/js/lib/names.js';
 
 const ANCHORS = {

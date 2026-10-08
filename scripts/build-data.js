@@ -7,18 +7,20 @@
 // Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--max-tournaments N]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { REG_IDS, REGULATIONS } from './lib/regs.js';
+import { REG_IDS, VGC_IDS, SHOWDOWN_IDS, REGULATIONS } from './lib/regs.js';
 import { fetchLimitlessOnline, RECENT_BEFORE } from './sources/limitless.js';
 import { fetchOfficialEvents } from './sources/official.js';
-import { fetchLadder } from './sources/ladder.js';
+import { fetchLadder, rollingMonths } from './sources/ladder.js';
 import { fetchRanked, renormalizeRanked } from './sources/ranked.js';
+import pkg from 'pokemon-showdown';
 import { buildDex } from './dex.js';
 import { resolveSprites } from './sprites.js';
 import { normalizeSpecies, normalizeTerm } from '../public/js/lib/names.js';
-import { buildPokedex } from './build-pokedex.js';
+import { buildPokedex, build as buildRoster } from './build-pokedex.js';
 import { validateAll } from './validate.js';
 import { printReport } from './report.js';
 
+const { Dex } = pkg;
 const DATA_DIR = path.join(process.cwd(), 'public', 'data');
 
 function parseArgs(argv) {
@@ -145,7 +147,7 @@ function assembleTeamsFile(reg, rawEvents) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const regsToProcess = args.reg ? [args.reg] : REG_IDS;
+  const regsToProcess = (args.reg ? [args.reg] : REG_IDS).filter((r) => REGULATIONS[r]?.family === 'vgc');
   await mkdir(DATA_DIR, { recursive: true });
 
   const rawEventsByReg = {};
@@ -161,7 +163,7 @@ async function main() {
 
   // 1) Load whatever already exists, so completed tournaments are reused.
   const existingFiles = {};
-  for (const reg of REG_IDS) {
+  for (const reg of VGC_IDS) {
     existingFiles[reg] = await readJSONIfExists(path.join(DATA_DIR, `teams-${reg}.json`));
     // online events from the last 7 days may have been captured mid-tournament: refetch them
     rawEventsByReg[reg] = decodeExistingTeamsFile(existingFiles[reg])
@@ -173,7 +175,7 @@ async function main() {
   // subsequent runs replay from the disk cache. See dedupeEvents below.
   log('Fetching official events (limitlessvgc.com)...');
   const official = await fetchOfficialEvents(null, { log });
-  for (const reg of REG_IDS) rawEventsByReg[reg].push(...official.byReg[reg]);
+  for (const reg of VGC_IDS) rawEventsByReg[reg].push(...official.byReg[reg]);
   log(`  official: ${JSON.stringify(official.stats)}`);
 
   // 3) Limitless online tournaments, only for the regulation(s) being processed.
@@ -200,13 +202,17 @@ async function main() {
     const have = new Set(ladderByReg[reg].map((m) => m.month));
     for (const m of existingLadder?.months || []) if (!have.has(m.month)) ladderByReg[reg].push(m);
     ladderByReg[reg].sort((a, b) => a.month.localeCompare(b.month));
+    if (REGULATIONS[reg].family === 'showdown') {
+      const oldest = rollingMonths()[0]; // rolling window: drop stored months that aged out
+      ladderByReg[reg] = ladderByReg[reg].filter((m) => m.month >= oldest);
+    }
   }
 
   // 4b) Ranked ladder (official Champions "Battle Data", Doubles, all regs, always).
   // Incremental like the ladder above: finished seasons already in the existing file are
   // reused rather than refetched; the season currently being collected always refetches.
   const rankedByReg = {};
-  for (const reg of REG_IDS) {
+  for (const reg of VGC_IDS) {
     const existingRanked = await readJSONIfExists(path.join(DATA_DIR, `ranked-${reg}.json`));
     const existingSeasons = new Set((existingRanked?.seasons || []).map((s) => s.season));
     log(`Fetching ranked ladder (championsbattledata.com) for ${reg}...`);
@@ -219,7 +225,19 @@ async function main() {
   }
 
   // 5) Collect every species/move/item actually present, so far normalized without a dex.
-  for (const reg of REG_IDS) {
+  const ndSpecies = new Set();
+  const ndMoves = new Set();
+  const ndItems = new Set();
+  for (const reg of SHOWDOWN_IDS) {
+    for (const month of ladderByReg[reg]) {
+      for (const [species, mon] of Object.entries(month.mons)) {
+        ndSpecies.add(species);
+        for (const it of Object.keys(mon.items)) ndItems.add(it);
+        for (const mv of Object.keys(mon.moves)) ndMoves.add(mv);
+      }
+    }
+  }
+  for (const reg of VGC_IDS) {
     for (const ev of rawEventsByReg[reg]) {
       for (const row of ev.rows) {
         for (const mon of row.mons) {
@@ -251,7 +269,12 @@ async function main() {
   if (missing.length) log(`dex: could not resolve ${missing.length} species (${missing.slice(0, 10).join(', ')}${missing.length > 10 ? ', ...' : ''})`);
   log('Resolving sprite availability (play.pokemonshowdown.com)...');
   await resolveSprites(dex.species);
-  for (const reg of REG_IDS) {
+  // Every Pokédex roster species needs a dex entry too (the Pokédex opens any of them in the deep dive).
+  for (const name of Object.keys(buildRoster(Dex, { natdex: true }).species)) ndSpecies.add(name);
+  const { dex: dexNat, missing: missingNat } = buildDex(ndSpecies, ndMoves, ndItems, Dex);
+  if (missingNat.length) log(`dex-natdex: could not resolve ${missingNat.length} species (${missingNat.slice(0, 10).join(', ')})`);
+  await resolveSprites(dexNat.species);
+  for (const reg of VGC_IDS) {
     for (const ev of rawEventsByReg[reg]) {
       for (const row of ev.rows) {
         for (const mon of row.mons) {
@@ -269,17 +292,22 @@ async function main() {
   // 7) Write teams-<REG>.json + ladder-<REG>.json per regulation, and manifest.json.
   const manifestRegs = [];
   for (const reg of REG_IDS) {
-    const teamsFile = assembleTeamsFile(reg, rawEventsByReg[reg]);
-    await writeFile(path.join(DATA_DIR, `teams-${reg}.json`), JSON.stringify(teamsFile));
-
+    const meta = REGULATIONS[reg];
     const ladderFile = { reg, source: 'smogon', cutoff: 1760, months: ladderByReg[reg] };
     await writeFile(path.join(DATA_DIR, `ladder-${reg}.json`), JSON.stringify(ladderFile));
+    const common = { id: reg, family: meta.family, format: meta.format, level: meta.level, label: meta.label };
+    if (meta.family === 'showdown') {
+      manifestRegs.push({ ...common, teams: 0, events: 0, openSheets: 0, matches: 0, ladderMonths: ladderByReg[reg].map((m) => m.month), rankedSeasons: [] });
+      continue;
+    }
+    const teamsFile = assembleTeamsFile(reg, rawEventsByReg[reg]);
+    await writeFile(path.join(DATA_DIR, `teams-${reg}.json`), JSON.stringify(teamsFile));
 
     await writeFile(path.join(DATA_DIR, `ranked-${reg}.json`), JSON.stringify(rankedByReg[reg]));
 
     const openSheets = teamsFile.teams.reduce((n, row) => n + (row[7].some((m) => typeof m[5] === 'string') ? 1 : 0), 0);
     manifestRegs.push({
-      id: reg,
+      ...common,
       start: REGULATIONS[reg].start,
       end: REGULATIONS[reg].end,
       teams: teamsFile.teams.length,
@@ -295,12 +323,14 @@ async function main() {
     path.join(DATA_DIR, 'dex.json'),
     JSON.stringify(dex),
   );
+  await writeFile(path.join(DATA_DIR, 'dex-natdex.json'), JSON.stringify(dexNat));
 
   await writeFile(
     path.join(DATA_DIR, 'manifest.json'),
     JSON.stringify({
       generated: new Date().toISOString(),
       current: 'M-C',
+      currentShowdown: 'ND',
       regs: manifestRegs,
       sources: [
         { id: 'limitless', name: 'Limitless (play.limitlesstcg.com)', url: 'https://play.limitlesstcg.com' },

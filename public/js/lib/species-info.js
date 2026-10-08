@@ -1,7 +1,7 @@
 // Pure helpers for the Pokémon deep dive (and the Pokédex grid): defensive buckets, Lv50 stat range,
 // the regulation's full species list, the most common set as a Mon. No DOM.
 import { TYPES, effectiveness } from './types.js';
-import { NATURES, calcStat } from './stats.js';
+import { NATURES, RULES, calcStat } from './stats.js';
 import { rankedMegaKey } from './aggregate.js';
 
 export const MATCHUP_BUCKETS = [
@@ -18,10 +18,11 @@ export function defensiveBuckets(defTypes) {
 const natureWith = (field, idx) => Object.keys(NATURES).find((n) => NATURES[n][field] === idx);
 
 /** Lv50 [{min, max}] x6: min = 0 SP + a nature that hinders the stat, max = 32 SP + a nature that boosts it (HP: no nature). */
-export function statRange(bs) {
+export function statRange(bs, rules = RULES.sp) {
+  const { max } = rules;
   return bs.map((b, i) => (i === 0
-    ? { min: calcStat(b, 0, 0), max: calcStat(b, 32, 0) }
-    : { min: calcStat(b, 0, i, natureWith('minus', i)), max: calcStat(b, 32, i, natureWith('plus', i)) }));
+    ? { min: calcStat(b, 0, 0, null, rules), max: calcStat(b, max, 0, null, rules) }
+    : { min: calcStat(b, 0, i, natureWith('minus', i), rules), max: calcStat(b, max, i, natureWith('plus', i), rules) }));
 }
 
 /** Every species known for a regulation, as sorted display keys: tournament teams ∪ ranked seasons ∪ Smogon ladder months.

@@ -1,9 +1,10 @@
 // types.js — Type landscape: (a) type usage, (b) move types the field is weak
 // to: for each attacking type, the share of the Pokémon in view that take each
 // real multiplier (4×, 2×, ½×, ¼×, 0×). No averages: an averaged multiplier
-// (e.g. "1.69×") is not a value the type chart can produce and read as one. Tournament-only (the ladder
-// payload has no per-team mon lists to derive type slots from).
-import { typeUsage, weaknesses } from '../lib/aggregate.js';
+// (e.g. "1.69×") is not a value the type chart can produce and read as one. Ladder: each species
+// is weighted by its usage (lib/ladder-field.js); tournaments count team slots.
+import { typeUsage, weaknesses, ladderMerge } from '../lib/aggregate.js';
+import { ladderTypeUsage, ladderWeaknesses } from '../lib/ladder-field.js';
 import { TYPE_COLORS } from '../lib/types.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
@@ -81,7 +82,7 @@ export default {
         tooltip: {
           backgroundColor: theme.tooltipBg, borderColor: theme.border,
           textStyle: { color: theme.ink },
-          formatter: (p) => `${p.data.type}<br/>${(Number(p.value) * 100).toFixed(1)}% of Pokémon in view (${p.data.n})<br/><i>click: only ${p.data.type}-type Pokémon</i>`,
+          formatter: (p) => `${p.data.type}<br/>${(Number(p.value) * 100).toFixed(1)}% of Pokémon in view${lastView?.state.source === 'ladder' ? ' (usage-weighted)' : ''} (${p.data.n}${lastView?.state.source === 'ladder' ? ' species' : ''})<br/><i>click: only ${p.data.type}-type Pokémon</i>`,
         },
         xAxis: { type: 'value', ...baseAxis(theme), axisLabel: { ...baseAxis(theme).axisLabel, formatter: (v) => `${(v * 100).toFixed(0)}%` } },
         yAxis: { type: 'category', data: sorted.map((r) => r.type).reverse(), ...baseAxis(theme), axisTick: { show: false }, axisLabel: { ...baseAxis(theme).axisLabel, interval: 0 } },
@@ -139,30 +140,33 @@ export default {
       const state = view.state;
       const theme = ctx.chartTheme();
 
-      if (state.source !== 'tournaments') {
-        const ranked = state.source === 'ranked';
+      if (state.source === 'ranked') {
         for (const p of [usagePanel, weakPanel]) {
-          ctx.meta(p.meta, ranked ? { source: rankedSource(null) } : { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
-          emptyState(p.body, ranked ? RANKED_NA : 'Tournament-only view — switch Source to Tournaments');
+          ctx.meta(p.meta, { source: rankedSource(null) });
+          emptyState(p.body, RANKED_NA);
         }
         lastRows = null;
         return;
       }
 
-      const teams = view.monTeams;
-      const n = teams.length;
+      const ladder = state.source === 'ladder';
+      const merged = ladder ? ladderMerge(view.ladder, state.from, state.to, view.dex) : null;
+      const teams = ladder ? [] : view.monTeams;
+      const n = ladder ? (merged?.battles || 0) : teams.length;
       for (const p of [usagePanel, weakPanel]) {
-        ctx.meta(p.meta, { source: 'Tournaments', n, unit: 'teams' });
+        ctx.meta(p.meta, ladder ? { source: 'Ladder (Smogon)', n, unit: 'battles' } : { source: 'Tournaments', n, unit: 'teams' });
         p.body.querySelector('.empty-state')?.remove();
         if (!p.body.contains(p.chartEl)) p.body.append(p.hintEl, p.chartEl);
       }
-      if (!n) {
-        for (const p of [usagePanel, weakPanel]) emptyState(p.body, 'Insufficient data');
+      if (!n || (ladder && !merged.mons.length)) {
+        for (const p of [usagePanel, weakPanel]) emptyState(p.body, ladder ? 'No ladder data for this regulation yet' : 'Insufficient data');
         lastRows = null;
         return;
       }
 
-      const rows = { usage: typeUsage(teams, view.dex), weak: weaknesses(teams, view.dex) };
+      const rows = ladder
+        ? { usage: ladderTypeUsage(merged.mons, view.dex), weak: ladderWeaknesses(merged.mons, view.dex) }
+        : { usage: typeUsage(teams, view.dex), weak: weaknesses(teams, view.dex) };
       lastRows = rows;
       drawUsage(rows.usage, theme);
       drawWeak(rows.weak, theme);

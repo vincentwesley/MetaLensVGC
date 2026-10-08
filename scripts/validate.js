@@ -2,7 +2,7 @@
 // contract). Exits non-zero on any error when run standalone.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { REGULATIONS, REG_IDS, inWindow } from './lib/regs.js';
+import { REGULATIONS, REG_IDS, VGC_IDS, SHOWDOWN_IDS, inWindow } from './lib/regs.js';
 
 async function readJSON(file) {
   return JSON.parse(await readFile(file, 'utf8'));
@@ -86,6 +86,9 @@ function validateLadderFile(file, data, errors) {
         const size = Object.keys(mon[table] || {}).length;
         if (size > 12) errors.push(`${file}: ${month.month} ${name}.${table} has ${size} entries (max 12)`);
       }
+      const tera = Object.entries(mon.teraTypes || {});
+      if (tera.length > 12) errors.push(`${file}: ${month.month} ${name}.teraTypes has ${tera.length} entries (max 12)`);
+      for (const [k, v] of tera) if (typeof v !== 'number' || v < 0 || v > 1) errors.push(`${file}: ${month.month} ${name}.teraTypes["${k}"] not a 0-1 fraction: ${v}`);
       const teammates = Object.keys(mon.teammates || {}).length;
       if (teammates > 20) errors.push(`${file}: ${month.month} ${name}.teammates has ${teammates} entries (max 20)`);
     }
@@ -122,14 +125,14 @@ function validateRankedFile(file, data, errors) {
   }
 }
 
-function validateDexFile(data, errors) {
+function validateDexFile(data, errors, f = 'dex.json') {
   const CATS = ['Physical', 'Special', 'Status'];
   for (const [name, sp] of Object.entries(data.species || {})) {
-    if (!Array.isArray(sp.bs) || sp.bs.length !== 6) errors.push(`dex.json: species "${name}" bad bs`);
-    if (!Array.isArray(sp.types) || !sp.types.length) errors.push(`dex.json: species "${name}" bad types`);
+    if (!Array.isArray(sp.bs) || sp.bs.length !== 6) errors.push(`${f}: species "${name}" bad bs`);
+    if (!Array.isArray(sp.types) || !sp.types.length) errors.push(`${f}: species "${name}" bad types`);
   }
   for (const [name, mv] of Object.entries(data.moves || {})) {
-    if (!CATS.includes(mv.cat)) errors.push(`dex.json: move "${name}" bad cat "${mv.cat}"`);
+    if (!CATS.includes(mv.cat)) errors.push(`${f}: move "${name}" bad cat "${mv.cat}"`);
   }
 }
 
@@ -167,10 +170,15 @@ export async function validateAll(dataDir) {
     for (const reg of REG_IDS) {
       const entry = manifest.regs.find((r) => r.id === reg);
       if (!entry) errors.push(`manifest.json: missing reg ${reg}`);
-      else if (entry.start !== REGULATIONS[reg].start || entry.end !== REGULATIONS[reg].end) {
-        errors.push(`manifest.json: ${reg} window mismatch`);
+      else {
+        const r = REGULATIONS[reg];
+        if (entry.start !== r.start || entry.end !== r.end) errors.push(`manifest.json: ${reg} window mismatch`);
+        for (const k of ['family', 'format', 'level', 'label']) if (entry[k] !== r[k]) errors.push(`manifest.json: ${reg}.${k} mismatch`);
+        if (r.family === 'showdown' && entry.teams !== 0) errors.push(`manifest.json: ${reg}.teams must be 0`);
       }
     }
+    if (!VGC_IDS.includes(manifest.current)) errors.push(`manifest.json: bad current "${manifest.current}"`);
+    if (!SHOWDOWN_IDS.includes(manifest.currentShowdown)) errors.push(`manifest.json: bad currentShowdown "${manifest.currentShowdown}"`);
   }
 
   const dex = await readJSON(path.join(dataDir, 'dex.json')).catch((e) => {
@@ -178,6 +186,11 @@ export async function validateAll(dataDir) {
     return null;
   });
   if (dex) validateDexFile(dex, errors);
+  const dexNat = await readJSON(path.join(dataDir, 'dex-natdex.json')).catch((e) => {
+    errors.push(`dex-natdex.json: ${e.message}`);
+    return null;
+  });
+  if (dexNat) validateDexFile(dexNat, errors, 'dex-natdex.json');
 
   for (const kind of ['vgc', 'natdex']) {
     const dx = await readJSON(path.join(dataDir, `pokedex-${kind}.json`)).catch((e) => (errors.push(`pokedex-${kind}.json: ${e.message}`), null));
@@ -186,8 +199,9 @@ export async function validateAll(dataDir) {
   }
 
   for (const reg of REG_IDS) {
+    const vgc = VGC_IDS.includes(reg);
     const teamsPath = path.join(dataDir, `teams-${reg}.json`);
-    const teams = await readJSON(teamsPath).catch((e) => {
+    const teams = vgc && await readJSON(teamsPath).catch((e) => {
       errors.push(`teams-${reg}.json: ${e.message}`);
       return null;
     });
@@ -201,7 +215,7 @@ export async function validateAll(dataDir) {
     if (ladder) validateLadderFile(`ladder-${reg}.json`, ladder, errors);
 
     const rankedPath = path.join(dataDir, `ranked-${reg}.json`);
-    const ranked = await readJSON(rankedPath).catch((e) => {
+    const ranked = vgc && await readJSON(rankedPath).catch((e) => {
       errors.push(`ranked-${reg}.json: ${e.message}`);
       return null;
     });

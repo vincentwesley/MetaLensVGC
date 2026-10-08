@@ -17,11 +17,17 @@ import { isStale } from './lib/stale.js';
 import { mountSecnav, mountHowto } from './ui/secnav.js';
 import { mountSettings } from './ui/settings.js';
 import { mountClock } from './ui/clock.js';
+import { mountModeSwitch } from './ui/modeswitch.js';
+import { regFamily } from './lib/state-core.js';
+import { rulesFor } from './lib/stats.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'quadrant', 'pokedex', 'types', 'items', 'archetypes',
   'teammates', 'speed', 'trends', 'countries', 'library', 'scanner', 'methodology',
 ];
+
+// Sections with no data in Showdown mode (no team sheets); hidden by CSS and skipped in updates.
+const TEAM_ONLY = new Set(['quadrant', 'archetypes', 'countries', 'library', 'scanner']);
 
 // Every chart is created through this: a full redraw (setOption with notMerge)
 // while the pointer is over a chart disposes the tooltip component while a show
@@ -111,6 +117,7 @@ async function boot() {
     return;
   }
   clock.setManifest(manifest);
+  mountModeSwitch(document.getElementById('header-mode'), store, manifest);
   store.setRegs((manifest.regs || []).map((r) => r.id));
   if (isStale(manifest.generated)) {
     const note = document.getElementById('stale-notice');
@@ -135,7 +142,7 @@ async function boot() {
   const rankedCache = new Map();
 
   function prevRegId(reg) {
-    const ids = (manifest.regs || []).map((r) => r.id);
+    const ids = (manifest.regs || []).map((r) => r.id).filter((id) => regFamily(id) === regFamily(reg));
     const i = ids.indexOf(reg);
     return i > 0 ? ids[i - 1] : null;
   }
@@ -199,8 +206,25 @@ async function boot() {
     }
   }
 
+  const NO_TEAMS = { teams: [], events: [], matches: [] };
   async function ensureReg(reg) {
+    if (regFamily(reg) === 'showdown') return NO_TEAMS; // ladder only: there are no team sheets
     return data.getDecoded(reg, dex, decode);
+  }
+
+  // The shared `dex` object is swapped in place per mode (sections hold a reference to it):
+  // Showdown mode uses the base-game Dex (dex-natdex.json), VGC the Champions one.
+  let vgcDex = null; // snapshot of the Champions dex, taken lazily at the first switch
+  let dexFamily = 'vgc';
+  async function ensureDex(family) {
+    if (family === dexFamily) return;
+    vgcDex ||= { species: { ...dex.species }, moves: { ...dex.moves }, items: { ...dex.items } };
+    const src = family === 'showdown' ? await data.loadDexFile('natdex') : vgcDex;
+    for (const k of ['species', 'moves', 'items']) {
+      for (const key of Object.keys(dex[k])) delete dex[k][key];
+      Object.assign(dex[k], src[k] || {});
+    }
+    dexFamily = family;
   }
 
   async function getLadder(reg) {
@@ -370,9 +394,12 @@ async function boot() {
     const seq = ++renderSeq;
     const state = store.get();
     try {
-      const regData = await ensureReg(state.reg);
-      const ladder = await getLadder(state.reg);
-      const ranked = await getRanked(state.reg);
+      const family = regFamily(state.reg);
+      const regMeta = (manifest.regs || []).find((r) => r.id === state.reg);
+      const [, regData, ladder, ranked] = await Promise.all([
+        ensureDex(family), ensureReg(state.reg), getLadder(state.reg),
+        family === 'showdown' ? { reg: state.reg, seasons: [] } : getRanked(state.reg), // no in-game ranked data for Showdown formats
+      ]);
       const teams = filterTeams(regData.teams, state, state.chips, dex);
       // The Scanner compares one team with the rest of the field, so a team chip (one team)
       // must not shrink its reference: same filters, minus team chips.
@@ -389,13 +416,14 @@ async function boot() {
       // Ladder / in-game ranked rows are per species: which chips can apply there.
       const speciesFilter = speciesChipFilter(state.chips, dex);
       const view = {
-        state, reg: state.reg, manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
+        state, reg: state.reg, family: family === 'showdown' ? 'natdex' : 'vgc', officialTiers: state.reg === 'ND', regMeta, rules: rulesFor(regMeta), manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
         ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams,
       };
       lastView = view;
       filterbarApi.update(view);
       if (state.chips.some((c) => c.kind === 'team')) chipsApi.update(state); // team chips can be named now
-      for (const s of mounted) dirty.add(s.id);
+      const showdown = family === 'showdown';
+      for (const s of mounted) if (!(showdown && TEAM_ONLY.has(s.id))) dirty.add(s.id);
       syncPending();
       // Visible sections first (in page order), yielding between each; the
       // rest catch up in idle time or as they scroll into view.

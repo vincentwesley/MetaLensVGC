@@ -76,7 +76,7 @@ export default {
       b.type = 'button';
       b.setAttribute('aria-sort', 'none');
       b.dataset.tip = `Sort by ${l}, highest first (click again for tier order)`;
-      b.addEventListener('click', () => { sort = sort === k ? 'tier' : k; render(); });
+      b.addEventListener('click', () => { sort = sort === k ? 'name' : k; render(); });
       statBtns[k] = b;
       headStats.appendChild(b);
     }
@@ -93,8 +93,8 @@ export default {
     card.append(head, body);
     root.appendChild(card);
 
-    let view = null, roster = null, family = 'vgc', use = new Map(), rev = 0, lastSig = '';
-    let sort = 'tier', shown = SHOWN, learn; // learn: undefined | 'loading' | 'failed' | {moves, learn}
+    let view = null, roster = null, family = 'vgc', official = false, use = new Map(), rev = 0, lastSig = '';
+    let sort = 'name', shown = SHOWN, learn; // learn: undefined | 'loading' | 'failed' | {moves, learn}
     let tags = [], opts = [], active = -1, usageKey = [], timer = null;
     const cache = new Map(); // name -> row element (cleared when the roster arrives)
     let rosterFor = null, lastShown = 0;
@@ -274,7 +274,7 @@ export default {
       lastShown = shown;
       const filters = { types: [], abilities: [], moves: [] };
       for (const t of tags) filters[t.kind].push(t.value);
-      const usageMode = family === 'vgc';
+      const usageMode = !official; // official tiers exist for National Dex singles only; VGC and NatDex Doubles tier by usage
       const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort });
       renderTags();
       segBtns.tier.setAttribute('aria-pressed', String(sort === 'tier'));
@@ -325,6 +325,7 @@ export default {
       update(v) {
         view = v;
         const st = v.state;
+        if (official !== !!v.officialTiers) { official = !!v.officialTiers; rev++; }
         const newFamily = v.family || 'vgc';
         if (newFamily !== family) {
           family = newFamily; learn = undefined; tags = tags.filter((t) => t.kind !== 'moves');

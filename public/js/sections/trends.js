@@ -1,8 +1,9 @@
 // trends.js — weekly usage lines (brush/zoom sets state.from/to on release),
 // risers & fallers, and a regulation-shift table. All three need per-team
-// dates, which the ladder payload doesn't carry, so the whole section is
-// tournament-only (same "switch Source" rule as archetypes.js).
-import { usage, atMinN, weekly, movers, changeVsPrev } from '../lib/aggregate.js';
+// dates; the ladder source gets monthly lines and month-over-month movers instead
+// (lib/ladder-field.js); the regulation shift stays tournament-only.
+import { usage, atMinN, weekly, movers, changeVsPrev, ladderMerge } from '../lib/aggregate.js';
+import { ladderSeries, ladderMovers } from '../lib/ladder-field.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
 
 function card(title) {
@@ -65,7 +66,8 @@ export default {
     const lineChartEl = document.createElement('div');
     lineChartEl.className = 'sb-chart sb-chart--tall';
     const lineEmptyEl = document.createElement('div');
-    linesCard.body.append(clickHint('Weekly usage of the top Pokémon. Drag the slider below the chart: set the date range for the whole dashboard.'), linesControls, lineChartEl, lineEmptyEl);
+    const linesHint = clickHint('Weekly usage of the top Pokémon. Drag the slider below the chart: set the date range for the whole dashboard.');
+    linesCard.body.append(linesHint, linesControls, lineChartEl, lineEmptyEl);
     const lineChart = ctx.echarts.init(lineChartEl);
     new ResizeObserver(() => lineChart.resize()).observe(lineChartEl);
 
@@ -82,7 +84,53 @@ export default {
       ctx.store.set({ from: lastWeeks[startIdx], to: addDays(lastWeeks[endIdx], 6) });
     });
 
+    function renderLadderLines(view, theme) {
+      linesCard.el.querySelector('h3').textContent = 'Monthly usage trend';
+      linesHint.textContent = 'Monthly usage of the top Pokémon on the ladder (a gap means the species was not in that month).';
+      const st = view.state;
+      const merged = ladderMerge(view.ladder, st.from, st.to, view.dex);
+      ctx.meta(linesCard.meta, { source: 'Ladder (Smogon)', n: merged?.battles || 0, unit: 'battles' });
+      lastWeeks = [];
+      if (!merged || !merged.mons.length) {
+        lineChartEl.style.display = 'none';
+        lineEmptyEl.textContent = '';
+        lineEmptyEl.appendChild(emptyState('No ladder months in the current range.', 'No ladder data'));
+        return;
+      }
+      const topKeys = merged.mons.slice(0, 8).map((m) => m.key);
+      const ls = ladderSeries(view.ladder, topKeys, st.from, st.to);
+      lineEmptyEl.textContent = '';
+      if (ls.months.length < 2) {
+        // One month: show the real single point per species instead of a blank chart.
+        lineChartEl.style.display = 'none';
+        const box = emptyState('A trend line needs two months; this range has one. Usage that month:', 'One month of data');
+        const note = document.createElement('div');
+        note.textContent = topKeys.map((k) => `${k} ${ctx.fmt.pct(ls.series[k][0])}`).join(' · ');
+        box.appendChild(note);
+        lineEmptyEl.appendChild(box);
+        return;
+      }
+      lineChartEl.style.display = '';
+      lineChart.setOption({
+        color: theme.series,
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
+          valueFormatter: (v) => (v == null ? 'not in data' : `${(v * 100).toFixed(1)}%`),
+        },
+        legend: { type: 'scroll', data: topKeys, textStyle: { color: theme.inkSecondary, fontFamily: theme.fontFamily }, top: 0, pageIconColor: theme.ink, pageTextStyle: { color: theme.muted } },
+        grid: { left: 46, right: 20, top: 36, bottom: 30 },
+        xAxis: { type: 'category', data: ls.months, axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily } },
+        yAxis: { type: 'value', axisLabel: { color: theme.muted, fontFamily: theme.fontFamily, formatter: (v) => `${(v * 100).toFixed(0)}%` }, axisLine: { lineStyle: { color: theme.axis } }, splitLine: { lineStyle: { color: theme.grid } } },
+        dataZoom: [],
+        series: topKeys.map((k) => ({ name: k, type: 'line', showSymbol: true, symbolSize: 6, data: ls.series[k], connectNulls: false })),
+      }, true);
+    }
+
     function renderLines(view, theme) {
+      if (view.state.source === 'ladder') { renderLadderLines(view, theme); return; }
+      linesCard.el.querySelector('h3').textContent = 'Weekly usage trend';
+      linesHint.textContent = 'Weekly usage of the top Pokémon. Drag the slider below the chart: set the date range for the whole dashboard.';
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
         lineChartEl.style.display = 'none';
@@ -135,7 +183,8 @@ export default {
     // --- risers & fallers ------------------------------------------------
     const compareLabel = document.createElement('div');
     compareLabel.className = 'sb-subhead';
-    moversCard.body.append(clickHint('Biggest usage changes between the last two weeks. Click a row: show only that Pokémon and its teams. Shift-click to exclude.'), compareLabel);
+    const moversHint = clickHint('Biggest usage changes between the last two weeks. Click a row: show only that Pokémon and its teams. Shift-click to exclude.');
+    moversCard.body.append(moversHint, compareLabel);
     const moversWrap = document.createElement('div');
     moversWrap.className = 'sb-two-col';
     const risersCol = document.createElement('div');
@@ -173,8 +222,36 @@ export default {
       return row;
     }
 
+    function ladderRow(r, up) {
+      const row = moverRow({ ...r, nPrev: 0, nLast: 0 }, up);
+      row.querySelector('.sb-stat').textContent = r.isNew ? 'NEW' : ctx.fmt.signedPct(r.delta);
+      row.lastChild.textContent = `${ctx.fmt.pct(r.pctPrev)}→${ctx.fmt.pct(r.pctLast)}`;
+      return row;
+    }
+
+    function renderLadderMovers(view) {
+      moversHint.textContent = 'Biggest usage changes between the last two ladder months. Click a row: show only that Pokémon. Shift-click to exclude.';
+      const st = view.state;
+      const merged = ladderMerge(view.ladder, st.from, st.to, view.dex);
+      ctx.meta(moversCard.meta, { source: 'Ladder (Smogon)', n: merged?.battles || 0, unit: 'battles' });
+      const m = merged ? ladderMovers(view.ladder, st.from, st.to) : null;
+      if (!m) {
+        risersList.appendChild(merged
+          ? emptyState('Risers & fallers compare the last two ladder months; this range has one.', 'One month of data')
+          : emptyState('No ladder months in the current range.', 'No ladder data'));
+        return;
+      }
+      compareLabel.textContent = `Comparing ${m.monthPrev} vs ${m.monthLast} (species under 1% usage in both months left out; NEW = not in the previous month)`;
+      if (!m.risers.length) risersList.appendChild(emptyState('Nothing in view gained share between these months.', 'No risers'));
+      else for (const r of m.risers.slice(0, 10)) risersList.appendChild(ladderRow(r, true));
+      if (!m.fallers.length) fallersList.appendChild(emptyState('Nothing in view lost share between these months.', 'No fallers'));
+      else for (const r of m.fallers.slice(0, 10)) fallersList.appendChild(ladderRow(r, false));
+    }
+
     function renderMovers(view) {
       risersList.textContent = ''; fallersList.textContent = ''; compareLabel.textContent = '';
+      if (view.state.source === 'ladder') { renderLadderMovers(view); return; }
+      moversHint.textContent = 'Biggest usage changes between the last two weeks. Click a row: show only that Pokémon and its teams. Shift-click to exclude.';
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
         risersList.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see risers & fallers.', 'Tournament-only view'));
@@ -210,8 +287,9 @@ export default {
       shiftWrap.textContent = '';
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
-        shiftWrap.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see the regulation shift.', 'Tournament-only view'));
-        ctx.meta(shiftCard.meta, ranked ? { source: rankedSource(null) } : { source: 'Tournaments', n: 0, unit: 'teams' });
+        const lad = view.state.source === 'ladder';
+        shiftWrap.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState(lad ? 'The regulation shift compares tournament periods. Month-over-month ladder changes are under Risers & fallers.' : 'Switch Source to Tournaments to see the regulation shift.', 'Tournament-only view'));
+        ctx.meta(shiftCard.meta, ranked ? { source: rankedSource(null) } : lad ? { source: 'Ladder (Smogon)', n: ladderMerge(view.ladder, view.state.from, view.state.to)?.battles || 0, unit: 'battles' } : { source: 'Tournaments', n: 0, unit: 'teams' });
         return;
       }
       ctx.meta(shiftCard.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
