@@ -30,7 +30,7 @@ main.grid .section[data-section="methodology"] {
 .ddv-picker {
   display: flex; flex-direction: column; gap: 4px;
   padding-bottom: var(--space-3); margin-bottom: var(--space-3);
-  border-bottom: 2px solid var(--frame); position: sticky; top: 0; background: var(--surface-1); z-index: 2;
+  border-bottom: 2px solid var(--frame); position: sticky; top: calc(-1 * var(--space-4)); margin-top: calc(-1 * var(--space-4)); padding-top: var(--space-4); background: var(--surface-1); z-index: 5;
 }
 [data-skin="pro"] .ddv-picker { border-bottom: 1px solid var(--border); }
 .ddv-picker__label { font-family: var(--font-label); font-size: var(--fs-small); color: var(--muted); text-transform: uppercase; }
@@ -311,10 +311,12 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 
 /* deep dive additions: dex number, filter/form buttons, stat range, matchups, sparkline */
 .ddv-num { color: var(--muted); font-size: var(--fs-small); font-weight: normal; }
-.ddv-btn { align-self: flex-start; font: inherit; font-size: var(--fs-small); padding: 4px 10px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.ddv-btn { align-self: flex-start; font: inherit; font-size: var(--fs-small); padding: 4px 10px; background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
 .ddv-btn:hover { border-color: var(--accent); }
 .ddv-forms { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .ddv-range { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.ddv-range .kpi { padding: var(--space-2); min-width: 0; }
+.ddv-range .kpi__value { white-space: nowrap; font-size: 22px; }
 .ddv-matchrow { display: grid; grid-template-columns: 36px 1fr; gap: var(--space-2); align-items: center; }
 .ddv-matchrow__mult { font-family: var(--font-label); font-size: var(--fs-small); color: var(--muted); }
 .ddv-spark { width: 100%; max-width: 320px; height: 56px; }

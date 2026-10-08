@@ -11,9 +11,7 @@
 // is still met without new markup outside owned files.
 import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
 import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
-import { rankedSource, RANKED_ATTRIBUTION } from '../ui/meta.js';
-import { TYPE_COLORS } from '../lib/types.js';
-import { inkOn } from '../lib/contrast.js';
+import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
 import { defensiveBuckets, MATCHUP_BUCKETS, statRange, allSpecies, topSetMon } from '../lib/species-info.js';
 import { toPaste } from '../lib/paste.js';
 import { copyText } from '../ui/clipboard.js';
@@ -136,13 +134,6 @@ function shiftText(key, dex, bs, cur, prevReg, prevRanked, curReg) {
   return `${head} (${prevReg} ${last.season} ranked → now): ${parts.join(' · ')}. Top spreads cover ${pctText(a.covered)} → ${pctText(b.covered)} of players.`;
 }
 
-function typePill(t) {
-  const pill = elm('span', 'pill', t);
-  pill.style.background = TYPE_COLORS[t] || 'var(--muted)';
-  if (TYPE_COLORS[t]) pill.style.color = inkOn(TYPE_COLORS[t]);
-  return pill;
-}
-
 /** Inline-SVG sparkline of weekly usage (no animation); values are fractions, needs 2+ points. */
 function sparkline(vals, weeks) {
   const W = 240, H = 48, P = 4, max = Math.max(...vals, 0.0001);
@@ -199,8 +190,12 @@ export default {
     let currentKey = null;
     let isOpen = false;
 
+    let pickerSig = '';
     function updatePickerList(view) {
       const keys = allSpecies(view?.base, view?.ranked, view?.ladder, view?.dex);
+      const sig = keys.join('|');
+      if (sig === pickerSig) return;
+      pickerSig = sig;
       datalist.innerHTML = '';
       for (const k of keys) datalist.appendChild(new Option(k));
     }
@@ -345,7 +340,8 @@ export default {
       const titleEl = document.getElementById('deepdive-title');
       if (titleEl) titleEl.textContent = key;
 
-      const det = speciesDetail(view.ddTeams || view.monTeams, key, dex);
+      const teams = view.ddTeams || view.monTeams;
+      const det = speciesDetail(teams, key, dex);
       const metaLine = elm('div');
       ctx.meta(metaLine, { source: view.state.source === 'ladder' ? 'Tournaments (base stats/usage) + Ladder (sets)' : 'Tournaments', n: det.n, unit: 'teams' });
       content.appendChild(metaLine);
@@ -444,9 +440,9 @@ export default {
       // usage by week
       const { card: wkCard, body: wkBody } = sectionCard('Usage by week');
       const wkMeta = elm('div');
-      ctx.meta(wkMeta, { source: 'Tournaments', n: (view.ddTeams || view.monTeams).length, unit: 'teams' });
+      ctx.meta(wkMeta, { source: 'Tournaments', n: teams.length, unit: 'teams' });
       wkBody.appendChild(wkMeta);
-      const wk = weekly(view.ddTeams || view.monTeams, [key]);
+      const wk = weekly(teams, [key]);
       if (wk.weeks.length < 2) {
         wkBody.appendChild(elm('div', 'ddv-note', wk.weeks.length
           ? `Only one qualifying week (${wk.weeks[0]}) in this view: a trend needs at least two.`
@@ -508,12 +504,11 @@ export default {
       // exact 4-move sets
       const { card: setsCard, body: setsBody } = sectionCard('Common move sets');
       barList(setsBody, det.sets.map((r) => ({ name: r.name, pct: r.pct })));
-      const topSet = topSetMon(view.ddTeams || view.monTeams, key);
-      if (topSet) {
+      if (topSetMon(teams, key)) {
         const copyBtn = elm('button', 'ddv-btn ddv-copyset', 'Copy most common set');
         copyBtn.type = 'button';
         copyBtn.addEventListener('click', async () => {
-          const ok = await copyText(toPaste({ mons: [topSet] }, dex));
+          const ok = await copyText(toPaste({ mons: [topSetMon(teams, key)] }, dex));
           toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
         });
         setsBody.appendChild(copyBtn);

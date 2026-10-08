@@ -52,6 +52,10 @@ export function dismiss(storage) {
   try { storage.setItem(HOWTO, '1'); } catch { /* storage unavailable: shown again next visit */ }
 }
 
+export function undismiss(storage) {
+  try { storage.removeItem(HOWTO); } catch { /* ignore */ }
+}
+
 export function mountHowto(el) {
   let st = null;
   try { st = localStorage; } catch { /* blocked: the strip just shows every visit */ }

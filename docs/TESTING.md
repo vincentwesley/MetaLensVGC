@@ -240,6 +240,15 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 "includes n < 100" meta tag; same rule for matchups, item check and teammate picks. E2E: default + that narrow view, no
 "Insufficient data" in any scanner card. Screenshots (1440/390, pro-dark) reviewed.
 
+### v1.1.0 (2026-10-08): 216 unit, 58 e2e green
+- Unit: prefs never in the hash + legacy `#skin=` still parsed + bad palette -> grass; contrast for all 28 skin x theme x palette combos;
+  clock math (`nextRefresh`, `daysLeft`, `fmtDuration`); changelog/package.json version sync; `statRange`, `defensiveBuckets`, `allSpecies`; Pokédex sort/filter.
+- e2e: settings panel changes mode/style/palette, persists on reload, never enters the hash, fits 390px; What's new lists 1.1.0 and clears the
+  gear dot; clock popover shows the refresh line; Pokédex card opens details with 0 chips, search + type filter narrow it, `P` focuses search,
+  empty state hides "Show all", no overflow at 390px; deep dive Filter-dashboard adds one chip, Copy set pastes the species.
+  Data-dependent checks (ladder-less M-C, team counts, ranks) now read the manifest/data instead of literals.
+- Visual sweep (1440/390, 7 palettes, drawer, popovers) done once; items fixed. Not re-reviewed by eye: pro-light fire/ghost pills, 390px What's new.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

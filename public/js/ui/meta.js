@@ -1,3 +1,5 @@
+import { TYPE_COLORS } from '../lib/types.js';
+import { inkOn } from '../lib/contrast.js';
 // Renders the "source / sample size / updated" line every card must show.
 // ctx.meta(el, { source, n, unit, relaxed }) in main.js injects `updated` from manifest.generated.
 
@@ -77,4 +79,14 @@ export function prevLabel(view) {
   if (!dates.length) return 'vs prior period';
   const days = Math.round((new Date(dates[dates.length - 1]) - new Date(dates[0])) / 86400000) + 1;
   return `vs prior ${days} day${days === 1 ? '' : 's'}`;
+}
+
+/** Coloured type pill (a span.pill). */
+export function typePill(t) {
+  const pill = document.createElement('span');
+  pill.className = 'pill';
+  pill.textContent = t;
+  pill.style.background = TYPE_COLORS[t] || 'var(--muted)';
+  if (TYPE_COLORS[t]) pill.style.color = inkOn(TYPE_COLORS[t]);
+  return pill;
 }

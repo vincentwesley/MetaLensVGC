@@ -27,8 +27,16 @@ export function statRange(bs) {
 /** Every species known for a regulation, as sorted display keys: tournament teams ∪ ranked seasons ∪ Smogon ladder months.
  *  `dex` (optional) adds ranked Mega keys and drops names the dex doesn't know. */
 export function allSpecies(base, ranked, ladder, dex = null) {
-  const out = new Set();
+  const out = new Set(extraSpecies(ranked, ladder, dex));
   for (const t of base || []) for (const k of t.keys || []) out.add(k);
+  return [...out].filter((k) => !dex || dex.species?.[k]).sort();
+}
+
+// The ranked + ladder part is the costly one and only changes with those objects (rebuilt on species chips), so cache it by identity.
+let xCache = { ranked: null, ladder: null, dex: null, set: null };
+function extraSpecies(ranked, ladder, dex) {
+  if (xCache.set && xCache.ranked === ranked && xCache.ladder === ladder && xCache.dex === dex) return xCache.set;
+  const out = new Set();
   for (const s of ranked?.seasons || []) {
     for (const [name, mon] of Object.entries(s.mons || {})) {
       out.add(name);
@@ -37,7 +45,8 @@ export function allSpecies(base, ranked, ladder, dex = null) {
     }
   }
   for (const m of ladder?.months || []) for (const k of Object.keys(m.mons || {})) out.add(k);
-  return [...out].filter((k) => !dex || dex.species?.[k]).sort();
+  xCache = { ranked, ladder, dex, set: out };
+  return out;
 }
 
 /** The most common exact 4-move set of `key` with its most common item and ability, as a Mon for toPaste; null if none. */
