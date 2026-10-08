@@ -177,6 +177,21 @@ Background: pixel field canvas.
   copy-set, form switch and an explicit "Filter dashboard" button.
 - **Weekly refresh** runs Mondays 00:00 UTC = 08:00 GMT+8.
 
+### v1.2.0 additions (2026-10-09)
+- **Pokédex is a Showdown-teambuilder-style list** (`sections/pokedex.js`, `lib/pokedex.js`): tier header bars, sprite, name, types,
+  abilities, HP..Spe + BST columns; sort by tier / A–Z / any stat header; one combobox search (Pokémon opens details, types /
+  abilities / moves become filter tags; moves match legal learnsets, `learnsets-<family>.json`, prefetched on search focus).
+  Roster = every legal species from `pokedex-<family>.json` (`scripts/build-pokedex.js`, from the installed `pokemon-showdown`
+  package, no network; run by `npm run data` / `npm run pokedex`). VGC uses **usage tiers** (Top 12 / Common >=4.5% / Uncommon >=1%
+  / Rare / Unused; ranked data places by rank) shown as "usage tier"; NatDex will use official tiers. Row click = details, never a chip.
+  Placed after the Usage + Quadrant pair. Roster loads lazily through `ctx.loadPokedex`.
+- **Styles**: `skin` pref has 6 values (pro, retro, glass, paper, terminal, soft). The DOM gets `data-skin` = retro|pro and
+  `data-style` = the chosen id, so glass/paper/terminal/soft inherit every `[data-skin="pro"]` rule and palette; style-only rules key on
+  `[data-style=...]`. `state.js#applyDom` and `prefs-init.js` hold the mapping (keep in sync). Glass blur only on small/overlay surfaces.
+- **Tips strip** lives inside `.stickybar` (stays pinned until dismissed; one line on phones).
+- **Animated sprites** keep their aspect (`ui/sprites.js`): scaled by natural size (gen5ani 1x, `ani/` ~1/1.35), centred in the same px box.
+- Planned next (v1.3.0): VGC | Showdown mode with National Dex + NatDex Doubles (Smogon `gen9nationaldex[doubles]`, EV/Lv100 stat rules, Tera).
+
 ### Invariants learned the hard way (keep them)
 - **Rendering** (`main.js`): sections update on-screen first, yielding between them; off-screen ones are marked dirty and
   catch up in idle time or when scrolled near (IntersectionObserver). `<html data-rendering>` is set while anything is

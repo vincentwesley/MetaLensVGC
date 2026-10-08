@@ -133,6 +133,29 @@ function validateDexFile(data, errors) {
   }
 }
 
+function validatePokedex(kind, dex, learn, errors) {
+  const f = `pokedex-${kind}.json`;
+  const sp = dex.species || {};
+  const order = new Set(dex.tierOrder || []);
+  const ids = new Set();
+  for (const [name, s] of Object.entries(sp)) {
+    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (ids.has(id)) errors.push(`${f}: duplicate species id ${id} (${name})`);
+    ids.add(id);
+    if (!Array.isArray(s.bs) || s.bs.length !== 6 || s.bs.some((n) => !Number.isInteger(n))) errors.push(`${f}: ${name} bad bs`);
+    if (!Array.isArray(s.types) || !s.types.length) errors.push(`${f}: ${name} empty types`);
+    if (!s.abilities || !Object.keys(s.abilities).length) errors.push(`${f}: ${name} empty abilities`);
+    if (s.tier !== undefined && !order.has(s.tier)) errors.push(`${f}: ${name} tier ${s.tier} not in tierOrder`);
+  }
+  const g = `learnsets-${kind}.json`;
+  const moves = learn.moves || {};
+  for (const [id, list] of Object.entries(learn.learn || {})) {
+    if (!ids.has(id)) errors.push(`${g}: species ${id} not in ${f}`);
+    for (const m of list) if (!moves[m]) errors.push(`${g}: ${id} move ${m} not in moves`);
+  }
+  for (const id of ids) if (!learn.learn?.[id]) errors.push(`${g}: no learnset for ${id}`);
+}
+
 export async function validateAll(dataDir) {
   const errors = [];
 
@@ -155,6 +178,12 @@ export async function validateAll(dataDir) {
     return null;
   });
   if (dex) validateDexFile(dex, errors);
+
+  for (const kind of ['vgc', 'natdex']) {
+    const dx = await readJSON(path.join(dataDir, `pokedex-${kind}.json`)).catch((e) => (errors.push(`pokedex-${kind}.json: ${e.message}`), null));
+    const ln = await readJSON(path.join(dataDir, `learnsets-${kind}.json`)).catch((e) => (errors.push(`learnsets-${kind}.json: ${e.message}`), null));
+    if (dx && ln) validatePokedex(kind, dx, ln, errors);
+  }
 
   for (const reg of REG_IDS) {
     const teamsPath = path.join(dataDir, `teams-${reg}.json`);

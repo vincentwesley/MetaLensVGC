@@ -110,3 +110,8 @@ test('palette: bad value -> grass, valid round-trips', () => {
   assert.equal(sanitizeState({ ...DEFAULT_STATE, palette: 'neon' }).palette, 'grass');
   assert.equal(sanitizeState({ ...DEFAULT_STATE, palette: 'steel' }).palette, 'steel');
 });
+
+test('skin enum accepts the extra styles and rejects unknown values', () => {
+  for (const skin of ['pro', 'retro', 'glass', 'paper', 'terminal', 'soft']) assert.equal(sanitizeState({ ...DEFAULT_STATE, skin }).skin, skin);
+  assert.equal(sanitizeState({ ...DEFAULT_STATE, skin: 'neon' }).skin, 'pro');
+});

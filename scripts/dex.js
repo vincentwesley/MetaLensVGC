@@ -5,7 +5,7 @@ import pkg from 'pokemon-showdown';
 const { Dex } = pkg;
 
 let sdexCache = null;
-function showdownDex() {
+export function showdownDex() {
   if (!sdexCache) {
     try {
       sdexCache = Dex.mod('champions');

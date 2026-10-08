@@ -15,6 +15,7 @@ import { fetchRanked, renormalizeRanked } from './sources/ranked.js';
 import { buildDex } from './dex.js';
 import { resolveSprites } from './sprites.js';
 import { normalizeSpecies, normalizeTerm } from '../public/js/lib/names.js';
+import { buildPokedex } from './build-pokedex.js';
 import { validateAll } from './validate.js';
 import { printReport } from './report.js';
 
@@ -309,6 +310,8 @@ async function main() {
       ],
     }),
   );
+
+  log(`pokedex: ${JSON.stringify(await buildPokedex(DATA_DIR))}`);
 
   // 8) Validate, then report.
   const errors = await validateAll(DATA_DIR);

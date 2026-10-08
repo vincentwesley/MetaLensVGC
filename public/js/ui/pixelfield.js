@@ -165,7 +165,7 @@ export function installPixelField() {
     let pending = 0;
     addEventListener('resize', () => { clearTimeout(pending); pending = setTimeout(resize, 150); });
     const recolor = () => { readColors(); blobT = -1e9; draw(last / 1000); };
-    new MutationObserver(recolor).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-skin'] });
+    new MutationObserver(recolor).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-skin', 'data-style'] });
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
     if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
       let lx = -999, ly = -999;

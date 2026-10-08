@@ -26,6 +26,18 @@ export function loadRankedFile(reg) {
   return fetchJSON(`data/ranked-${reg}.json`).catch(() => ({ reg, source: 'championsbattledata', seasons: [] }));
 }
 
+/** Pokédex roster for a family ('vgc' | 'natdex'). Empty roster when missing, never throws. */
+export function loadPokedexFile(family = 'vgc') {
+  const path = `data/pokedex-${family}.json`;
+  // failures are not cached (a transient error must not blank the Pokédex for the session);
+  // the section asks once per family, so there is no re-request storm
+  return fetchJSON(path).catch(() => ({ tierOrder: [], species: {} }));
+}
+/** Learnsets for a family, fetched only when a move filter first needs them. null when missing. */
+export function loadLearnsetsFile(family = 'vgc') {
+  return fetchJSON(`data/learnsets-${family}.json`).catch(() => null);
+}
+
 /** Decode (and cache) a regulation's teams file. Kept for the lifetime of the
  *  page so a previously-viewed reg's teams stay available for previousPeriod. */
 export async function getDecoded(reg, dex, decode) {

@@ -56,3 +56,10 @@
 .changelog ul { margin: var(--space-2) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
 .changelog .tag { font-family: var(--font-label); font-size: var(--fs-label); color: var(--accent); }
 .changelog .tag--fix { color: var(--warn); }
+
+/* Style row: six options in a 3x2 grid */
+.settings .segmented--grid { display: grid; grid-template-columns: repeat(3, 1fr); align-self: stretch; }
+.settings .segmented--grid button { border-bottom: 1px solid var(--border); }
+.settings .segmented--grid button:nth-child(3n) { border-right: 0; }
+.settings .segmented--grid button:nth-last-child(-n+3) { border-bottom: 0; }
+[data-style="soft"] .settings .segmented--grid { border-radius: 18px; }

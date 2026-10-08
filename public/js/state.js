@@ -36,7 +36,9 @@ const subs = new Set();
 
 function applyDom(s) {
   const root = document.documentElement;
-  root.setAttribute('data-skin', s.skin);
+  // New styles reuse Pro's data-skin rules; data-style carries the real id (mirrored in prefs-init.js).
+  root.setAttribute('data-skin', s.skin === 'retro' ? 'retro' : 'pro');
+  root.setAttribute('data-style', s.skin);
   root.setAttribute('data-theme', s.theme);
   root.setAttribute('data-palette', s.palette);
   root.setAttribute('data-anim', s.anim ? 'on' : 'off');

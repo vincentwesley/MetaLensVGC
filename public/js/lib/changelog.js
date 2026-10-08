@@ -1,6 +1,17 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.2.0', date: '2026-10-09', title: 'Showdown-style Pokédex, more styles',
+    notes: [
+      { tag: 'NEW', text: 'Pokédex rebuilt like Pokémon Showdown’s teambuilder: tier rows, base stats, abilities, sort by tier, A–Z or any stat.' },
+      { tag: 'NEW', text: 'Pokédex search finds Pokémon, types, abilities and moves; type, ability and move filters (moves match legal learnsets).' },
+      { tag: 'NEW', text: 'Four more styles: Glass, Paper, Terminal and Soft (Pro stays the default).' },
+      { tag: 'IMPROVED', text: 'Pokédex now sits below the usage leaderboard and quadrant.' },
+      { tag: 'IMPROVED', text: 'The tips strip stays pinned while you scroll, until you dismiss it.' },
+      { tag: 'FIX', text: 'Animated sprites keep their proportions (tall or wide Pokémon like Sneasler were stretched).' },
+    ],
+  },
+  {
     version: '1.1.0', date: '2026-10-08', title: 'Settings, palettes, Pokédex',
     notes: [
       { tag: 'NEW', text: 'Settings panel (gear in the header): mode, style, palette, animated sprites, clock, tips.' },
