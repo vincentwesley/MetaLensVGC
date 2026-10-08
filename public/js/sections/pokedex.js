@@ -266,7 +266,9 @@ export default {
     function render() {
       if (!view) return;
       if (!roster) { status.textContent = 'Loading Pokédex…'; status.hidden = false; return; }
-      const sig = [rev, sort, typeof learn === 'object' ? 'L' : learn, tags.map((t) => t.kind + t.value).join('|')].join('~');
+      const chipTest = view?.speciesFilter?.test || null;
+      const chipSig = (view?.state.chips || []).map((c) => `${c.neg ? '!' : ''}${c.kind}:${[].concat(c.value).join('+')}`).join('|');
+      const sig = [rev, sort, chipSig, typeof learn === 'object' ? 'L' : learn, tags.map((t) => t.kind + t.value).join('|')].join('~');
       if (sig === lastSig && shown === lastShown) return;
       const append = sig === lastSig && shown > lastShown; // "Show more": only add the new rows
       lastSig = sig;
@@ -275,7 +277,7 @@ export default {
       const filters = { types: [], abilities: [], moves: [] };
       for (const t of tags) filters[t.kind].push(t.value);
       const usageMode = !official; // official tiers exist for National Dex singles only; VGC and NatDex Doubles tier by usage
-      const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort });
+      const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort, chipTest });
       renderTags();
       segBtns.tier.setAttribute('aria-pressed', String(sort === 'tier'));
       segBtns.name.setAttribute('aria-pressed', String(sort === 'name'));
@@ -296,9 +298,9 @@ export default {
       const rows = res.rows;
       if (!rows.length) {
         const empty = el('div', 'empty-state');
-        const what = tags.map((t) => t.label).join(' + ');
+        const what = [...tags.map((t) => t.label), ...(chipTest ? ['the dashboard filters'] : [])].join(' + ');
         empty.appendChild(el('div', 'empty-state__title', Object.keys(roster.species).length ? `No Pokémon match ${what}` : 'No Pokémon known for this regulation yet'));
-        if (tags.length) empty.appendChild(el('div', null, 'Remove a filter tag above to widen the list.'));
+        if (tags.length || chipTest) empty.appendChild(el('div', null, chipTest ? 'Remove a filter tag or a dashboard filter to widen the list.' : 'Remove a filter tag above to widen the list.'));
         body.appendChild(empty);
         return;
       }

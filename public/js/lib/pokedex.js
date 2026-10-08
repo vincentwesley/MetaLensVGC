@@ -32,7 +32,7 @@ function learnOf(learnsets, name, roster) {
 
 const az = (a, b) => a.name.localeCompare(b.name);
 
-export function dexRows(roster, { usage = new Map(), tierMode = 'official', filters = {}, learnsets = null, sort = 'tier' } = {}) {
+export function dexRows(roster, { usage = new Map(), tierMode = 'official', filters = {}, learnsets = null, sort = 'tier', chipTest = null } = {}) {
   const { types = [], abilities = [], moves = [] } = filters;
   const needsLearnsets = moves.length > 0 && !learnsets;
   const wantAbs = abilities.map(toID);
@@ -45,6 +45,7 @@ export function dexRows(roster, { usage = new Map(), tierMode = 'official', filt
       use: u || null,
     };
   }).filter((r) => {
+    if (chipTest && !chipTest(r.name)) return false; // dashboard chips (cross-filter) narrow the roster too
     if (!types.every((t) => r.types.includes(t))) return false;
     if (wantAbs.length) {
       const have = Object.values(r.abilities).map(toID);

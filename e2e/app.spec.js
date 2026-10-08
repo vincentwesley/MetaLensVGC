@@ -1279,3 +1279,15 @@ test('Showdown mode: switch, sections hidden, EV rules, reload keeps reg, back t
   await expect(page.locator('main [data-section="scanner"]')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('Pokédex follows the dashboard filters, but clicking it adds none', async ({ page }) => {
+  await page.goto('/#chips=type:Dragon');
+  await waitForAllSections(page);
+  const rows = page.locator('[data-section="pokedex"] .dex-row');
+  await expect(rows.first()).toBeVisible();
+  const names = await rows.evaluateAll((els) => els.map((e) => e.textContent));
+  expect(names.length).toBeGreaterThan(0);
+  expect(await page.locator('[data-section="pokedex"] .dex-row .type-pill, [data-section="pokedex"] .dex-row [class*="pill"]').evaluateAll((els) => els.filter((e) => e.textContent.trim() === 'Dragon').length)).toBeGreaterThanOrEqual(names.length);
+  await rows.first().click();
+  await expect(page.locator('#chips .chip')).toHaveCount(1); // still just the Dragon chip
+});
