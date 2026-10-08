@@ -179,8 +179,12 @@ export default {
       table.className = 'data-table';
       const thead = document.createElement('thead');
       const trh = document.createElement('tr');
-      for (const c of cols) {
+      const ladderCols = lastView?.state.source === 'ladder';
+      for (const c0 of cols) {
+        // Smogon usage % is rating-weighted, so it need not follow the unweighted raw count.
+        const c = ladderCols && c0.key === 'n' ? { ...c0, label: 'Raw uses' } : c0;
         const th = document.createElement('th');
+        if (ladderCols && c.key === 'usage') th.setAttribute('data-tip', 'Smogon usage is weighted by player rating, so it can differ from the raw count.');
         th.className = `col-${c.key}${c.key === 'rank' || c.key === 'win' || c.key === 'n' ? ' num' : ''}`;
         th.textContent = c.label;
         if (c.sortable) {
