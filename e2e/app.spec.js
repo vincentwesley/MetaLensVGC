@@ -46,7 +46,7 @@ test('no console errors while loading each regulation and cycling source through
     const ladderBtn = sourceGroup.getByRole('button', { name: 'Ladder', exact: true });
     if (await ladderBtn.isEnabled()) {
       await ladderBtn.click();
-      await expect(page.locator('[data-section="usage"] thead')).toContainText('battles');
+      await expect(page.locator('[data-section="usage"] thead')).toContainText('Raw uses');
       await sourceGroup.getByRole('button', { name: 'Tournaments', exact: true }).click();
       await expect(page.locator('[data-section="usage"] thead')).toContainText('Win %');
     }
