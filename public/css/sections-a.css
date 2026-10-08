@@ -191,3 +191,21 @@ main.grid .section[data-section="quadrant"] {
   .items-table .item-link { flex-wrap: wrap; row-gap: 0; }
   .items-table .item-link__name { white-space: normal; }
 }
+
+/* ---------- Pokédex ---------- */
+.dex-types { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: var(--space-2); }
+.dex-type { border: 2px solid transparent; cursor: pointer; opacity: .55; font: inherit; font-size: var(--fs-small); }
+.dex-type[aria-pressed="true"] { opacity: 1; border-color: var(--ink); }
+.dex-type:focus-visible, .dex-card:focus-visible, .dex-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-2); }
+.dex-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: var(--space-2);
+  background: var(--surface-1); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius);
+  font: inherit; text-align: center; cursor: pointer;
+}
+.dex-card:hover { background: var(--surface-2); }
+.dex-card__name { font-weight: 600; font-size: var(--fs-small); overflow-wrap: anywhere; }
+.dex-card__types { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
+.dex-card__use, .dex-card__num { font-size: var(--fs-small); }
+.dex-more { display: block; margin: var(--space-3) auto 0; padding: 4px 12px; background: var(--surface-1); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font: inherit; }
+.dex-search { width: 200px; }

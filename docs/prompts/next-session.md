@@ -34,7 +34,7 @@ below say what state things are in and what typically needs doing.
   idle CPU, contrast, hints, aria); UX (section nav, tips strip, loading cue); Spread explorer (deep dive) + scanner SP
   check; cross-filters never blank; motion budget; Meta by country; Archetype share by week; Library "Filter" scans the
   team; leaderboard search + Change column; Copy link; scanner cards never say "Insufficient data" after a scan.
-- **Weekly refresh** (`.github/workflows/refresh-data.yml`, Mondays 06:00 UTC + manual "Run workflow"): verified twice
+- **Weekly refresh** (`.github/workflows/refresh-data.yml`, Mondays 00:00 UTC (08:00 GMT+8) + manual "Run workflow"): verified twice
   by hand (latest run 36710957061, 2026-09-30, success in 17.5 min with the restored `data-raw` cache; data commit
   touched only `public/data`). On any failure it opens/comments the GitHub issue "Weekly data refresh failed" (run link,
   failing step, log tail) and commits nothing, so the site keeps the last good data; the next success closes the issue.
