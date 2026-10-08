@@ -416,7 +416,7 @@ async function boot() {
       // Ladder / in-game ranked rows are per species: which chips can apply there.
       const speciesFilter = speciesChipFilter(state.chips, dex);
       const view = {
-        state, reg: state.reg, family: family === 'showdown' ? 'natdex' : 'vgc', officialTiers: state.reg === 'ND', regMeta, rules: rulesFor(regMeta), manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
+        state, reg: state.reg, family: family === 'showdown' ? 'natdex' : 'vgc', officialTiers: family === 'showdown', regMeta, rules: rulesFor(regMeta), manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
         ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams,
       };
       lastView = view;

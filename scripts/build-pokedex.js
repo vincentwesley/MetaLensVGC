@@ -8,6 +8,7 @@ const { Dex } = pkg;
 import { showdownDex } from './dex.js';
 
 const NATDEX_ORDER = ['AG', 'Uber', 'OU', 'UUBL', 'UU', 'RUBL', 'RU', 'NUBL', 'NU', 'PUBL', 'PU', 'ZUBL', 'ZU', 'NFE', 'LC'];
+const DOUBLES_ORDER = ['DUber', 'DOU', 'DBL', 'DUU', 'NFE', 'LC']; // Showdown's Doubles tiers (gen9 Doubles OU; NatDex Doubles has no list of its own)
 const VGC_ORDER = ['Uber', 'OU', 'UUBL', 'UU', 'RUBL', 'RU', 'NUBL', 'NU', 'PUBL', 'PU', 'NFE', 'LC'];
 
 const tierOf = (t) => {
@@ -20,6 +21,7 @@ export function build(dex, { natdex }) {
   const learn = {};
   const moveNames = {};
   const present = new Set();
+  const presentD = new Set();
   const moveOk = (m) => m.exists && (natdex ? !['CAP', 'Custom', 'Future', 'LGPE', 'Unobtainable'].includes(m.isNonstandard) : !m.isNonstandard);
   for (const sp of dex.species.all()) {
     if (!sp.exists || !sp.baseStats) continue;
@@ -33,6 +35,10 @@ export function build(dex, { natdex }) {
     const b = sp.baseStats;
     species[sp.name] = { num: sp.num, types: sp.types, bs: [b.hp, b.atk, b.def, b.spa, b.spd, b.spe], abilities: ab, tier };
     present.add(tier);
+    if (natdex) {
+      const dt = tierOf(sp.doublesTier);
+      if (dt) { species[sp.name].dtier = dt; presentD.add(dt); }
+    }
     const ids = [];
     for (const id of dex.species.getMovePool(sp.id, natdex)) {
       const m = dex.moves.get(id);
@@ -44,19 +50,21 @@ export function build(dex, { natdex }) {
   }
   const order = (natdex ? NATDEX_ORDER : VGC_ORDER).filter((t) => present.has(t));
   const extra = [...present].filter((t) => !order.includes(t)); // ponytail: unexpected tiers appended, not silently dropped
-  return { species, learn, moveNames, tierOrder: [...order, ...extra] };
+  return { species, learn, moveNames, tierOrder: [...order, ...extra], dTierOrder: DOUBLES_ORDER.filter((t) => presentD.has(t)) };
 }
+
+const natdexOnly = (name, o, d) => (name === 'natdex' ? { ...o, dTierOrder: d } : o);
 
 export async function buildPokedex(dataDir) {
   await mkdir(dataDir, { recursive: true });
   const generated = new Date().toISOString();
   const out = {};
   for (const [name, dex, natdex] of [['vgc', showdownDex(), false], ['natdex', Dex, true]]) {
-    const { species, learn, moveNames, tierOrder } = build(dex, { natdex });
+    const { species, learn, moveNames, tierOrder, dTierOrder } = build(dex, { natdex });
     const moves = Object.fromEntries(Object.keys(moveNames).sort().map((k) => [k, moveNames[k]]));
     // ponytail: no moveList index; learnsets-natdex.json is ~1.2MB raw, under the 1.5MB budget
     const raw = JSON.stringify({ moves, learn });
-    await writeFile(path.join(dataDir, `pokedex-${name}.json`), JSON.stringify({ generated, tierOrder, species }));
+    await writeFile(path.join(dataDir, `pokedex-${name}.json`), JSON.stringify(natdexOnly(name, { generated, tierOrder, species }, dTierOrder)));
     await writeFile(path.join(dataDir, `learnsets-${name}.json`), raw);
     out[name] = { species: Object.keys(species).length, learnBytes: raw.length };
   }

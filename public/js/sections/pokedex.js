@@ -94,7 +94,7 @@ export default {
     root.appendChild(card);
 
     let view = null, roster = null, family = 'vgc', official = false, use = new Map(), rev = 0, lastSig = '';
-    let sort = 'name', shown = SHOWN, learn; // learn: undefined | 'loading' | 'failed' | {moves, learn}
+    let lastReg = null, sort = 'name', shown = SHOWN, learn; // learn: undefined | 'loading' | 'failed' | {moves, learn}
     let tags = [], opts = [], active = -1, usageKey = [], timer = null;
     const cache = new Map(); // name -> row element (cleared when the roster arrives)
     let rosterFor = null, lastShown = 0;
@@ -277,7 +277,7 @@ export default {
       const filters = { types: [], abilities: [], moves: [] };
       for (const t of tags) filters[t.kind].push(t.value);
       const usageMode = !official; // official tiers exist for National Dex singles only; VGC and NatDex Doubles tier by usage
-      const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort, chipTest });
+      const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort, chipTest, tierKey: view?.reg === 'NDD' ? 'dtier' : 'tier' });
       renderTags();
       segBtns.tier.setAttribute('aria-pressed', String(sort === 'tier'));
       segBtns.name.setAttribute('aria-pressed', String(sort === 'name'));
@@ -327,10 +327,10 @@ export default {
       update(v) {
         view = v;
         const st = v.state;
-        if (official !== !!v.officialTiers) { official = !!v.officialTiers; rev++; }
+        if (official !== !!v.officialTiers || lastReg !== v.reg) { official = !!v.officialTiers; lastReg = v.reg; rev++; }
         const newFamily = v.family || 'vgc';
         if (newFamily !== family) {
-          family = newFamily; learn = undefined; tags = tags.filter((t) => t.kind !== 'moves');
+          family = newFamily; sort = family === 'vgc' ? 'name' : 'tier'; learn = undefined; tags = tags.filter((t) => t.kind !== 'moves');
           rev++; shown = SHOWN;
         }
         ensureRoster();

@@ -32,7 +32,7 @@ function learnOf(learnsets, name, roster) {
 
 const az = (a, b) => a.name.localeCompare(b.name);
 
-export function dexRows(roster, { usage = new Map(), tierMode = 'official', filters = {}, learnsets = null, sort = 'tier', chipTest = null } = {}) {
+export function dexRows(roster, { usage = new Map(), tierMode = 'official', filters = {}, learnsets = null, sort = 'tier', chipTest = null, tierKey = 'tier' } = {}) {
   const { types = [], abilities = [], moves = [] } = filters;
   const needsLearnsets = moves.length > 0 && !learnsets;
   const wantAbs = abilities.map(toID);
@@ -41,7 +41,7 @@ export function dexRows(roster, { usage = new Map(), tierMode = 'official', filt
     return {
       name, num: s.num, types: s.types, bs: s.bs, bst: s.bs.reduce((a, b) => a + b, 0),
       abilities: s.abilities || {},
-      tier: tierMode === 'usage' ? usageTier(u?.rank, u ? u.pct : 0) : s.tier || 'Untiered',
+      tier: tierMode === 'usage' ? usageTier(u?.rank, u ? u.pct : 0) : s[tierKey] || 'Untiered',
       use: u || null,
     };
   }).filter((r) => {
@@ -60,7 +60,7 @@ export function dexRows(roster, { usage = new Map(), tierMode = 'official', filt
 
   const groups = [];
   if (sort === 'tier') {
-    const order = tierMode === 'usage' ? USAGE_TIERS : [...roster.tierOrder, 'Untiered'];
+    const order = tierMode === 'usage' ? USAGE_TIERS : [...(tierKey === 'dtier' ? roster.dTierOrder || [] : roster.tierOrder), 'Untiered'];
     const idx = (r) => { const i = order.indexOf(r.tier); return i < 0 ? order.length : i; };
     rows.sort((a, b) => idx(a) - idx(b) || az(a, b));
     rows.forEach((r, i) => {
