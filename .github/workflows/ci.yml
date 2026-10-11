@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+      - name: Identity check (only vincentwesley commits)
+        run: |
+          bad=$(git log --format='%an|%ae|%cn|%ce' | tr '|' '\n' | sort -u | grep -vE '^(vincentwesley|Vincent Wesley|GitHub|github-actions\[bot\]|dependabot\[bot\]|221810966\+vincentwesley@users\.noreply\.github\.com|noreply@github\.com|[0-9]+\+(github-actions|dependabot)\[bot\]@users\.noreply\.github\.com)$' || true)
+          if [ -n "$bad" ]; then echo "Unexpected commit identities:"; echo "$bad"; exit 1; fi
+      - run: npm ci --ignore-scripts
+      - run: npm test

@@ -9,3 +9,7 @@ playwright-report/
 promo/
 graphify-out/
 .claude/settings.local.json
+
+# local Claude Code config (never tracked)
+.claude/settings.json
+.claude/settings.local.json

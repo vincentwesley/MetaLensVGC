@@ -103,7 +103,7 @@ export default {
 
     // --- credits ---
     const { card: credCard, body: credBody } = sectionCard('Data credits');
-    credBody.appendChild(elm('p', null, 'Sprites from Pokémon Showdown (play.pokemonshowdown.com).'));
+    credBody.appendChild(elm('p', null, "Pokémon and its characters and sprites are trademarks and copyrighted works of Nintendo, Game Freak, Creatures Inc. and The Pokémon Company. Sprites are hot-linked from Pokémon Showdown's sprite server (play.pokemonshowdown.com); the Showdown project does not own them."));
     credBody.appendChild(elm('p', null, 'Data from Limitless (play.limitlesstcg.com), Limitless VGC (limitlessvgc.com) and Smogon (smogon.com).'));
     const rankedCredit = elm('p');
     const rankedLink = document.createElement('a');
@@ -113,7 +113,7 @@ export default {
     rankedLink.textContent = RANKED_ATTRIBUTION.text;
     rankedCredit.append(rankedLink, document.createTextNode(' (in-game ranked ladder data).'));
     credBody.appendChild(rankedCredit);
-    credBody.appendChild(elm('p', 'mth-disclaimer', 'MetaLens VGC is a fan project and is not affiliated with Nintendo, Game Freak, Creatures or The Pokémon Company.'));
+    credBody.appendChild(elm('p', 'mth-disclaimer', 'MetaLens VGC is an unofficial, non-commercial fan project and is not affiliated with Nintendo, Game Freak, Creatures Inc. or The Pokémon Company.'));
     body.appendChild(credCard);
 
     let lastView = null;

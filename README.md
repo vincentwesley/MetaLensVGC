@@ -79,9 +79,15 @@ filter leaves too little data, the widget says **Insufficient data** instead of 
 | [`pokemon-showdown`](https://www.npmjs.com/package/pokemon-showdown) npm package (`champions` mod) | Dex: types, base stats, abilities, move data, Mega Stones | Covers every Champions and Z-A Mega, so no override table was needed |
 | [Pokémon Showdown sprites](https://play.pokemonshowdown.com/sprites/) | gen5 sprites, plus gen5ani/ani animated sprites | Availability is resolved at build time, so the browser never requests missing sprites |
 
-The data belongs to its sources and the sprites belong to Pokémon Showdown and their artists. This
-repository's code is MIT-licensed. MetaLens VGC is a fan project and is not affiliated with
-Nintendo, Game Freak, Creatures or The Pokémon Company.
+Pokémon and its characters and sprites are trademarks and copyrighted works of Nintendo, Game Freak, Creatures Inc. and The Pokémon Company. Sprites are hot-linked from Pokémon Showdown's sprite server (the Showdown project does not own them). MetaLens VGC is an unofficial, non-commercial fan project and is not affiliated with them.
+The data belongs to its sources. This repository's code is MIT-licensed (see `LICENSE`); third-party
+components and data are listed in `THIRD_PARTY_NOTICES.md`.
+
+## Data and privacy
+
+- Player names and countries come from public tournament results (Limitless, official event pages) and are credited above. To request removal of your name, open an issue or contact the owner through GitHub (@vincentwesley).
+- No analytics, no cookies, no accounts.
+- The site only calls its own origin and the sprite host (plus Google Fonts for typefaces).
 
 ## Decisions and known gaps
 

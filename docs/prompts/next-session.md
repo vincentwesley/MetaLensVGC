@@ -3,7 +3,7 @@ Handover written 2026-10-09 after v1.3.0. Everything is live and tests are green
 
 ## Before anything
 1. Local clone: `C:\Coding Projects\VGCMetaScope`. `git pull --rebase` first: the weekly bot (`metalensvgc-bot`, "chore: refresh data") pushes to the same branch.
-2. Read `CLAUDE.md` in full (hard rules, data notes, "v1.1.0 / v1.2.0 / v1.3.0 additions") and `docs/TESTING.md` (coverage ledger). Don't re-verify what the ledger covers unless its code changed. Don't edit `.claude/settings.json`, `.gitattributes` or the graphify / skill-trigger parts of `CLAUDE.md`.
+2. Read `CLAUDE.md` in full (hard rules, data notes, "v1.1.0 / v1.2.0 / v1.3.0 additions") and `docs/TESTING.md` (coverage ledger). Don't re-verify what the ledger covers unless its code changed. Don't edit `.gitattributes` or the graphify / skill-trigger parts of `CLAUDE.md`.
 
 ## How to work here
 - **One branch**: `claude/pokemon-vgc-metagame-dashboard-9whe1a` is the default branch and Cloudflare Pages' production branch (no `main`). Commit in logical steps and push to it (that deploys).
