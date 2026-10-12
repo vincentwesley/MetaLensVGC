@@ -1,0 +1,17 @@
+/* v1.4.0 digest */
+.digest__tools { display: flex; gap: var(--space-2, 8px); margin-bottom: var(--space-3, 12px); }
+.digest__head { margin: 0 0 var(--space-3, 12px); color: var(--muted); font-size: var(--fs-small); }
+.digest__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4, 16px); }
+.digest__h { margin: 0 0 var(--space-2, 8px); font-size: var(--fs-small); }
+.digest__list { list-style: none; margin: 0 0 var(--space-3, 12px); padding: 0; }
+.digest__list li { display: flex; justify-content: space-between; gap: var(--space-3, 12px); padding: 2px 0; font-variant-numeric: tabular-nums; }
+.digest__val.is-up { color: var(--up); }
+.digest__val.is-down { color: var(--down); }
+.digest__none { color: var(--muted); }
+.digest__note { margin: var(--space-2, 8px) 0 0; }
+@media print {
+  body * { visibility: hidden; }
+  .digest-card, .digest-card * { visibility: visible; }
+  .digest-card { position: absolute; left: 0; top: 0; width: 100%; }
+  .digest__tools { display: none; }
+}

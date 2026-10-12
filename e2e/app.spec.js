@@ -1251,7 +1251,7 @@ test('Showdown mode: switch, sections hidden, EV rules, reload keeps reg, back t
   await page.locator('.modeswitch button[data-mode="showdown"]').click();
   await expect(page.locator('html')).toHaveAttribute('data-family', 'showdown');
   await expect.poll(() => page.url()).toContain('reg=ND');
-  for (const id of ['quadrant', 'archetypes', 'countries', 'library', 'scanner']) {
+  for (const id of ['archetypes', 'countries', 'library', 'scanner', 'events']) {
     await expect(page.locator(`main [data-section="${id}"]`)).toBeHidden();
     await expect(page.locator(`#secnav a[data-jump="${id}"]`)).toBeHidden();
   }

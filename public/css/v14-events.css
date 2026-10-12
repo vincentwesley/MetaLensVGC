@@ -1,0 +1,13 @@
+/* v1.4.0 events */
+.ev-list { display: grid; gap: 10px; }
+.ev-row { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.ev-row__head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ev-row__name { font-weight: 600; overflow-wrap: anywhere; }
+.ev-row__sub { color: var(--muted); font-size: 0.85em; }
+.ev-winner { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 6px; margin: 0 -6px; background: none; border: 0; border-radius: 6px; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ev-winner:hover, .ev-winner:focus-visible { background: color-mix(in srgb, currentColor 10%, transparent); }
+.ev-winner__lbl { color: var(--muted); font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; }
+.ev-winner__who { font-weight: 500; }
+.ev-winner__mons { display: inline-flex; gap: 2px; }
+.ev-mix { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 1px; }
+.ev-mix__seg { min-width: 4px; }

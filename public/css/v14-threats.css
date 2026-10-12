@@ -1,0 +1,15 @@
+/* v1.4.0 threats */
+.threats__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.threats__row {
+  display: grid; grid-template-columns: 40px minmax(90px, 1fr) auto minmax(110px, 1.2fr);
+  align-items: center; gap: 10px; padding: 4px 8px; cursor: pointer;
+  border: 1px solid transparent;
+}
+.threats__row:hover, .threats__row:focus-visible { border-color: var(--border); background: var(--surface-2); }
+.threats__checks { color: var(--ink-2); font-size: var(--fs-small); white-space: nowrap; }
+@media (max-width: 560px) {
+  .threats__row { grid-template-columns: 40px 1fr; }
+  .threats__checks, .threats__row .usage-bar { grid-column: 2; }
+}
+.threats__row .usage-bar__track { display: block; }
+.threats__row .usage-bar__fill { display: block; }

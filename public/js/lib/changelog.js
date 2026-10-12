@@ -1,6 +1,17 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.4.0', date: '2026-10-12', title: 'Five new sections',
+    notes: [
+      { tag: 'NEW', text: 'Threats: which Pokémon check the most of the top 12 (from Smogon ladder counters).' },
+      { tag: 'NEW', text: 'Moves & Tera: field-wide move usage, and Tera types in NatDex Doubles.' },
+      { tag: 'NEW', text: 'Compare Periods: two Smogon months side by side with risers, fallers and item changes.' },
+      { tag: 'NEW', text: 'Event Results: each tournament’s winner and top-cut archetype mix.' },
+      { tag: 'NEW', text: 'Weekly Digest: a shareable text summary of the current view (copy or print).' },
+      { tag: 'NEW', text: 'Showdown quadrant: rating-weighted usage vs equal-weight usage, labelled as not win rate.' },
+    ],
+  },
+  {
     version: '1.3.1', date: '2026-10-12', title: 'Smoke-test fixes',
     notes: [
       { tag: 'FIX', text: 'Deep dive "Checks & counters" showed NaN%: Smogon changed its counter format; now shows the KO/switch rate with its spread.' },

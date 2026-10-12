@@ -1,0 +1,9 @@
+/* Moves & Tera: CSS bar rows (no chart lib). */
+.moves-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; }
+.moves-bar__fill { height: 10px; min-width: 2px; max-width: 100%; background: var(--accent); }
+.moves-bar__val { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.moves-tera { display: grid; grid-template-columns: minmax(70px, auto) 1fr; gap: 6px 8px; align-items: center; }
+[data-section="moves"] .data-table { table-layout: fixed; width: 100%; }
+[data-section="moves"] .data-table th:nth-child(1) { width: 40%; }
+[data-section="moves"] .data-table th:nth-child(2) { width: 24%; }
+[data-section="moves"] .data-table td { overflow-wrap: anywhere; }

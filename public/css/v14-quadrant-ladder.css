@@ -1,0 +1,2 @@
+/* v1.4.0 quadrant-ladder: the ladder variant reuses .quadrant__chart; its hint is long, keep it readable. */
+[data-family="showdown"] [data-section="quadrant"] .click-hint { max-width: 70ch; }

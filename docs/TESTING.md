@@ -267,6 +267,11 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Fixed with unit tests (trimMon shapes, aggregate no-NaN, build() with seen set, validate roster check) and an e2e check that ND text has no "team(s)". Cloudflare Web Analytics beacon: turn it off in the Pages dashboard (CSP unchanged on purpose).
 - Not run: Lighthouse, real phone, offline fonts.
 
+### v1.4.0 (five new sections + Showdown quadrant), 2026-10-12
+- New: Threats, Moves & Tera, Compare Periods, Event Results (VGC only), Weekly Digest (all families), quadrant ladder variant in Showdown. Each has pure-lib unit tests and its own e2e/<name>.spec.js (run with the rest: `npx playwright test`).
+- Headless screenshots at 1440/390 for M-C and ND: caught a 390px overflow (Showdown quadrant span-12 created implicit grid tracks; now only >=1101px) and an invisible Threats bar (fill was display:inline). Quadrant markers are sprites, so they only show with sprites online.
+- Not run: Lighthouse (not installed), real phone, light theme / other styles for the new sections, Print output of the digest.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

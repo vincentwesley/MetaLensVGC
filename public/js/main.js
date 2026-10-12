@@ -23,11 +23,11 @@ import { rulesFor } from './lib/stats.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'quadrant', 'pokedex', 'types', 'items', 'archetypes',
-  'teammates', 'speed', 'trends', 'countries', 'library', 'scanner', 'methodology',
+  'teammates', 'speed', 'trends', 'countries', 'library', 'scanner', 'threats', 'moves', 'compare', 'events', 'digest', 'methodology',
 ];
 
 // Sections with no data in Showdown mode (no team sheets); hidden by CSS and skipped in updates.
-const TEAM_ONLY = new Set(['quadrant', 'archetypes', 'countries', 'library', 'scanner']);
+const TEAM_ONLY = new Set(['archetypes', 'countries', 'library', 'scanner', 'events']);
 
 // Every chart is created through this: a full redraw (setOption with notMerge)
 // while the pointer is over a chart disposes the tooltip component while a show

@@ -866,8 +866,8 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
 .segmented button[hidden] { display: none; }
 .pill[hidden], .card[hidden], .mth-fact-list [hidden] { display: none; }
 /* Showdown mode has ladder data only: team-sheet sections and tournament filters are hidden. */
-[data-family="showdown"] :is([data-section="quadrant"], [data-section="archetypes"], [data-section="countries"], [data-section="library"], [data-section="scanner"]),
-[data-family="showdown"] :is(a[data-jump="archetypes"], a[data-jump="countries"], a[data-jump="library"], a[data-jump="scanner"]),
+[data-family="showdown"] :is([data-section="events"], [data-section="archetypes"], [data-section="countries"], [data-section="library"], [data-section="scanner"]),
+[data-family="showdown"] :is(a[data-jump="events"], a[data-jump="archetypes"], a[data-jump="countries"], a[data-jump="library"], a[data-jump="scanner"]),
 [data-family="showdown"] :is([data-g="source"], [data-g="tier"], [data-g="place"], [data-g="dates"]) { display: none; }
 [data-family="showdown"] .howto__text span:has(a[data-jump="scanner"]) { display: none; }
 
@@ -912,3 +912,23 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
   [data-family="showdown"] main.grid .section[data-section="methodology"] { order: 11; }
   [data-family="showdown"] main.grid .section.creator { order: 12; }
 }
+
+/* v1.4.0: Showdown order with the quadrant (full width) and the new sections after trends. */
+[data-family="showdown"] main.grid .section[data-section="quadrant"] { order: 6; }
+@media (min-width: 1101px) { [data-family="showdown"] main.grid .section[data-section="quadrant"] { grid-column: span 12; } }
+[data-family="showdown"] main.grid .section[data-section="pokedex"] { order: 7; }
+[data-family="showdown"] main.grid .section[data-section="types"] { order: 8; }
+[data-family="showdown"] main.grid .section[data-section="items"] { order: 9; }
+[data-family="showdown"] main.grid .section[data-section="speed"] { order: 10; }
+[data-family="showdown"] main.grid .section[data-section="trends"] { order: 11; }
+[data-family="showdown"] main.grid .section:is([data-section="threats"], [data-section="moves"], [data-section="compare"], [data-section="digest"]) { order: 12; }
+[data-family="showdown"] main.grid .section[data-section="methodology"] { order: 13; }
+[data-family="showdown"] main.grid .section.creator { order: 14; }
+[data-family="showdown"] .secnav a[data-jump="quadrant"] { order: 5; }
+[data-family="showdown"] .secnav a[data-jump="pokedex"] { order: 6; }
+[data-family="showdown"] .secnav a[data-jump="types"] { order: 7; }
+[data-family="showdown"] .secnav a[data-jump="items"] { order: 8; }
+[data-family="showdown"] .secnav a[data-jump="speed"] { order: 9; }
+[data-family="showdown"] .secnav a[data-jump="trends"] { order: 10; }
+[data-family="showdown"] .secnav a:is([data-jump="threats"], [data-jump="moves"], [data-jump="compare"], [data-jump="digest"]) { order: 11; }
+[data-family="showdown"] .secnav a[data-jump="methodology"] { order: 12; }

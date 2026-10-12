@@ -102,3 +102,18 @@ export function ladderPairs(mons, limit = 15) {
     .sort((x, y) => y.score - x.score || x.keys.join().localeCompare(y.keys.join()))
     .slice(0, limit);
 }
+
+/**
+ * Showdown-ladder quadrant: Smogon publishes no win rates, so this plots how rating-weighted usage compares
+ * with raw usage. x = `usage` (rating-weighted), y = `expected` = raw_i / sum(raw) * sum(usage), the same unit as
+ * usage if every battle counted equally. usage > expected = favoured by higher-rated players. Species without a
+ * raw count are skipped (not guessed). Top `n` by usage; null when nothing is plottable.
+ */
+export function ladderQuadrant(mons, n = 40) {
+  const ok = (mons || []).filter((m) => m.usage > 0 && m.raw > 0);
+  const sumRaw = ok.reduce((a, m) => a + m.raw, 0);
+  const sumUse = ok.reduce((a, m) => a + m.usage, 0);
+  if (!sumRaw) return null;
+  return ok.sort((a, b) => b.usage - a.usage).slice(0, n)
+    .map((m) => ({ key: m.key, usage: m.usage, raw: m.raw, expected: (m.raw / sumRaw) * sumUse, lean: m.usage / ((m.raw / sumRaw) * sumUse) }));
+}

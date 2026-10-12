@@ -287,3 +287,6 @@ These skills are available in every session. The user never types slash commands
 
 ### v1.3.1 notes
 - Smogon chaos counters are objects `{n,p,d}`; `trimMon` stores `[p, d, n]` (n<30 dropped), `ladderMerge` sorts by p-4d. The VGC Pokédex roster adds every species seen in `dex.json` even if the champions mod marks it Past/Future/Illegal (untiered, sorted last). Showdown-mode text must not say "teams" (e2e guards it). The Tera card shows only in the natdex family ("Tera is banned" for ND).
+
+### v1.4.0 notes
+- New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.

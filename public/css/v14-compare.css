@@ -1,0 +1,12 @@
+/* Compare Periods */
+.cmp-controls { align-items: flex-end; }
+.cmp-pick { display: flex; flex-direction: column; gap: 2px; }
+.cmp-note { margin: var(--space-2) 0; color: var(--ink-2); font-size: var(--fs-small); }
+.cmp-note:empty { display: none; }
+.cmp-movers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-4); }
+@media (max-width: 600px) { .cmp-movers { grid-template-columns: 1fr; } }
+[data-section="compare"] table.data-table tbody tr { cursor: pointer; }
+[data-section="compare"] table.data-table tbody tr:hover { background: var(--surface-2); }
+@media (max-width: 700px) { [data-section="compare"] table.data-table { display: block; max-width: 100%; overflow-x: auto; } }
+.cmp-col { min-width: 0; }
+@media (max-width: 600px) { .cmp-movers { grid-template-columns: minmax(0, 1fr); } }
