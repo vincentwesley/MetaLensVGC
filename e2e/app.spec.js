@@ -618,7 +618,7 @@ test('Items under Source=Ladder without data says "No ladder data"; teammate rat
   const row = page.locator('main [data-section="teammates"] .card').filter({ hasText: 'Teammate rate' }).locator('.sb-row').first();
   await row.scrollIntoViewIfNeeded();
   await expect(row).toHaveAttribute('role', 'button');
-  await expect(row).toHaveAttribute('data-tip', /Show only teams with/);
+  await expect(row).toHaveAttribute('data-tip', /Filter to .* and /);
 });
 
 test('no chart aria-label contains NaN or undefined (default view and M-B)', async ({ page }) => {
@@ -1302,4 +1302,24 @@ test('Showdown teammates: heatmap and top pairs are filled from ladder data; a p
   expect(await rows.count()).toBeGreaterThan(5);
   await rows.first().click();
   await expect(page.locator('#chips .chip')).toHaveCount(1);
+});
+
+test('Showdown (ND): no "team(s)" wording anywhere in the main page', async ({ page }) => {
+  await page.goto('/#reg=ND');
+  await waitForAllSections(page);
+  const text = await page.locator('main').evaluate((m) => {
+    const out = [];
+    const w = document.createTreeWalker(m, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const el = n.parentElement;
+      if (el.closest('script,style') || !el.checkVisibility()) continue;
+      out.push(n.data);
+    }
+    // tooltips live in attributes
+    for (const el of m.querySelectorAll('[data-tip],[title],[aria-label]')) {
+      if (el.checkVisibility()) out.push(el.dataset.tip || '', el.title || '', el.getAttribute('aria-label') || '');
+    }
+    return out.join('\n');
+  });
+  expect(text.match(/.{0,50}\bteams?\b.{0,30}/gi) || []).toEqual([]);
 });

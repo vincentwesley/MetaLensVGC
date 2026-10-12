@@ -88,7 +88,7 @@ export default {
     btnLift.setAttribute('data-tip', 'Lift = P(both) / (P(a) × P(b)). 1.0 = no relationship; >1 = seen together more than chance.');
     modeSeg.append(btnRaw, btnLift);
     controls.appendChild(modeSeg);
-    const heatHint = clickHint('How often two Pokémon share a team. Click a cell: show only teams with both. Shift-click to exclude.');
+    const heatHint = clickHint('How often two Pokémon share a team. Click a cell: filter to both. Shift-click to exclude.');
     heat.body.append(heatHint, controls);
 
     const heatChartEl = document.createElement('div');
@@ -152,7 +152,7 @@ export default {
       heatChartEl.style.display = 'none';
       controls.style.display = 'none';
       heatTitle.textContent = 'Ranked teammate order';
-      heatHint.textContent = 'Each row is a Pokémon and its usual teammates. Click a row: show only that Pokémon and its teams.';
+      heatHint.textContent = 'Each row is a Pokémon and its usual teammates. Click a row: filter the dashboard to that Pokémon.';
       heatEmptyEl.textContent = '';
       lastKeys = [];
       const season = rankedSeason(view.ranked, view.state.from, view.state.to);
@@ -185,14 +185,14 @@ export default {
     function renderHeat(view, theme) {
       controls.style.display = '';
       heatTitle.textContent = 'Teammate co-usage';
-      heatHint.textContent = 'How often two Pokémon share a team. Click a cell: show only teams with both. Shift-click to exclude.';
+      heatHint.textContent = 'How often two Pokémon share a team. Click a cell: filter to both. Shift-click to exclude.';
       if (view.state.source === 'ranked') { renderRankedTeammates(view); return; }
       const merged = view.state.source === 'ladder' ? ladderMerge(view.ladder, view.state.from, view.state.to, view.dex) : null;
       const lad = merged ? ladderCoMatrix(merged.mons) : null;
       if (view.state.source === 'ladder') {
         controls.style.display = 'none';
         heatTitle.textContent = 'Teammate co-usage (Smogon ladder)';
-        heatHint.textContent = 'Each cell is the row Pokémon’s teammate share of the column Pokémon (ladder data lists each Pokémon’s top 20 teammates). Grey = not in its top 20. Click a cell: show only teams with both.';
+        heatHint.textContent = 'Each cell is the row Pokémon’s teammate share of the column Pokémon (ladder data lists each Pokémon’s top 20 teammates). Grey = not in its top 20. Click a cell: filter to both.';
         ctx.meta(heat.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
         if (!lad || lad.keys.length < 2) {
           heatChartEl.style.display = 'none';
@@ -314,13 +314,13 @@ export default {
 
     // --- top cores ---------------------------------------------------------
     const coresWrap = document.createElement('div');
-    const coresHint = clickHint('Most common trios of Pokémon. Click a row: show only teams running all three.');
+    const coresHint = clickHint('Most common trios of Pokémon. Click a row: filter to all three.');
     const coresTitle = coresCard.el.querySelector('h3');
     coresCard.body.append(coresHint, coresWrap);
     function renderLadderCores(view) {
       const merged = ladderMerge(view.ladder, view.state.from, view.state.to, view.dex);
       coresTitle.textContent = 'Top pairs (Smogon ladder)';
-      coresHint.textContent = 'Derived from Smogon teammate data, not counted teams: pair score = usage of one × its teammate share of the other, averaged both ways. Click a row: show only teams with both.';
+      coresHint.textContent = 'Derived from Smogon teammate data: pair score = usage of one × its teammate share of the other, averaged both ways. Click a row: filter to both.';
       ctx.meta(coresCard.meta, { source: 'Ladder (Smogon)', n: merged?.battles ?? 0, unit: 'battles' });
       const pairs = merged ? ladderPairs(merged.mons) : [];
       if (!pairs.length) { coresWrap.appendChild(emptyState('No Smogon ladder data for this period.', 'No pairs')); return; }
@@ -350,7 +350,7 @@ export default {
       coresWrap.textContent = '';
       if (view.state.source === 'ladder') { renderLadderCores(view); return; }
       coresTitle.textContent = 'Top cores';
-      coresHint.textContent = 'Most common trios of Pokémon. Click a row: show only teams running all three.';
+      coresHint.textContent = 'Most common trios of Pokémon. Click a row: filter to all three.';
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
         coresWrap.appendChild(emptyState(ranked ? RANKED_NA : 'Switch Source to Tournaments to see top cores.', 'Tournament-only view'));
@@ -400,7 +400,7 @@ export default {
     const ladderSelect = document.createElement('select');
     ladderSelect.setAttribute('aria-label', 'Pokémon to show teammates for');
     ladderControls.append(ladderLabel, ladderSelect);
-    const rateHint = clickHint('Share of the picked Pokémon\'s teams that also run each teammate. Click a row: show only teams with both.');
+    const rateHint = clickHint('Share of the picked Pokémon\'s usage that also includes each teammate. Click a row: filter to both.');
     const ladderList = document.createElement('div');
     ladderCard.body.append(rateHint, ladderControls, ladderList);
 
@@ -435,7 +435,7 @@ export default {
         row.className = 'sb-row sb-row--clickable';
         row.tabIndex = 0;
         row.setAttribute('role', 'button');
-        row.dataset.tip = `Show only teams with ${key} and ${t.name}`;
+        row.dataset.tip = `Filter to ${key} and ${t.name}`;
         row.appendChild(ctx.sprite(t.name, { size: 'xs' }));
         const name = document.createElement('div');
         name.className = 'sb-names';

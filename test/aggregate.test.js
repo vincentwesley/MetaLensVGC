@@ -563,3 +563,12 @@ test('filterTeams: country chip keeps that country; NOT country drops it', () =>
   assert.deepEqual(filterTeams(teams, {}, [{ kind: 'country', value: 'BR', neg: false }]).map((x) => x.country), ['BR']);
   assert.deepEqual(filterTeams(teams, {}, [{ kind: 'country', value: 'BR', neg: true }]).map((x) => x.country), ['US']);
 });
+
+test('ladderMerge counters never NaN, ranked by p-4d; realTera drops Nothing', async () => {
+  const { ladderMerge, realTera } = await import('../public/js/lib/aggregate.js');
+  const m = ladderMerge({ cutoff: 1695, months: [{ month: '2026-09', battles: 1, url: '', mons: { A: { usage: 1, raw: 1, counters: { X: [0.6, 0.2, 50], Y: [0.5, 0.0, 50], Legacy: [{ n: 1 }, 0], Bad: [NaN, 0] } } } }] });
+  assert.deepEqual(m.mons[0].counters.map((c) => c.name), ['Y', 'X']);
+  assert.ok(m.mons[0].counters.every((c) => Number.isFinite(c.score) && Number.isFinite(c.dev)));
+  assert.deepEqual(realTera([{ name: 'Nothing' }, { name: 'Fire' }]), [{ name: 'Fire' }]);
+  assert.deepEqual(realTera([{ name: 'nothing' }]), []);
+});

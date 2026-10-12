@@ -27,3 +27,10 @@ test('trimMon keeps top 12 Tera Types as fractions; empty for Champions', () => 
 test('rollingMonths = current + 2 before, across year boundary', () => {
   assert.deepEqual(rollingMonths(new Date('2027-01-15T00:00:00Z')), ['2026-11', '2026-12', '2027-01']);
 });
+
+test('trimMon counters: object, array, empty shapes; n<30 dropped', () => {
+  const c = (o) => trimMon({ 'Checks and Counters': o }, null).counters;
+  assert.deepEqual(c({ Incineroar: { n: 100, p: 0.6, d: 0.05 }, Rare: { n: 5, p: 0.9, d: 0.1 } }), { Incineroar: [0.6, 0.05, 100] });
+  assert.deepEqual(c({ Incineroar: [0.6, 0.05] }), { Incineroar: [0.6, 0.05, undefined] });
+  assert.deepEqual(c({}), {});
+});

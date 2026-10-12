@@ -88,7 +88,7 @@ export default {
     B.controls.append(search, allSeg.el);
     const note = el('div', 'items-note');
     const tableWrap = el('div', 'table-wrap table-wrap--scroll');
-    B.body.append(clickHint('Click a row: show only that Pokémon and its teams. Click an item: Pokémon holding it. Sprite: details.'), note, tableWrap);
+    B.body.append(clickHint('Click a row: filter the dashboard to that Pokémon. Click an item: Pokémon holding it. Sprite: details.'), note, tableWrap);
     let searchTimer = null;
     search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderTable, 120); });
 
@@ -206,7 +206,7 @@ export default {
       if (!item) { td.appendChild(el('span', 'muted', '—')); return td; }
       const btn = el('button', 'item-link');
       btn.type = 'button';
-      btn.title = `Filter to teams with ${item.name} (shift-click to exclude)`;
+      btn.title = `Filter to ${item.name} (shift-click to exclude)`;
       btn.append(el('span', 'item-link__name', item.name), el('span', 'item-link__pct', ctx.fmt.pct(item.pct)));
       btn.addEventListener('click', (e) => { e.stopPropagation(); ctx.chip('item', item.name, e); });
       btn.addEventListener('keydown', (e) => e.stopPropagation());

@@ -196,6 +196,7 @@ export async function validateAll(dataDir) {
     const dx = await readJSON(path.join(dataDir, `pokedex-${kind}.json`)).catch((e) => (errors.push(`pokedex-${kind}.json: ${e.message}`), null));
     const ln = await readJSON(path.join(dataDir, `learnsets-${kind}.json`)).catch((e) => (errors.push(`learnsets-${kind}.json: ${e.message}`), null));
     if (dx && ln) validatePokedex(kind, dx, ln, errors);
+    if (kind === 'vgc' && dx && dex) for (const n of Object.keys(dex.species || {})) if (!dx.species?.[n]) errors.push(`pokedex-vgc.json: dex.json species ${n} missing`);
   }
 
   for (const reg of REG_IDS) {

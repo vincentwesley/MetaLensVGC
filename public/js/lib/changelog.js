@@ -1,6 +1,15 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.3.1', date: '2026-10-12', title: 'Smoke-test fixes',
+    notes: [
+      { tag: 'FIX', text: 'Deep dive "Checks & counters" showed NaN%: Smogon changed its counter format; now shows the KO/switch rate with its spread.' },
+      { tag: 'FIX', text: 'Pokédex now lists every species seen in the data (Rillaboom, many Megas and other missing Pokémon).' },
+      { tag: 'FIX', text: 'Showdown mode no longer says "teams" in hints; team-only downloads and notes are hidden there; the jump bar follows the page order.' },
+      { tag: 'IMPROVED', text: 'National Dex Tera card says Tera is banned instead of showing nothing.' },
+    ],
+  },
+  {
     version: '1.3.0', date: '2026-10-09', title: 'Showdown mode: National Dex',
     notes: [
       { tag: 'NEW', text: 'VGC | Showdown switch in the header: National Dex and NatDex Doubles from the Smogon ladder (cutoff 1760).' },

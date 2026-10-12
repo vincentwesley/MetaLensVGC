@@ -1,5 +1,5 @@
 Continue work on **MetaLens VGC** (repo `vincentwesley/MetaLensVGC`, live at https://metalensvgc.pages.dev).
-Handover written 2026-10-09 after v1.3.0. Everything is live and tests are green. Only do what the owner asks.
+Handover updated 2026-10-12 after v1.3.1 (smoke-test fixes). Everything is live and tests are green. Only do what the owner asks.
 
 ## Before anything
 1. Local clone: `C:\Coding Projects\VGCMetaScope`. `git pull --rebase` first: the weekly bot (`metalensvgc-bot`, "chore: refresh data") pushes to the same branch.
@@ -20,8 +20,8 @@ Handover written 2026-10-09 after v1.3.0. Everything is live and tests are green
 
 ## Known gaps / ideas (none block "done")
 1. Showdown has no usage x win-rate quadrant (Smogon publishes no win rates). Offered but not built: a quadrant of rating-weighted usage vs raw usage share ("favoured by top players"), clearly labelled as not win rate.
-2. Hint strings in ladder/Showdown views still say "teams" (usage hint, snapshot, type hints); the Pokédex hint says "this doesn't filter" though it now follows chips.
-3. Showdown jump bar (secnav) order differs from the reordered page; spread-explorer card subtitle in Showdown still says "In-game ranked and Smogon spreads".
+2. (done in 1.3.1) hint wording.
+3. (done in 1.3.1) jump bar order.
 4. Smogon raw counts in our `ladder-*.json` ("Raw count" field of the chaos JSON) run ~8% above the `.txt` stats page; usage % matches exactly. Not investigated.
 5. Review leftovers not applied (minor): `view.rules || RULES.sp` fallbacks repeated in sections; `ladderWeaknesses` recomputes per species instead of per typing; in-place dex swap in `main.js#ensureDex`; family list duplicated in `state-core.js` and `scripts/lib/regs.js` (a parity test would pin it); `modeswitch.js` hand-builds a segmented control.
 6. Next regulation (M-C ends 2026-12-02): add it to `scripts/lib/regs.js` (window + `format`), `current` in `scripts/build-data.js`, then run the workflow.

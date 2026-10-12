@@ -262,6 +262,11 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - e2e (63): mode switch round-trip (ND -> reload -> NDD -> VGC), team-sheet sections/filters hidden, no NaN in the 8 visible sections, deep dive Lv100; Pokédex default A-Z. Manual sweep ND/NDD at 1440 and 390: no console errors, no overflow.
 - Not verified: Showdown-mode hint wording ("teams"), real-device layout of the header switch.
 
+### v1.3.1 (smoke-test fixes), 2026-10-12
+- Full smoke (headless, live site): 22 reg x source x width combos + 16 interactions; found counters NaN (Smogon {n,p,d} format), 72 species missing from the Champions Pokedex roster, CSP beacon console error, "teams" wording in Showdown. Script lives outside the repo (scratchpad smoke.cjs); rerun it after deploy.
+- Fixed with unit tests (trimMon shapes, aggregate no-NaN, build() with seen set, validate roster check) and an e2e check that ND text has no "team(s)". Cloudflare Web Analytics beacon: turn it off in the Pages dashboard (CSP unchanged on purpose).
+- Not run: Lighthouse, real phone, offline fonts.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

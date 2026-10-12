@@ -88,13 +88,13 @@ client only ever requests URLs known to exist:
         "Kingambit": { "usage": 0.4724, "raw": 1199000,
           "items": {"Black Glasses": 0.41}, "abilities": {"Defiant": 0.9}, "moves": {"Sucker Punch": 0.95},
           "spreads": {"Adamant:32/32/0/0/2/0": 0.12}, "teammates": {"Garchomp": 0.3},
-          "counters": {"Incineroar": [0.61, 0.05]} }
+          "counters": {"Incineroar": [0.61, 0.05, 412]} }
       } }
   ]
 }
 ```
 All shares are fractions (0–1) of that Pokémon's usage. Keep the top 12 entries per sub-table (top 20 teammates).
-`counters` is `{name: [score, stdev]}` from "Checks and Counters", `{}` if Smogon left it empty.
+`counters` is `{name: [p, stdev, n]}` from "Checks and Counters" (p = KO/switch probability, n = matchups, entries with n < 30 dropped; legacy files have `[p, stdev]` without n), `{}` if empty. Ranked by `p - 4*stdev`.
 A regulation with no ladder data has `"months": []`.
 
 ## ranked-<REG>.json (official in-game ranked ladder, Doubles only)

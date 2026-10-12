@@ -2,7 +2,7 @@
 // Builds pokedex-{vgc,natdex}.json + learnsets-{vgc,natdex}.json (SCHEMA.md) from the
 // pokemon-showdown package. No network. Run alone: `npm run pokedex`.
 import pkg from 'pokemon-showdown';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 const { Dex } = pkg;
 import { showdownDex } from './dex.js';
@@ -16,7 +16,8 @@ const tierOf = (t) => {
   return t.replace(/^\((.*)\)$/, '$1'); // "(OU)" = OU by technicality -> OU
 };
 
-export function build(dex, { natdex }) {
+// seen (vgc only): species names that appear in real usage; kept even if the mod marks them Past/Illegal/untiered.
+export function build(dex, { natdex, seen = new Set() }) {
   const species = {};
   const learn = {};
   const moveNames = {};
@@ -25,22 +26,25 @@ export function build(dex, { natdex }) {
   const moveOk = (m) => m.exists && (natdex ? !['CAP', 'Custom', 'Future', 'LGPE', 'Unobtainable'].includes(m.isNonstandard) : !m.isNonstandard);
   for (const sp of dex.species.all()) {
     if (!sp.exists || !sp.baseStats) continue;
-    if (['CAP', 'Custom', 'Future', 'LGPE'].includes(sp.isNonstandard)) continue;
-    if (!natdex && sp.isNonstandard) continue;
+    const keep = !natdex && seen.has(sp.name);
+    if (['CAP', 'Custom', 'Future', 'LGPE'].includes(sp.isNonstandard) && !(keep && sp.isNonstandard === 'Future')) continue;
+    if (!natdex && sp.isNonstandard && !keep) continue;
     const tier = tierOf(natdex ? sp.natDexTier : sp.tier);
-    if (!tier || /^CAP/.test(tier)) continue; // untiered/Illegal = not selectable (battle-only formes etc.)
+    if (!keep && (!tier || /^CAP/.test(tier))) continue; // untiered/Illegal = not selectable (battle-only formes etc.)
     const ab = {};
     for (const [k, v] of Object.entries(sp.abilities)) if (v) ab[k] = v;
     if (!Object.keys(ab).length) continue;
     const b = sp.baseStats;
-    species[sp.name] = { num: sp.num, types: sp.types, bs: [b.hp, b.atk, b.def, b.spa, b.spd, b.spe], abilities: ab, tier };
-    present.add(tier);
+    species[sp.name] = { num: sp.num, types: sp.types, bs: [b.hp, b.atk, b.def, b.spa, b.spd, b.spe], abilities: ab };
+    if (tier && !/^CAP/.test(tier)) { species[sp.name].tier = tier; present.add(tier); }
     if (natdex) {
       const dt = tierOf(sp.doublesTier);
       if (dt) { species[sp.name].dtier = dt; presentD.add(dt); }
     }
     const ids = [];
-    for (const id of dex.species.getMovePool(sp.id, natdex)) {
+    let pool = dex.species.getMovePool(sp.id, natdex);
+    if (keep && !pool.length) pool = Dex.species.getMovePool(sp.id, natdex); // Past species: mod pool may be empty
+    for (const id of pool) {
       const m = dex.moves.get(id);
       if (!moveOk(m)) continue;
       moveNames[m.id] = m.name;
@@ -59,8 +63,9 @@ export async function buildPokedex(dataDir) {
   await mkdir(dataDir, { recursive: true });
   const generated = new Date().toISOString();
   const out = {};
+  const seen = new Set(Object.keys((await readFile(path.join(dataDir, 'dex.json'), 'utf8').then(JSON.parse, () => ({}))).species || {}));
   for (const [name, dex, natdex] of [['vgc', showdownDex(), false], ['natdex', Dex, true]]) {
-    const { species, learn, moveNames, tierOrder, dTierOrder } = build(dex, { natdex });
+    const { species, learn, moveNames, tierOrder, dTierOrder } = build(dex, { natdex, seen });
     const moves = Object.fromEntries(Object.keys(moveNames).sort().map((k) => [k, moveNames[k]]));
     // ponytail: no moveList index; learnsets-natdex.json is ~1.2MB raw, under the 1.5MB budget
     const raw = JSON.stringify({ moves, learn });

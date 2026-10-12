@@ -9,7 +9,7 @@
 // pinned to the top of the drawer body, always visible while the drawer is
 // open, so the intent (search species in the current view -> open drawer)
 // is still met without new markup outside owned files.
-import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
+import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, realTera, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
 import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
 import { defensiveBuckets, MATCHUP_BUCKETS, statRange, allSpecies, topSetMon } from '../lib/species-info.js';
@@ -42,8 +42,9 @@ function sectionCard(title) {
 }
 
 /** Accessible clickable row (mirrors usage.js's <tr> pattern) used for bar lists. */
-function barRow(label, pct, maxPct, { onClick, sprite, valueText } = {}) {
+function barRow(label, pct, maxPct, { onClick, sprite, valueText, title } = {}) {
   const row = elm('div', 'bar-row');
+  if (title) row.title = title;
   if (onClick) {
     row.classList.add('is-clickable');
     row.setAttribute('role', 'button');
@@ -259,7 +260,7 @@ export default {
         panel.innerHTML = '';
         const seq = ++shiftSeq;
         if (!avail.length) {
-          ctx.meta(metaEl, { source: 'In-game ranked and Smogon spreads' });
+          ctx.meta(metaEl, { source: view.family === 'natdex' ? 'Smogon ladder spreads' : 'In-game ranked and Smogon spreads' });
           if (view.family === 'natdex') { panel.appendChild(elm('div', 'ddv-note', 'No Smogon spreads recorded for this Pokémon in this format.')); return; }
           emptyState(panel, 'Insufficient data');
           panel.appendChild(elm('div', 'ddv-note', 'No in-game ranked or Smogon spreads for this Pokémon in this regulation (tournament sheets carry none).'));
@@ -502,9 +503,11 @@ export default {
       if (!(sd && !ladderRow)) content.appendChild(itemsCard);
 
       // Tera types (Showdown only; no chip kind exists for Tera, so informational)
-      if (ladderRow?.tera?.length) {
+      if (ladderRow && view.family === 'natdex') {
         const { card: teraCard, body: teraBody } = sectionCard('Tera types');
-        barList(teraBody, ladderRow.tera.map((r) => ({ name: r.name, pct: r.pct })));
+        const tera = realTera(ladderRow.tera);
+        if (tera.length) barList(teraBody, tera.map((r) => ({ name: r.name, pct: r.pct })));
+        else teraBody.appendChild(elm('div', 'ddv-note', 'Tera is banned in this format.'));
         content.appendChild(teraCard);
       }
 
@@ -618,7 +621,7 @@ export default {
         const max = Math.max(...counters.map((c) => c.score), 0.0001);
         const list = elm('div', 'bar-list');
         for (const c of counters.slice(0, 12)) {
-          list.appendChild(barRow(c.name, c.score, max, { valueText: `${(c.score * 100).toFixed(1)}%` }));
+          list.appendChild(barRow(c.name, c.score, max, { valueText: `${(c.score * 100).toFixed(1)}% KO/switch`, title: `±${(c.dev * 100).toFixed(1)}%` }));
         }
         ccBody.appendChild(list);
       }

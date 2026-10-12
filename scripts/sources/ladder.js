@@ -22,12 +22,15 @@ function fractions(obj) {
   return out;
 }
 
+const MIN_COUNTER_N = 30;
+
 export function trimMon(raw, dex) {
   const counters = {};
   for (const [name, v] of Object.entries(raw['Checks and Counters'] || {})) {
-    // Smogon leaves this empty for every M-A/M-B month observed during recon; pass
-    // through defensively as [score, stdev] if it's ever populated.
-    counters[normalizeSpecies(name, dex)] = Array.isArray(v) ? v.slice(0, 2) : [v, 0];
+    // Smogon: {n,p,d} (matchups, KO/switch prob, stddev); older files: [p,d]. Stored as [p,d,n].
+    const [p, d, n] = Array.isArray(v) ? [v[0], v[1], undefined] : v && typeof v === 'object' ? [v.p, v.d, v.n] : [v, 0, undefined];
+    if (n < MIN_COUNTER_N) continue; // ponytail: Smogon's own 30-matchup ceiling; undefined n (legacy) passes
+    counters[normalizeSpecies(name, dex)] = [p, d, n];
   }
   return {
     usage: raw.usage,

@@ -121,7 +121,7 @@ export default {
     body.append(hero, kpiRow);
     card.append(head, body);
     el.appendChild(card);
-    const hint = clickHint('Top Pokémon by usage. Click a card: show only that Pokémon and its teams. Shift-click to exclude.');
+    const hint = clickHint('Top Pokémon by usage. Click a card: filter the dashboard to that Pokémon. Shift-click to exclude.');
     body.prepend(hint);
 
     let lastView = null;
@@ -191,7 +191,7 @@ export default {
         if (top.length) kpiRow.appendChild(kpiTile('Most-used', top[0].key, { sprite: ctx.sprite(top[0].key, { size: 'xs', animated: anim }) }));
         // Mega KPIs only where the format has Megas (not in Showdown National Dex tiers).
         if (topMega) {
-          kpiRow.appendChild(kpiTile('Megas per team', megaShare.toFixed(2), { tip: 'Sum of Mega usage shares = average number of Megas on a ladder team.' }));
+          kpiRow.appendChild(kpiTile('Megas per six', megaShare.toFixed(2), { tip: 'Sum of Mega usage shares = average number of Megas among six Pokémon.' }));
           kpiRow.appendChild(kpiTile('Most-used Mega', topMega.key, { sprite: ctx.sprite(topMega.key, { size: 'xs', animated: anim }) }));
         }
         return;

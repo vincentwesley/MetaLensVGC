@@ -183,7 +183,7 @@ export default {
     // --- risers & fallers ------------------------------------------------
     const compareLabel = document.createElement('div');
     compareLabel.className = 'sb-subhead';
-    const moversHint = clickHint('Biggest usage changes between the last two weeks. Click a row: show only that Pokémon and its teams. Shift-click to exclude.');
+    const moversHint = clickHint('Biggest usage changes between the last two weeks. Click a row: filter the dashboard to that Pokémon. Shift-click to exclude.');
     moversCard.body.append(moversHint, compareLabel);
     const moversWrap = document.createElement('div');
     moversWrap.className = 'sb-two-col';
@@ -251,7 +251,7 @@ export default {
     function renderMovers(view) {
       risersList.textContent = ''; fallersList.textContent = ''; compareLabel.textContent = '';
       if (view.state.source === 'ladder') { renderLadderMovers(view); return; }
-      moversHint.textContent = 'Biggest usage changes between the last two weeks. Click a row: show only that Pokémon and its teams. Shift-click to exclude.';
+      moversHint.textContent = 'Biggest usage changes between the last two weeks. Click a row: filter the dashboard to that Pokémon. Shift-click to exclude.';
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
         risersList.appendChild(ranked ? emptyState(RANKED_NA, 'Tournament-only view') : emptyState('Switch Source to Tournaments to see risers & fallers.', 'Tournament-only view'));
@@ -281,7 +281,7 @@ export default {
 
     // --- regulation shift --------------------------------------------------
     const shiftWrap = document.createElement('div');
-    shiftCard.body.append(clickHint('Top 20 now versus the previous period. Click a row: show only that Pokémon and its teams.'), shiftWrap);
+    shiftCard.body.append(clickHint('Top 20 now versus the previous period. Click a row: filter the dashboard to that Pokémon.'), shiftWrap);
 
     function renderShift(view) {
       shiftWrap.textContent = '';

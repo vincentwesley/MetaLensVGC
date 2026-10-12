@@ -911,6 +911,9 @@ export function toCSV(teams) {
 }
 
 // --- ladder (Smogon chaos, see SCHEMA ladder-<REG>.json) ------------------
+/** Tera rows that are real types (Smogon logs 'Nothing' when Tera is unused/banned). */
+export const realTera = (rows) => (rows || []).filter((r) => r.name && r.name.toLowerCase() !== 'nothing');
+
 // Merge the months inside [from, to] (YYYY-MM-DD, "" = open), weighting each month by its battle count.
 // Returns null when no month qualifies. Sub-tables are weighted by the mon's usage share in each month.
 /** Pass `dex` to get display names ("Life Orb") instead of Smogon ids ("lifeorb")
@@ -954,7 +957,8 @@ function mergeMonths(ladder, from, to, dex) {
     };
     return { key: o.key, usage: o.usage, raw: o.raw, items: named(o.tables.items), abilities: named(o.tables.abilities), moves: named(o.tables.moves),
       tera: norm(o.tables.teraTypes), spreads: norm(o.tables.spreads), teammates: norm(o.tables.teammates),
-      counters: Object.entries(o.tables.counters).map(([name, [score, dev]]) => ({ name, score, dev })).sort((a, b) => b.score - a.score) };
+      counters: Object.entries(o.tables.counters).map(([name, v]) => ({ name, score: Array.isArray(v) ? v[0] : NaN, dev: Number.isFinite(v?.[1]) ? v[1] : 0 }))
+        .filter((c) => Number.isFinite(c.score)).sort((a, b) => (b.score - 4 * b.dev) - (a.score - 4 * a.dev)) };
   }).sort((a, b) => b.usage - a.usage);
   return { battles, months: months.map((m) => m.month), cutoff: ladder.cutoff, urls: months.map((m) => m.url), mons };
 }

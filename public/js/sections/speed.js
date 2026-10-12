@@ -146,6 +146,7 @@ export default {
       item.style.background = `var(--pill-${SOURCE_PILL[src]})`;
       item.style.color = `var(--pill-ink-${SOURCE_PILL[src]})`;
       item.textContent = label;
+      item.dataset.src = src;
       legend.appendChild(item);
     }
     main.body.appendChild(legend);
@@ -248,6 +249,7 @@ export default {
       bench.style.display = '';
       controls.style.display = '';
       legend.style.display = '';
+      legend.querySelector('[data-src="sheet"]').hidden = view.family === 'natdex';
 
       const modded = rows.map((r) => {
         const min = applyMods(r.min, mods);

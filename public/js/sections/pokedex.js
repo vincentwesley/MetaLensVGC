@@ -28,7 +28,7 @@ export default {
     const meta = el('span');
     head.append(el('h3', null, 'Pokédex'), meta);
     const body = el('div', 'card__body');
-    const hint = clickHint('Click a Pokémon to open its details (this doesn’t filter). Click a stat header to sort by it.');
+    const hint = clickHint('Click a Pokémon to open its details (the list follows your filters; clicking never adds one). Click a stat header to sort by it.');
 
     // combobox
     const box = el('div', 'dex-box');

@@ -77,7 +77,7 @@ export default {
     body.className = 'card__body';
     card.append(head, body);
     el.appendChild(card);
-    const hint = clickHint('Rows rank Pokémon by usage. Click a row: show only that Pokémon and its teams. Click the item under a name: Pokémon holding it. Sprite: details. Shift-click to exclude.');
+    const hint = clickHint('Rows rank Pokémon by usage. Click a row: filter the dashboard to that Pokémon. Click the item under a name: Pokémon holding it. Sprite: details. Shift-click to exclude.');
     body.prepend(hint);
 
     let showAll = false;
@@ -396,7 +396,7 @@ function itemCell(ctx, top) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'item-link item-link--sub';
-  btn.title = `Filter to teams with ${top.name} (shift-click to exclude)`;
+  btn.title = `Filter to ${top.name} (shift-click to exclude)`;
   const name = document.createElement('span');
   name.className = 'item-link__name';
   name.textContent = top.name;

@@ -864,6 +864,7 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
 .header__mode { display: flex; align-items: center; }
 .modeswitch button { padding: 5px 12px; font-weight: 700; }
 .segmented button[hidden] { display: none; }
+.pill[hidden], .card[hidden], .mth-fact-list [hidden] { display: none; }
 /* Showdown mode has ladder data only: team-sheet sections and tournament filters are hidden. */
 [data-family="showdown"] :is([data-section="quadrant"], [data-section="archetypes"], [data-section="countries"], [data-section="library"], [data-section="scanner"]),
 [data-family="showdown"] :is(a[data-jump="archetypes"], a[data-jump="countries"], a[data-jump="library"], a[data-jump="scanner"]),
@@ -883,6 +884,15 @@ table.data-table tbody img.sprite:hover { animation: sprite-hop 360ms steps(3, j
 [data-family="showdown"] main.grid .section[data-section="trends"] { order: 8; }
 [data-family="showdown"] main.grid .section[data-section="methodology"] { order: 10; }
 [data-family="showdown"] main.grid .section.creator { order: 11; }
+[data-family="showdown"] .secnav a[data-jump="snapshot"] { order: 1; }
+[data-family="showdown"] .secnav a[data-jump="usage"] { order: 2; }
+[data-family="showdown"] .secnav a[data-jump="teammates"] { order: 3; }
+[data-family="showdown"] .secnav a[data-jump="pokedex"] { order: 4; }
+[data-family="showdown"] .secnav a[data-jump="types"] { order: 5; }
+[data-family="showdown"] .secnav a[data-jump="items"] { order: 6; }
+[data-family="showdown"] .secnav a[data-jump="speed"] { order: 7; }
+[data-family="showdown"] .secnav a[data-jump="trends"] { order: 8; }
+[data-family="showdown"] .secnav a[data-jump="methodology"] { order: 9; }
 
 /* Showdown, wide screens: the teammates cards join the main grid so they pair with the leaderboard
    (usage | pairs, then teammate rate | heatmap) with row heights that match, instead of one tall column. */

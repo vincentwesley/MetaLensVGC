@@ -91,8 +91,8 @@ export default {
     ];
     const factsList = elm('dl', 'mth-fact-list');
     for (const [label, desc] of facts) {
-      factsList.appendChild(elm('dt', 'mth-fact__label', label));
-      factsList.appendChild(elm('dd', 'mth-fact__desc', desc));
+      const vgcOnly = /\bteams?\b/i.test(desc); // team-sheet prose: hidden outside VGC
+      for (const e of [elm('dt', 'mth-fact__label', label), elm('dd', 'mth-fact__desc', desc)]) { e.dataset.vgcOnly = vgcOnly; factsList.appendChild(e); }
     }
     statBody.appendChild(factsList);
     body.appendChild(statCard);
@@ -122,6 +122,10 @@ export default {
       const view = lastView;
       if (!view) return;
 
+      const vgc = view.family === 'vgc';
+      dlCard.hidden = !vgc;
+      archCard.hidden = !vgc;
+      for (const e of statBody.querySelectorAll('[data-vgc-only="true"]')) e.hidden = !vgc;
       const today = new Date().toISOString().slice(0, 10);
       jsonBtn.onclick = () => download(`metalens-vgc-${view.reg}-${today}.json`, JSON.stringify(toJSONRows(view.teams), null, 2), 'application/json');
       csvBtn.onclick = () => download(`metalens-vgc-${view.reg}-${today}.csv`, toCSV(view.teams), 'text/csv');
@@ -155,7 +159,8 @@ export default {
       const thead = elm('thead');
       const trh = elm('tr');
       const regCols = ['Reg', 'Teams', 'Events', 'Open sheets', 'Matches', 'Ladder months', 'Ranked seasons'];
-      regCols.forEach((h, i) => trh.appendChild(elm('th', i > 0 ? 'num' : null, h)));
+      const skipTeams = vgc ? -1 : 1; // no team counts outside VGC
+      regCols.forEach((h, i) => { if (i !== skipTeams) trh.appendChild(elm('th', i > 0 ? 'num' : null, h)); });
       thead.appendChild(trh);
       table.appendChild(thead);
       const tbody = elm('tbody');
@@ -163,7 +168,7 @@ export default {
         const tr = elm('tr');
         tr.append(
           elm('td', null, r.id),
-          elm('td', 'num', ctx.fmt.n(r.teams)),
+          ...(vgc ? [elm('td', 'num', ctx.fmt.n(r.teams))] : []),
           elm('td', 'num', ctx.fmt.n(r.events)),
           elm('td', 'num', ctx.fmt.n(r.openSheets)),
           elm('td', 'num', ctx.fmt.n(r.matches)),
