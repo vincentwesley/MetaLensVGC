@@ -1134,13 +1134,13 @@ test('Pokédex: tier bars, stat header sort, unused species opens the drawer cle
   expect(await sec.locator('.dex-tierbar').count()).toBeGreaterThan(1);
   const spe = sec.locator('.dex-sort', { hasText: 'Spe' });
   await spe.click();
-  await expect(spe).toHaveAttribute('aria-sort', 'descending');
+  await expect(spe).toHaveAttribute('aria-pressed', 'true');
   await expect(sec.locator('.dex-tierbar')).toHaveCount(0);
   const vals = await sec.locator('.dex-row').evaluateAll((els) => els.slice(0, 30).map((e) => +e.querySelectorAll('.dex-stat b')[5].textContent));
   expect(vals[0]).toBe(Math.max(...vals));
   expect(vals).toEqual([...vals].sort((a, b) => b - a));
   await spe.click();
-  await expect(spe).toHaveAttribute('aria-sort', 'none'); // back to the default A–Z
+  await expect(spe).toHaveAttribute('aria-pressed', 'false'); // back to the default A–Z
   // an unused species (usage "—") still opens a sane drawer
   await sec.locator('.dex-seg__btn', { hasText: 'A–Z' }).click();
   await sec.locator('.dex-row', { has: page.locator('.dex-row__use', { hasText: '—' }) }).first().click();

@@ -155,6 +155,7 @@ export default {
       regBody.innerHTML = '';
       const regs = view.manifest.regs || [];
       const wrap = elm('div', 'table-wrap');
+      wrap.tabIndex = 0; wrap.setAttribute('role', 'region'); wrap.setAttribute('aria-label', 'Regulations');
       const table = elm('table', 'data-table');
       const thead = elm('thead');
       const trh = elm('tr');

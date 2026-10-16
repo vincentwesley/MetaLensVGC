@@ -47,7 +47,6 @@ export default {
         const li = document.createElement('li');
         li.className = 'threats__row';
         li.tabIndex = 0;
-        li.setAttribute('role', 'button');
         li.dataset.key = r.name;
         li.setAttribute('aria-label', `Filter by ${r.name}`);
         const act = (e) => ctx.chip('species', r.name, e);

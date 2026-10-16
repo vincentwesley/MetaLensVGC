@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.4.1', date: '2026-10-16', title: 'Accessibility pass',
+    notes: [
+      { tag: 'FIX', text: 'Pokédex no longer scrolls sideways on tablet widths; labelled the Speed benchmark controls; screen-reader fixes.' },
+    ],
+  },
+  {
     version: '1.4.0', date: '2026-10-12', title: 'Five new sections',
     notes: [
       { tag: 'NEW', text: 'Threats: which Pokémon check the most of the top 12 (from Smogon ladder counters).' },

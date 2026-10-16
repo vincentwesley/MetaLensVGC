@@ -74,7 +74,7 @@ export default {
       const l = LABEL[k];
       const b = el('button', 'dex-sort', l);
       b.type = 'button';
-      b.setAttribute('aria-sort', 'none');
+      b.setAttribute('aria-pressed', 'false');
       b.dataset.tip = `Sort by ${l}, highest first (click again for tier order)`;
       b.addEventListener('click', () => { sort = sort === k ? 'name' : k; render(); });
       statBtns[k] = b;
@@ -282,7 +282,7 @@ export default {
       segBtns.tier.setAttribute('aria-pressed', String(sort === 'tier'));
       segBtns.name.setAttribute('aria-pressed', String(sort === 'name'));
       for (const [k, b] of Object.entries(statBtns)) {
-        b.setAttribute('aria-sort', sort === k ? 'descending' : 'none');
+        b.setAttribute('aria-pressed', String(sort === k));
         b.classList.toggle('is-active', sort === k);
       }
       tierNote.hidden = !usageMode || sort !== 'tier';

@@ -169,18 +169,20 @@ export default {
     speciesInput.type = 'text';
     speciesInput.setAttribute('list', 'speed-species-list');
     speciesInput.placeholder = 'Species…';
+    speciesInput.setAttribute('aria-label', 'My Pokémon species');
     const datalist = document.createElement('datalist');
     datalist.id = 'speed-species-list';
     const spLabel = document.createElement('span');
     spLabel.className = 'filterbar__label';
     spLabel.textContent = 'Speed SP';
     const spSlider = document.createElement('input');
-    spSlider.type = 'range'; spSlider.min = '0'; spSlider.max = '32'; spSlider.step = '1'; spSlider.value = '32';
+    spSlider.type = 'range'; spSlider.min = '0'; spSlider.max = '32'; spSlider.step = '1'; spSlider.value = '32'; spSlider.setAttribute('aria-label', 'Speed investment');
     const benchRules = () => lastView?.rules || RULES.sp;
     const spVal = document.createElement('span');
     spVal.className = 'filterbar__label';
     spVal.textContent = '32';
     const natureSelect = document.createElement('select');
+    natureSelect.setAttribute('aria-label', 'Speed nature');
     for (const [v, t] of [['plus', '+Spe nature'], ['neutral', 'Neutral nature'], ['minus', '−Spe nature']]) {
       const o = document.createElement('option'); o.value = v; o.textContent = t; natureSelect.appendChild(o);
     }

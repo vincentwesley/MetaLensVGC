@@ -235,7 +235,7 @@ main.grid .section[data-section="quadrant"] {
 .dex-status[hidden] { display: none; }
 .dex-more[hidden] { display: none; }
 .dex-more { display: block; margin: var(--space-3) auto 0; padding: 4px 12px; background: var(--surface-1); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font: inherit; }
-@media (max-width: 700px) {
+@media (max-width: 960px) {
   .dex-head { grid-template-columns: 1fr; grid-template-areas: "stats"; }
   .dex-row { grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "spr name" "spr types" "spr abil" "stats stats"; contain-intrinsic-size: auto 120px; }
   .dex-row__tier { display: none; }
