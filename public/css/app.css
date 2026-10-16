@@ -296,6 +296,11 @@ html { scroll-padding-top: calc(var(--header-real, var(--header-h)) + var(--stic
 .filterbar__sample { margin-left: auto; color: var(--ink-2); font-size: var(--fs-small); white-space: nowrap; }
 .filterbar__body { display: contents; }
 
+/* reserve the populated height (filterbar.js fills it after first paint) so the page below does not jump */
+@media (min-width: 701px) { :root:not([data-filters-collapsed]) .filterbar { min-height: 85px; } }
+/* while sections are still filling in, keep the page tall so the footer and credits stay below the fold instead of jumping */
+html[data-rendering] main.grid { min-height: 4000px; }
+main.grid > .section[aria-busy="true"] { visibility: hidden; } /* not yet filled in: invisible, so its growth is not a layout shift */
 /* collapse / expand */
 .filterbar__toggle-btn {
   display: inline-flex; align-items: center; gap: 6px; flex: none;
@@ -661,7 +666,7 @@ button[data-tip] { cursor: pointer; }
   background: var(--surface-2); color: var(--ink-2); border-bottom: 1px solid var(--border);
   font-family: var(--font-body); font-size: var(--fs-small); line-height: 1.4;
 }
-.howto[hidden] { display: none; }
+.howto[hidden], :root[data-howto-off] .howto { display: none; }
 /* pinned with the filter bar, so on a phone it is one line: first tip only */
 @media (max-width: 700px) {
   .howto__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

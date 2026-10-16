@@ -10,3 +10,9 @@ try {
   }
   if (p && typeof p.anim === 'boolean') root.setAttribute('data-anim', p.anim ? 'on' : 'off');
 } catch { /* no storage: defaults */ }
+// Layout state that main.js would otherwise set after first paint (avoids layout shift): collapsed filter bar, dismissed tips.
+try {
+  const c = localStorage.getItem('metalens.filtersCollapsed');
+  if (c == null ? matchMedia('(max-width: 700px)').matches : c === '1') document.documentElement.setAttribute('data-filters-collapsed', '');
+  if (localStorage.getItem('metalens.howtoDismissed') === '1') document.documentElement.setAttribute('data-howto-off', '');
+} catch { /* defaults */ }

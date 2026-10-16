@@ -28,3 +28,10 @@ Handover updated 2026-10-12 after v1.3.1 (smoke-test fixes). Everything is live 
 7. Not verified in real browsers/devices: glass style frame rate, header switch on a phone, offline font fallbacks.
 
 When you finish a piece of work, update `CLAUDE.md` and `docs/TESTING.md`, then report tersely: found, built (commits), tested, left open.
+
+## QA pass 2026-10-16 (v1.4.1-1.4.2): open findings
+- Desktop CLS ~0.7 (Lighthouse): card heights change when the previous-period file loads / on regulation switch (snapshot, usage re-render). Reserve card heights.
+- Mobile performance is low (Lighthouse mobile perf under 10 headless/throttled; main-thread work decoding ~9 MB data). Profile `data.js` decode.
+- Owner: disable Cloudflare Pages Web Analytics (the injected beacon is blocked by the CSP and logs a console error).
+- No section-by-section design review done (full-page screenshots in qa-output/ are too tall); slice with `scripts/slice-shots.mjs`.
+- Minor axe: `empty-table-header` (usage table).

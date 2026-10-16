@@ -283,3 +283,8 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Retro type sizes with the real VT323 font at 390 (the UX probe had fonts stubbed).
 - Motion with real network (sprites loading mid-animation), View Transitions cross-fade in Firefox/Safari (no API: instant
   switch expected), and the reveal on a real phone scroll.
+
+### QA pass 2026-10-16 (v1.4.1-1.4.2)
+- axe (wcag2a/aa, 21aa, best-practice) at 375/1280, dark+light, VGC + Showdown: only minor `empty-table-header` left. 66 e2e + 378 unit green.
+- Layout-shift fixes: `prefs-init.js` sets collapsed/howto state pre-paint; busy sections are `visibility:hidden`. Local CLS ~0.4 (was ~1.1 live); the remainder is the previous-period reload re-rendering snapshot/usage.
+- Live Lighthouse before fixes (headless, throttled): mobile perf 9, desktop 32, a11y 81, BP 92, SEO 92.

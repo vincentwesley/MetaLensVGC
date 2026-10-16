@@ -238,7 +238,6 @@ export default {
         const tr = tbody.insertRow();
         tr.dataset.key = r.key;
         tr.tabIndex = 0;
-        tr.setAttribute('role', 'button');
         tr.setAttribute('aria-label', `Filter by ${r.key}`);
         const act = (e) => ctx.chip('species', r.key, e);
         tr.addEventListener('click', act);

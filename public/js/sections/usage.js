@@ -214,7 +214,6 @@ export default {
       shown.forEach((r, i) => {
         const tr = document.createElement('tr');
         tr.tabIndex = 0;
-        tr.setAttribute('role', 'button');
         tr.dataset.key = r.key;
         tr.setAttribute('aria-label', `Filter by ${r.key}`);
         const act = (e) => ctx.chip('species', r.key, e);
@@ -339,7 +338,6 @@ export default {
         const mon = season.mons[key];
         const tr = tbody.insertRow();
         tr.tabIndex = 0;
-        tr.setAttribute('role', 'button');
         tr.dataset.key = key;
         tr.setAttribute('aria-label', `Filter by ${key}`);
         const act = (e) => ctx.chip('species', key, e);

@@ -1,6 +1,13 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.4.2', date: '2026-10-16', title: 'Less page jumping',
+    notes: [
+      { tag: 'FIX', text: 'The page no longer jumps while sections load in; filter bar and tips strip reserve their space.' },
+      { tag: 'IMPROVED', text: 'Leaderboard and item rows are cleaner for screen readers.' },
+    ],
+  },
+  {
     version: '1.4.1', date: '2026-10-16', title: 'Accessibility pass',
     notes: [
       { tag: 'FIX', text: 'Pokédex no longer scrolls sideways on tablet widths; labelled the Speed benchmark controls; screen-reader fixes.' },
