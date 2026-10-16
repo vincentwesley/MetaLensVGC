@@ -13,3 +13,6 @@ graphify-out/
 # local Claude Code config (never tracked)
 .claude/settings.json
 .claude/settings.local.json
+
+# QA output (design review, axe, lighthouse)
+qa-output/
