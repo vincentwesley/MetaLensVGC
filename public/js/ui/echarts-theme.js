@@ -74,6 +74,14 @@ export function withChartDefaults(opt) {
     : t);
   const out = { ...opt };
   if (opt.tooltip) out.tooltip = Array.isArray(opt.tooltip) ? opt.tooltip.map(fix) : fix(opt.tooltip);
+  // Narrow charts (phones) would print colliding tick labels ("0%10%20%..."): ECharts drops the ones that overlap.
+  const axes = (ax) => {
+    const one = (x) => (x && typeof x === 'object' && x.axisLabel?.hideOverlap === undefined
+      ? { ...x, axisLabel: { ...x.axisLabel, hideOverlap: true } } : x);
+    return Array.isArray(ax) ? ax.map(one) : one(ax);
+  };
+  if (opt.xAxis) out.xAxis = axes(opt.xAxis);
+  if (opt.yAxis) out.yAxis = axes(opt.yAxis);
   // Screen readers: ECharts' own data dump prints NaN for heatmap / object-valued data, so
   // describe the chart (type, series names, point count) ourselves.
   if (opt.series && !('aria' in opt)) out.aria = { enabled: true, label: { description: describeChart(opt) } };

@@ -288,6 +288,15 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Node: structured clone of decoded M-B = 454 ms serialize + 820 ms deserialize vs 135 ms parse + 293 ms decode, so no worker.
 - `npm run e2e:cloud` 66/66, section specs 13/13, 379 unit.
 
+### v1.5.2 (layout review), 2026-10-20
+- Slice review (scripts/slice-shots.mjs) at 1440 and 390, plus region shots in light / Retro and card-position dumps for
+  M-C, ND, NDD at 1440 and M-C at 1000. Fixed: Speed/Trends column gap (~1,150px), quadrant shorter than its row,
+  Moves half-width in VGC / short Tera note in ND, Compare table spread, crowded item-axis ticks at 390, unstyled selects.
+- Found while doing it: the section nav could not jump to a display: contents section (Showdown teammates since v1.3.0).
+  New e2e "section nav: jumps to a section whose cards join the main grid" (fails on the old code, passes now).
+- Not bugs (artifacts of full-page shots): empty Pokédex rows (`content-visibility: auto`) and blank lazy sprites below the fold.
+- CLS after: 0.014-0.038 desktop, 0.064 phone. `npm run e2e:cloud` 66/67 then the shift check fixed (scroll to its card), 379 unit, 13 section specs.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

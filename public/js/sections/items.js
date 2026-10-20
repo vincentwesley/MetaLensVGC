@@ -125,7 +125,8 @@ export default {
             return lines.join('<br/>');
           },
         },
-        xAxis: { type: 'value', ...axis, axisLabel: { ...axis.axisLabel, formatter: (v) => `${Math.round(v * 100)}%` } },
+        // Narrow (phones): fewer ticks; every bar carries its own value label anyway.
+        xAxis: { type: 'value', ...axis, splitNumber: chart.getWidth() < 420 ? 3 : 5, axisLabel: { ...axis.axisLabel, formatter: (v) => `${Math.round(v * 100)}%` } },
         yAxis: {
           type: 'category', data: shown.map((r) => r.name), ...axis,
           axisTick: { show: false }, axisLabel: { ...axis.axisLabel, interval: 0, color: theme.inkSecondary },

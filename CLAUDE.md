@@ -304,3 +304,9 @@ These skills are available in every session. The user never types slash commands
   output as `decode`, unit-tested); `data.getDecoded` keeps one in-flight promise per reg. A Web Worker was measured and rejected:
   structured-cloning the decoded teams back costs more main-thread time than parse + decode (M-B 820 ms vs 428 ms in Node).
   `mondayOf` is memoized per date string.
+- v1.5.2 (layout): one-card sections fill their grid row (`.section__mount:not(.sb-grid) > .card:only-child`, height 100%).
+  VGC >=1100px: trends section + mount are `display: contents`; rows are weekly trend | risers, then speed | regulation shift
+  (`order` 1 on speed + shift, 2 on every later section). A display: contents section has no box: `main.js` and
+  `ui/secnav.js` also observe its mount/cards (any target intersecting = near view / in band), `secnav.jumpTo` scrolls to its
+  first card, and e2e must scroll to a card, not the section. `withChartDefaults` sets `axisLabel.hideOverlap` on every axis.
+  Moves: the list spans the row when the Tera card is hidden (VGC) or only holds its empty state (ND). `:where(select)` base style.

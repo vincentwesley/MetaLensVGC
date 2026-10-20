@@ -313,6 +313,25 @@ html[data-rendering] main.grid > [data-section="usage"], html[data-rendering] ma
   html[data-rendering] main.grid > [data-section="usage"], html[data-rendering] main.grid > [data-section="quadrant"] { min-height: 840px; }
 }
 @media (max-width: 899px) { main.grid > [data-section="snapshot"] { min-height: 700px; } }
+/* Paired cards end level: a one-card section fills the grid row it shares (the quadrant next to the taller leaderboard). */
+main.grid > .section > .section__mount:not(.sb-grid) { height: 100%; }
+main.grid > .section > .section__mount:not(.sb-grid) > .card:only-child { height: 100%; }
+/* VGC, wide screens: the three trend cards join the main grid, so they pair by height instead of stacking beside one
+   Speed card (which left ~1,100px of empty column): weekly trend | risers & fallers, then speed | regulation shift.
+   main.js and ui/secnav.js observe the cards, since a display: contents section has no box of its own. */
+@media (min-width: 1100px) {
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"],
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] > .section__mount { display: contents; }
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] > .section__mount > .card { grid-column: span 6; min-width: 0; }
+  :root:not([data-family="showdown"]) main.grid .section[data-section="speed"],
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] > .section__mount > .card:nth-child(3) { order: 1; }
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] ~ .section { order: 2; }
+}
+/* Native selects without a section style of their own get the field look (section rules still win). */
+:where(select) {
+  background: var(--surface-1); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 3px 6px; font-size: var(--fs-small);
+}
 main.grid > .section[aria-busy="true"] { visibility: hidden; } /* not yet filled in: invisible, so its growth is not a layout shift */
 /* collapse / expand */
 .filterbar__toggle-btn {

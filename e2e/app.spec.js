@@ -450,7 +450,8 @@ test('regulation shift table has no NaN at min-n 0', async ({ page }) => {
   await page.goto('/#minN=0');
   await waitForAllSections(page);
   const shift = page.locator('main [data-section="trends"]');
-  await shift.scrollIntoViewIfNeeded();
+  // >=1100px the trend cards join the main grid (the section is display: contents, with no box to scroll to)
+  await shift.locator('.card').filter({ hasText: 'Regulation shift' }).scrollIntoViewIfNeeded();
   await waitForAllSections(page);
   expect(await shift.innerText()).not.toMatch(/NaN/);
 });
@@ -651,6 +652,26 @@ test('section nav: a link scrolls to its section and aria-current follows the sc
   await page.mouse.wheel(0, -100000);
   await expect(nav.locator('[aria-current="true"]')).toHaveText('Snapshot');
   await expect(nav.locator('[aria-current="true"]')).toHaveCount(1);
+});
+
+// >=1100px some sections' cards join the main grid (display: contents: VGC trends, Showdown teammates). Such a section
+// has no box, so the nav jumps to its first card and observes the cards for aria-current.
+test('section nav: jumps to a section whose cards join the main grid (trends, Showdown teammates)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const [hash, id, label] of [['', 'trends', 'Trends'], ['#reg=ND', 'teammates', 'Teammates']]) {
+    await page.goto(`/${hash}`);
+    await waitForAllSections(page);
+    const sec = page.locator(`main [data-section="${id}"]`);
+    expect(await sec.evaluate((e) => getComputedStyle(e).display)).toBe('contents');
+    await page.locator(`#secnav a[data-jump="${id}"]`).click();
+    await expect(page.locator('#secnav [aria-current="true"]')).toHaveText(label);
+    const first = sec.locator('.card').first();
+    await expect.poll(async () => {
+      const top = await first.evaluate((e) => e.getBoundingClientRect().top);
+      const barBottom = await page.locator('#stickybar').evaluate((e) => e.getBoundingClientRect().bottom);
+      return top >= barBottom - 2 && top < barBottom + 120;
+    }).toBe(true);
+  }
 });
 
 test('phones start with the filter bar collapsed when nothing is stored; a stored choice wins', async ({ page }) => {

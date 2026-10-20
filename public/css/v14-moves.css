@@ -7,3 +7,9 @@
 [data-section="moves"] .data-table th:nth-child(1) { width: 40%; }
 [data-section="moves"] .data-table th:nth-child(2) { width: 24%; }
 [data-section="moves"] .data-table td { overflow-wrap: anywhere; }
+/* VGC has no Tera card (Tera is not in Champions): the move list takes the whole row instead of half of it. */
+[data-section="moves"] .sb-grid:has(> .card[hidden]) > .card:not([hidden]) { grid-column: 1 / -1; }
+/* National Dex: the Tera card is only the "Tera is banned" note. Both cards take the full row (move list first, the
+   note under it) instead of a short card beside a tall one. */
+[data-section="moves"] .sb-grid:has(> .card:not([hidden]) .empty-state) > .card { grid-column: 1 / -1; }
+[data-section="moves"] .sb-grid > .card + .card:has(.empty-state) { order: 1; }

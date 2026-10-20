@@ -1,6 +1,15 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.2', date: '2026-10-20', title: 'Tidier layout',
+    notes: [
+      { tag: 'IMPROVED', text: 'Wide screens: the trend cards pair up with Speed tiers, so no long empty column; paired cards end level.' },
+      { tag: 'IMPROVED', text: 'Moves list uses the full width where there is no Tera card; Compare table is sized to its columns.' },
+      { tag: 'FIX', text: 'Section nav jumps to Trends and (Showdown) Teammates again on wide screens.' },
+      { tag: 'FIX', text: 'Chart axis labels no longer run together on phones; dropdowns match the other fields.' },
+    ],
+  },
+  {
     version: '1.5.1', date: '2026-10-20', title: 'Smoother on phones',
     notes: [
       { tag: 'IMPROVED', text: 'Loading the team data no longer freezes the page: it is unpacked in small steps, so scrolling and taps keep working.' },
