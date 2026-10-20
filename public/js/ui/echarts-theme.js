@@ -57,6 +57,7 @@ export function echartsBase(theme) {
 // e.g. near the edge on a phone) and wraps long lines instead of growing wider
 // than the viewport. ECharts' default tooltip CSS is `white-space: nowrap`.
 const TOOLTIP_CSS = 'white-space:normal;width:max-content;max-width:min(320px,calc(100vw - 32px));overflow-wrap:anywhere;';
+const AXIS_POINTER = { type: 'line', lineStyle: { type: 'dashed', width: 1 } };
 export function describeChart(opt) {
   const list = [].concat(opt.series || []);
   const points = list.reduce((n, s) => n + (Array.isArray(s.data) ? s.data.length : 0), 0);
@@ -67,8 +68,9 @@ export function describeChart(opt) {
 
 export function withChartDefaults(opt) {
   if (!opt || typeof opt !== 'object') return opt;
+  // Axis tooltips get a thin dashed crosshair line (unless the chart sets its own pointer).
   const fix = (t) => (t && typeof t === 'object'
-    ? { confine: true, ...t, extraCssText: TOOLTIP_CSS + (t.extraCssText || '') }
+    ? { confine: true, ...(t.trigger === 'axis' && !t.axisPointer ? { axisPointer: AXIS_POINTER } : {}), ...t, extraCssText: TOOLTIP_CSS + (t.extraCssText || '') }
     : t);
   const out = { ...opt };
   if (opt.tooltip) out.tooltip = Array.isArray(opt.tooltip) ? opt.tooltip.map(fix) : fix(opt.tooltip);

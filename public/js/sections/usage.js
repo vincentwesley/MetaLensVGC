@@ -191,19 +191,28 @@ export default {
         if (ladderCols && c.key === 'usage') th.setAttribute('data-tip', 'Smogon usage is weighted by player rating, so it can differ from the raw count.');
         th.className = `col-${c.key}${c.key === 'rank' || c.key === 'win' || c.key === 'n' ? ' num' : ''}`;
         th.textContent = c.label;
+        if (!c.label) { // screen readers (and axe) need a name for the sprite column
+          const sr = document.createElement('span');
+          sr.className = 'sr-only';
+          sr.textContent = 'Sprite';
+          th.appendChild(sr);
+        }
         if (c.sortable) {
-          th.style.cursor = 'pointer';
-          th.tabIndex = 0;
+          // A real button carries the keyboard and the name; aria-sort on the header says which way it is sorted.
           const active = (c.sortKey || c.key) === sortKey;
-          th.textContent = c.label + (active ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '');
-          const doSort = () => {
+          th.setAttribute('aria-sort', active ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'th-sort';
+          btn.textContent = c.label + (active ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '');
+          btn.addEventListener('click', () => {
             const k = c.sortKey || c.key;
             if (sortKey === k) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
             else { sortKey = k; sortDir = 'desc'; }
             refresh();
-          };
-          th.addEventListener('click', doSort);
-          th.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doSort(); } });
+            body.querySelector(`th.col-${c.key} .th-sort`)?.focus(); // the header was rebuilt: keep the keyboard in place
+          });
+          th.replaceChildren(btn);
         }
         trh.appendChild(th);
       }
