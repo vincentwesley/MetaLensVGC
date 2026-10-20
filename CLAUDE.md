@@ -310,3 +310,6 @@ These skills are available in every session. The user never types slash commands
   `ui/secnav.js` also observe its mount/cards (any target intersecting = near view / in band), `secnav.jumpTo` scrolls to its
   first card, and e2e must scroll to a card, not the section. `withChartDefaults` sets `axisLabel.hideOverlap` on every axis.
   Moves: the list spans the row when the Tera card is hidden (VGC) or only holds its empty state (ND). `:where(select)` base style.
+- v1.5.3: `withChartDefaults` sets `animation: false` unless a chart sets it (motion budget: a filter click must not move
+  every chart; on a 4x-throttled phone, all sections are current after a click in ~4.6 s instead of ~8.1 s). Unit-tested in
+  test/ui-helpers.test.js with the crosshair and hideOverlap defaults.

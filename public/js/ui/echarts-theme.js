@@ -72,7 +72,9 @@ export function withChartDefaults(opt) {
   const fix = (t) => (t && typeof t === 'object'
     ? { confine: true, ...(t.trigger === 'axis' && !t.axisPointer ? { axisPointer: AXIS_POINTER } : {}), ...t, extraCssText: TOOLTIP_CSS + (t.extraCssText || '') }
     : t);
-  const out = { ...opt };
+  // No chart transition animations: a filter click would otherwise move every chart on the page at once (the motion
+  // budget allows only the new chip and the leaderboard bars), and the animation frames cost phones ~1 s of main thread.
+  const out = { animation: false, ...opt };
   if (opt.tooltip) out.tooltip = Array.isArray(opt.tooltip) ? opt.tooltip.map(fix) : fix(opt.tooltip);
   // Narrow charts (phones) would print colliding tick labels ("0%10%20%..."): ECharts drops the ones that overlap.
   const axes = (ax) => {

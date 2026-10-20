@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.3', date: '2026-10-20', title: 'Calmer charts',
+    notes: [
+      { tag: 'IMPROVED', text: 'Charts redraw in place instead of animating after every filter click, so the whole page settles about twice as fast on phones.' },
+    ],
+  },
+  {
     version: '1.5.2', date: '2026-10-20', title: 'Tidier layout',
     notes: [
       { tag: 'IMPROVED', text: 'Wide screens: the trend cards pair up with Speed tiers, so no long empty column; paired cards end level.' },

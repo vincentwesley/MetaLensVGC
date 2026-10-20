@@ -297,6 +297,12 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Not bugs (artifacts of full-page shots): empty Pokédex rows (`content-visibility: auto`) and blank lazy sprites below the fold.
 - CLS after: 0.014-0.038 desktop, 0.064 phone. `npm run e2e:cloud` 66/67 then the shift check fixed (scroll to its card), 379 unit, 13 section specs.
 
+### v1.5.3 (chart animation off), 2026-10-20
+- 390px, 4x CPU throttle, a leaderboard row click (2 runs each): every section current after 8.0-8.3 s -> 4.6 s; TBT after
+  the click ~2.2 s -> 1.8-2.2 s (unchanged within noise); load TBT unchanged (~3.2-3.6 s).
+- Considered: memoizing archetypeMatrix / cores / weekly. Skipped, because each runs once per state change, so a memo would not help a click.
+- `npm run e2e:cloud` 67/67, section specs 13/13, 380 unit.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

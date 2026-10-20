@@ -26,6 +26,18 @@ test('withChartDefaults: every tooltip is confined and wraps, section options wi
   assert.equal(withChartDefaults(null), null);
 });
 
+test('withChartDefaults: no animation, dashed axis crosshair, overlapping axis labels hidden; section options win', () => {
+  const out = withChartDefaults({ tooltip: { trigger: 'axis' }, xAxis: { type: 'value' }, yAxis: [{ type: 'category', axisLabel: { color: 'red' } }] });
+  assert.equal(out.animation, false);
+  assert.equal(out.tooltip.axisPointer.lineStyle.type, 'dashed');
+  assert.equal(out.xAxis.axisLabel.hideOverlap, true);
+  assert.deepEqual(out.yAxis[0].axisLabel, { color: 'red', hideOverlap: true });
+  assert.equal(withChartDefaults({ animation: true }).animation, true);
+  assert.equal(withChartDefaults({ tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } } }).tooltip.axisPointer.type, 'shadow');
+  assert.equal(withChartDefaults({ tooltip: { trigger: 'item' } }).tooltip.axisPointer, undefined);
+  assert.equal(withChartDefaults({ xAxis: { axisLabel: { hideOverlap: false } } }).xAxis.axisLabel.hideOverlap, false);
+});
+
 test('clampTip keeps the tip inside the viewport', () => {
   const vw = 390, vh = 844, tip = { width: 300, height: 60 };
   // Anchor at the right edge: the tip is pulled back inside.
