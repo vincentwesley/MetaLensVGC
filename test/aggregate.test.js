@@ -572,3 +572,21 @@ test('ladderMerge counters never NaN, ranked by p-4d; realTera drops Nothing', a
   assert.deepEqual(realTera([{ name: 'Nothing' }, { name: 'Fire' }]), [{ name: 'Fire' }]);
   assert.deepEqual(realTera([{ name: 'nothing' }]), []);
 });
+
+import { decodeChunked } from '../public/js/lib/aggregate.js';
+test('decodeChunked: same teams / events / matches as decode, yielding between slices', async () => {
+  let yields = 0;
+  const out = await decodeChunked(file, dex, async () => { yields++; }, 3);
+  assert.ok(yields > 1);
+  assert.deepEqual(out.events, events);
+  assert.deepEqual(out.matches, matches);
+  assert.equal(out.teams.length, teams.length);
+  // Teams are compared field by field (ev is a shared event object, species a Set).
+  out.teams.forEach((t, i) => {
+    const { ev, species, ...rest } = t;
+    const { ev: ev0, species: species0, ...rest0 } = teams[i];
+    assert.equal(ev, out.events[events.indexOf(ev0)]);
+    assert.deepEqual([...species], [...species0]);
+    assert.deepEqual(rest, rest0);
+  });
+});

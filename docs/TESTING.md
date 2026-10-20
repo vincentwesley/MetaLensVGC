@@ -281,6 +281,13 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Final run: `npm run e2e:cloud` 65/66 (extra styles timed out at 30s; passes with its 90s timeout, 27.7s), section specs 13/13, 378 unit.
 - Not run: real Firefox/Safari for `linear()` (falls back to ease), Lighthouse.
 
+### v1.5.1 (chunked decode), 2026-10-20
+- CDP profile, 390px, 4x CPU throttle, stubbed third parties, 2 runs each: TBT 5.4-5.9 s -> 3.1-3.6 s; longest task 1.4-1.5 s
+  -> 0.5-0.6 s; snapshot filled ~2.7-3.3 s either way (the decode work still has to finish). Remaining long tasks are single
+  section renders (archetypes ~0.5-0.9 s, teammates / trends / quadrant ~0.5 s at 4x).
+- Node: structured clone of decoded M-B = 454 ms serialize + 820 ms deserialize vs 135 ms parse + 293 ms decode, so no worker.
+- `npm run e2e:cloud` 66/66, section specs 13/13, 379 unit.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

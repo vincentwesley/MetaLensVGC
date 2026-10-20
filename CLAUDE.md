@@ -300,3 +300,7 @@ These skills are available in every session. The user never types slash commands
   sized just under the filled height. Re-measure (PerformanceObserver layout-shift) if those cards change shape.
 - Leaderboard sortable headers are `<button class="th-sort">` inside the `th`, which carries `aria-sort`.
 - >=1280px: filter-bar children 4+ get `order: 1`, so Copy link + Hide end the first row.
+- v1.5.1: the browser decodes team files with `decodeChunked(file, dex, yieldFn)` (500 teams / 5,000 matches per slice; same
+  output as `decode`, unit-tested); `data.getDecoded` keeps one in-flight promise per reg. A Web Worker was measured and rejected:
+  structured-cloning the decoded teams back costs more main-thread time than parse + decode (M-B 820 ms vs 428 ms in Node).
+  `mondayOf` is memoized per date string.

@@ -136,7 +136,7 @@ async function boot() {
     return;
   }
 
-  const { decode, filterTeams, previousPeriod, projectTeams, speciesChipFilter, fieldChips } = lib.aggregate;
+  const { decodeChunked, filterTeams, previousPeriod, projectTeams, speciesChipFilter, fieldChips } = lib.aggregate;
 
   const ladderCache = new Map();
   const rankedCache = new Map();
@@ -207,9 +207,11 @@ async function boot() {
   }
 
   const NO_TEAMS = { teams: [], events: [], matches: [] };
+  const yieldDecode = () => (globalThis.scheduler?.yield ? globalThis.scheduler.yield() : new Promise((r) => setTimeout(r, 0)));
   async function ensureReg(reg) {
     if (regFamily(reg) === 'showdown') return NO_TEAMS; // ladder only: there are no team sheets
-    return data.getDecoded(reg, dex, decode);
+    // Chunked so a big regulation (M-B: 33k teams) never freezes a phone for one long task.
+    return data.getDecoded(reg, dex, (file, d) => decodeChunked(file, d, yieldDecode));
   }
 
   // The shared `dex` object is swapped in place per mode (sections hold a reference to it):

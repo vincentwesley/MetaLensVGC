@@ -42,12 +42,16 @@ export function loadLearnsetsFile(family = 'vgc') {
 
 /** Decode (and cache) a regulation's teams file. Kept for the lifetime of the
  *  page so a previously-viewed reg's teams stay available for previousPeriod. */
-export async function getDecoded(reg, dex, decode) {
-  if (decodedCache.has(reg)) return decodedCache.get(reg);
-  const file = await loadTeamsFile(reg);
-  const decoded = decode(file, dex);
-  decodedCache.set(reg, decoded);
-  return decoded;
+const decoding = new Map(); // reg -> in-flight promise (a chunked decode yields, so a second caller must not start another)
+export function getDecoded(reg, dex, decode) {
+  if (decodedCache.has(reg)) return Promise.resolve(decodedCache.get(reg));
+  if (!decoding.has(reg)) {
+    decoding.set(reg, loadTeamsFile(reg)
+      .then((file) => decode(file, dex)) // decode may be sync or return a promise (decodeChunked)
+      .then((decoded) => { decodedCache.set(reg, decoded); return decoded; })
+      .finally(() => decoding.delete(reg)));
+  }
+  return decoding.get(reg);
 }
 
 export function getDecodedSync(reg) { return decodedCache.get(reg) || null; }

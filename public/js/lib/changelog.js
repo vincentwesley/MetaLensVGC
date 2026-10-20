@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.1', date: '2026-10-20', title: 'Smoother on phones',
+    notes: [
+      { tag: 'IMPROVED', text: 'Loading the team data no longer freezes the page: it is unpacked in small steps, so scrolling and taps keep working.' },
+    ],
+  },
+  {
     version: '1.5.0', date: '2026-10-20', title: 'Steadier, snappier',
     notes: [
       { tag: 'FIX', text: 'The first screen no longer shifts down while data loads in.' },
