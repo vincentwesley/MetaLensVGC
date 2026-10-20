@@ -300,6 +300,16 @@ html { scroll-padding-top: calc(var(--header-real, var(--header-h)) + var(--stic
 @media (min-width: 701px) { :root:not([data-filters-collapsed]) .filterbar { min-height: 85px; } }
 /* while sections are still filling in, keep the page tall so the footer and credits stay below the fold instead of jumping */
 html[data-rendering] main.grid { min-height: 4000px; }
+/* ...and size its rows by content (the spare height goes below the last row, not into stretched rows that resize as cards fill) */
+main.grid { align-content: start; }
+/* The first screen reserves about its filled height, so the cards below it do not move when data lands (CLS). Values sit
+   just under the typical filled height: a smaller card leaves a little space instead of jumping. */
+main.grid > [data-section="snapshot"] { min-height: 400px; }
+html[data-rendering] main.grid > [data-section="usage"], html[data-rendering] main.grid > [data-section="quadrant"] { min-height: 520px; }
+@media (min-width: 1100px) {
+  html[data-rendering] main.grid > [data-section="usage"], html[data-rendering] main.grid > [data-section="quadrant"] { min-height: 840px; }
+}
+@media (max-width: 899px) { main.grid > [data-section="snapshot"] { min-height: 700px; } }
 main.grid > .section[aria-busy="true"] { visibility: hidden; } /* not yet filled in: invisible, so its growth is not a layout shift */
 /* collapse / expand */
 .filterbar__toggle-btn {
@@ -321,6 +331,12 @@ main.grid > .section[aria-busy="true"] { visibility: hidden; } /* not yet filled
 :root[data-filters-collapsed] .filterbar__body { display: none; }
 :root[data-filters-collapsed] .filterbar__summary { display: block; }
 :root[data-filters-collapsed] .filterbar__toggle-btn { margin-left: auto; }
+/* Wide screens: Copy link + Hide end the first row (Reg / Source / Tier has room) instead of wrapping onto a row of their
+   own, which kept ~40px of sticky chrome over the page. The later groups (placement, dates, min n, sample) follow them. */
+@media (min-width: 1280px) {
+  .filterbar__body > :nth-child(n+4) { order: 1; }
+  :root:not([data-filters-collapsed]) .filterbar__link-btn { margin-left: auto; }
+}
 
 @media (max-width: 700px) {
   /* expanded filters are tall on phones: only stick while collapsed */

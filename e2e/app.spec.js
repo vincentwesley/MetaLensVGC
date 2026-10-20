@@ -355,6 +355,7 @@ test('active filters stay visible while scrolling and Clear all empties them', a
 });
 
 test('chart tooltips and [data-tip] tips stay inside the viewport on a phone', async ({ page }) => {
+  test.setTimeout(90_000); // hovers 6 points on every chart (~30s on its own), more than the 30s default
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await waitForAllSections(page);
@@ -508,9 +509,14 @@ test('Scanner never blanks a card after a scan: Weakest link shows flagged small
     await expect(card.locator('.empty-state')).toHaveCount(0);
     expect(await card.innerText()).not.toContain('Insufficient data');
     if (relaxed) {
-      await expect(card).toContainText('smaller samples shown');
-      await expect(card.locator('.meta-line__relaxed')).toBeVisible();
+      // Data-independent: thin rows are flagged, and the "smaller samples" note (+ meta flag) shows exactly when no row
+      // reaches the solid-read line (every row is flagged). Which case the narrow view hits depends on the week's data.
       await expect(card.locator('tbody tr.scn-low').first()).toContainText('low sample');
+      const rows = await card.locator('tbody tr').count();
+      const low = await card.locator('tbody tr.scn-low').count();
+      await expect(card.locator('.meta-line__relaxed')).toHaveCount(low === rows ? 1 : 0);
+      if (low === rows) await expect(card).toContainText('smaller samples shown');
+      else expect(await card.innerText()).not.toContain('smaller samples shown');
     } else {
       await expect(card.locator('.meta-line__relaxed')).toHaveCount(0);
     }
