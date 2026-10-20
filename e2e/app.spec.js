@@ -1180,6 +1180,7 @@ test('Pokédex: no match shows an empty state and hides Show more', async ({ pag
 });
 
 test('extra styles: each is selectable in settings, persists on reload, no overflow at 390px, no console errors', async ({ page }) => {
+  test.setTimeout(90_000); // one full reload per style (~30s alone), more than the 30s default
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));

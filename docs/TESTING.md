@@ -272,6 +272,15 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Headless screenshots at 1440/390 for M-C and ND: caught a 390px overflow (Showdown quadrant span-12 created implicit grid tracks; now only >=1101px) and an invisible Threats bar (fill was display:inline). Quadrant markers are sprites, so they only show with sprites online.
 - Not run: Lighthouse (not installed), real phone, light theme / other styles for the new sections, Print output of the digest.
 
+### v1.5.0 (UI/UX pass), 2026-10-20
+- CLS probe (Playwright PerformanceObserver 'layout-shift', fresh load, stubbed third parties): 1440px 0.263 -> 0.022, 390px 0.381 -> 0.056.
+  Section heights re-checked at 390/800/1000/1440 and in ND (no reserved gap larger than ~10%).
+- e2e fixes: Scanner weakest-link check made data-independent (relaxed note iff every row flagged); phone tooltip sweep and extra-styles reload loop have their own
+  90s timeout (~30s alone); the active-filters check passes again with Copy link/Hide on row 1 at 1280.
+- By script: keyboard sort on the leaderboard keeps focus and sets aria-sort; trend hover dims other lines, tooltip value-sorted.
+- Final run: `npm run e2e:cloud` 65/66 (extra styles timed out at 30s; passes with its 90s timeout, 27.7s), section specs 13/13, 378 unit.
+- Not run: real Firefox/Safari for `linear()` (falls back to ease), Lighthouse.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

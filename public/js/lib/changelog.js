@@ -1,6 +1,16 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.0', date: '2026-10-20', title: 'Steadier, snappier',
+    notes: [
+      { tag: 'FIX', text: 'The first screen no longer shifts down while data loads in.' },
+      { tag: 'IMPROVED', text: 'On wide screens the filter bar is one row shorter: Copy link and Hide sit at the end of the first row.' },
+      { tag: 'IMPROVED', text: 'Trend charts: hovering a line dims the others, and the tooltip lists the week’s leader first.' },
+      { tag: 'IMPROVED', text: 'Leaderboard column sorting works with the keyboard and tells screen readers the sort order.' },
+      { tag: 'IMPROVED', text: 'Buttons give slightly when pressed; new filter chips pop in with a small spring.' },
+    ],
+  },
+  {
     version: '1.4.2', date: '2026-10-16', title: 'Less page jumping',
     notes: [
       { tag: 'FIX', text: 'The page no longer jumps while sections load in; filter bar and tips strip reserve their space.' },

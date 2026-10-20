@@ -290,3 +290,13 @@ These skills are available in every session. The user never types slash commands
 
 ### v1.4.0 notes
 - New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.
+
+### v1.5.0 notes (UI/UX pass, research in `docs/research/ui-ux-2026-10.md`)
+- No motion library: motion.dev / anime.js were evaluated and not vendored; Bklit / Kokonut are React-only (patterns ported). Springs
+  are `--ease-spring` (a CSS `linear()` curve, scale pops only, `@supports`-guarded). Press feedback = `:active` transform on
+  standalone buttons (list in the app.css motion block). Axis tooltips get a dashed crosshair from `withChartDefaults`; trend
+  lines use `emphasis.focus: 'series'` + `order: 'valueDesc'`.
+- CLS: `main.grid { align-content: start }` + first-screen min-heights (snapshot always, usage/quadrant while `data-rendering`),
+  sized just under the filled height. Re-measure (PerformanceObserver layout-shift) if those cards change shape.
+- Leaderboard sortable headers are `<button class="th-sort">` inside the `th`, which carries `aria-sort`.
+- >=1280px: filter-bar children 4+ get `order: 1`, so Copy link + Hide end the first row.
