@@ -272,6 +272,37 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Headless screenshots at 1440/390 for M-C and ND: caught a 390px overflow (Showdown quadrant span-12 created implicit grid tracks; now only >=1101px) and an invisible Threats bar (fill was display:inline). Quadrant markers are sprites, so they only show with sprites online.
 - Not run: Lighthouse (not installed), real phone, light theme / other styles for the new sections, Print output of the digest.
 
+### v1.5.0 (UI/UX pass), 2026-10-20
+- CLS probe (Playwright PerformanceObserver 'layout-shift', fresh load, stubbed third parties): 1440px 0.263 -> 0.022, 390px 0.381 -> 0.056.
+  Section heights re-checked at 390/800/1000/1440 and in ND (no reserved gap larger than ~10%).
+- e2e fixes: Scanner weakest-link check made data-independent (relaxed note iff every row flagged); phone tooltip sweep and extra-styles reload loop have their own
+  90s timeout (~30s alone); the active-filters check passes again with Copy link/Hide on row 1 at 1280.
+- By script: keyboard sort on the leaderboard keeps focus and sets aria-sort; trend hover dims other lines, tooltip value-sorted.
+- Final run: `npm run e2e:cloud` 65/66 (extra styles timed out at 30s; passes with its 90s timeout, 27.7s), section specs 13/13, 378 unit.
+- Not run: real Firefox/Safari for `linear()` (falls back to ease), Lighthouse.
+
+### v1.5.1 (chunked decode), 2026-10-20
+- CDP profile, 390px, 4x CPU throttle, stubbed third parties, 2 runs each: TBT 5.4-5.9 s -> 3.1-3.6 s; longest task 1.4-1.5 s
+  -> 0.5-0.6 s; snapshot filled ~2.7-3.3 s either way (the decode work still has to finish). Remaining long tasks are single
+  section renders (archetypes ~0.5-0.9 s, teammates / trends / quadrant ~0.5 s at 4x).
+- Node: structured clone of decoded M-B = 454 ms serialize + 820 ms deserialize vs 135 ms parse + 293 ms decode, so no worker.
+- `npm run e2e:cloud` 66/66, section specs 13/13, 379 unit.
+
+### v1.5.2 (layout review), 2026-10-20
+- Slice review (scripts/slice-shots.mjs) at 1440 and 390, plus region shots in light / Retro and card-position dumps for
+  M-C, ND, NDD at 1440 and M-C at 1000. Fixed: Speed/Trends column gap (~1,150px), quadrant shorter than its row,
+  Moves half-width in VGC / short Tera note in ND, Compare table spread, crowded item-axis ticks at 390, unstyled selects.
+- Found while doing it: the section nav could not jump to a display: contents section (Showdown teammates since v1.3.0).
+  New e2e "section nav: jumps to a section whose cards join the main grid" (fails on the old code, passes now).
+- Not bugs (artifacts of full-page shots): empty Pokédex rows (`content-visibility: auto`) and blank lazy sprites below the fold.
+- CLS after: 0.014-0.038 desktop, 0.064 phone. `npm run e2e:cloud` 66/67 then the shift check fixed (scroll to its card), 379 unit, 13 section specs.
+
+### v1.5.3 (chart animation off), 2026-10-20
+- 390px, 4x CPU throttle, a leaderboard row click (2 runs each): every section current after 8.0-8.3 s -> 4.6 s; TBT after
+  the click ~2.2 s -> 1.8-2.2 s (unchanged within noise); load TBT unchanged (~3.2-3.6 s).
+- Considered: memoizing archetypeMatrix / cores / weekly. Skipped, because each runs once per state change, so a memo would not help a click.
+- `npm run e2e:cloud` 67/67, section specs 13/13, 380 unit.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

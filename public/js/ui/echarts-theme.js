@@ -57,6 +57,7 @@ export function echartsBase(theme) {
 // e.g. near the edge on a phone) and wraps long lines instead of growing wider
 // than the viewport. ECharts' default tooltip CSS is `white-space: nowrap`.
 const TOOLTIP_CSS = 'white-space:normal;width:max-content;max-width:min(320px,calc(100vw - 32px));overflow-wrap:anywhere;';
+const AXIS_POINTER = { type: 'line', lineStyle: { type: 'dashed', width: 1 } };
 export function describeChart(opt) {
   const list = [].concat(opt.series || []);
   const points = list.reduce((n, s) => n + (Array.isArray(s.data) ? s.data.length : 0), 0);
@@ -67,11 +68,22 @@ export function describeChart(opt) {
 
 export function withChartDefaults(opt) {
   if (!opt || typeof opt !== 'object') return opt;
+  // Axis tooltips get a thin dashed crosshair line (unless the chart sets its own pointer).
   const fix = (t) => (t && typeof t === 'object'
-    ? { confine: true, ...t, extraCssText: TOOLTIP_CSS + (t.extraCssText || '') }
+    ? { confine: true, ...(t.trigger === 'axis' && !t.axisPointer ? { axisPointer: AXIS_POINTER } : {}), ...t, extraCssText: TOOLTIP_CSS + (t.extraCssText || '') }
     : t);
-  const out = { ...opt };
+  // No chart transition animations: a filter click would otherwise move every chart on the page at once (the motion
+  // budget allows only the new chip and the leaderboard bars), and the animation frames cost phones ~1 s of main thread.
+  const out = { animation: false, ...opt };
   if (opt.tooltip) out.tooltip = Array.isArray(opt.tooltip) ? opt.tooltip.map(fix) : fix(opt.tooltip);
+  // Narrow charts (phones) would print colliding tick labels ("0%10%20%..."): ECharts drops the ones that overlap.
+  const axes = (ax) => {
+    const one = (x) => (x && typeof x === 'object' && x.axisLabel?.hideOverlap === undefined
+      ? { ...x, axisLabel: { ...x.axisLabel, hideOverlap: true } } : x);
+    return Array.isArray(ax) ? ax.map(one) : one(ax);
+  };
+  if (opt.xAxis) out.xAxis = axes(opt.xAxis);
+  if (opt.yAxis) out.yAxis = axes(opt.yAxis);
   // Screen readers: ECharts' own data dump prints NaN for heatmap / object-valued data, so
   // describe the chart (type, series names, point count) ourselves.
   if (opt.series && !('aria' in opt)) out.aria = { enabled: true, label: { description: describeChart(opt) } };

@@ -10,3 +10,5 @@
 @media (max-width: 700px) { [data-section="compare"] table.data-table { display: block; max-width: 100%; overflow-x: auto; } }
 .cmp-col { min-width: 0; }
 @media (max-width: 600px) { .cmp-movers { grid-template-columns: minmax(0, 1fr); } }
+/* A few columns across a 1,400px card read as scattered: size the table to its content (at least the card's half). */
+@media (min-width: 701px) { [data-section="compare"] table.data-table { width: auto; min-width: min(100%, 640px); } }

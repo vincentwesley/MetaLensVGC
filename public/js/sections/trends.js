@@ -117,13 +117,14 @@ export default {
           trigger: 'axis',
           backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           valueFormatter: (v) => (v == null ? 'not in data' : `${(v * 100).toFixed(1)}%`),
+          order: 'valueDesc', // the week's leader first
         },
         legend: { type: 'scroll', data: topKeys, textStyle: { color: theme.inkSecondary, fontFamily: theme.fontFamily }, top: 0, pageIconColor: theme.ink, pageTextStyle: { color: theme.muted } },
         grid: { left: 46, right: 20, top: 36, bottom: 30 },
         xAxis: { type: 'category', data: ls.months, axisLine: { lineStyle: { color: theme.axis } }, axisLabel: { color: theme.muted, fontFamily: theme.fontFamily } },
         yAxis: { type: 'value', axisLabel: { color: theme.muted, fontFamily: theme.fontFamily, formatter: (v) => `${(v * 100).toFixed(0)}%` }, axisLine: { lineStyle: { color: theme.axis } }, splitLine: { lineStyle: { color: theme.grid } } },
         dataZoom: [],
-        series: topKeys.map((k) => ({ name: k, type: 'line', showSymbol: true, symbolSize: 6, data: ls.series[k], connectNulls: false })),
+        series: topKeys.map((k) => ({ name: k, type: 'line', showSymbol: true, symbolSize: 6, data: ls.series[k], connectNulls: false, emphasis: { focus: 'series' } })),
       }, true);
     }
 
@@ -161,6 +162,7 @@ export default {
           trigger: 'axis',
           backgroundColor: theme.tooltipBg, borderColor: theme.border, textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
           valueFormatter: (v) => `${(v * 100).toFixed(1)}%`,
+          order: 'valueDesc', // the week's leader first
         },
         // Scrollable (not wrapping) legend: up to 8 species names can take 2+
         // rows if left to wrap, colliding with the y-axis's top tick label.
@@ -176,6 +178,7 @@ export default {
         series: topKeys.map((k) => ({
           name: k, type: 'line', showSymbol: true, symbolSize: 6,
           data: wk.series[k], connectNulls: true,
+          emphasis: { focus: 'series' }, // hovering a line dims the other seven, so one species is easy to follow
         })),
       }, true);
     }

@@ -355,6 +355,7 @@ test('active filters stay visible while scrolling and Clear all empties them', a
 });
 
 test('chart tooltips and [data-tip] tips stay inside the viewport on a phone', async ({ page }) => {
+  test.setTimeout(90_000); // hovers 6 points on every chart (~30s on its own), more than the 30s default
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await waitForAllSections(page);
@@ -449,7 +450,8 @@ test('regulation shift table has no NaN at min-n 0', async ({ page }) => {
   await page.goto('/#minN=0');
   await waitForAllSections(page);
   const shift = page.locator('main [data-section="trends"]');
-  await shift.scrollIntoViewIfNeeded();
+  // >=1100px the trend cards join the main grid (the section is display: contents, with no box to scroll to)
+  await shift.locator('.card').filter({ hasText: 'Regulation shift' }).scrollIntoViewIfNeeded();
   await waitForAllSections(page);
   expect(await shift.innerText()).not.toMatch(/NaN/);
 });
@@ -508,9 +510,14 @@ test('Scanner never blanks a card after a scan: Weakest link shows flagged small
     await expect(card.locator('.empty-state')).toHaveCount(0);
     expect(await card.innerText()).not.toContain('Insufficient data');
     if (relaxed) {
-      await expect(card).toContainText('smaller samples shown');
-      await expect(card.locator('.meta-line__relaxed')).toBeVisible();
+      // Data-independent: thin rows are flagged, and the "smaller samples" note (+ meta flag) shows exactly when no row
+      // reaches the solid-read line (every row is flagged). Which case the narrow view hits depends on the week's data.
       await expect(card.locator('tbody tr.scn-low').first()).toContainText('low sample');
+      const rows = await card.locator('tbody tr').count();
+      const low = await card.locator('tbody tr.scn-low').count();
+      await expect(card.locator('.meta-line__relaxed')).toHaveCount(low === rows ? 1 : 0);
+      if (low === rows) await expect(card).toContainText('smaller samples shown');
+      else expect(await card.innerText()).not.toContain('smaller samples shown');
     } else {
       await expect(card.locator('.meta-line__relaxed')).toHaveCount(0);
     }
@@ -645,6 +652,26 @@ test('section nav: a link scrolls to its section and aria-current follows the sc
   await page.mouse.wheel(0, -100000);
   await expect(nav.locator('[aria-current="true"]')).toHaveText('Snapshot');
   await expect(nav.locator('[aria-current="true"]')).toHaveCount(1);
+});
+
+// >=1100px some sections' cards join the main grid (display: contents: VGC trends, Showdown teammates). Such a section
+// has no box, so the nav jumps to its first card and observes the cards for aria-current.
+test('section nav: jumps to a section whose cards join the main grid (trends, Showdown teammates)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const [hash, id, label] of [['', 'trends', 'Trends'], ['#reg=ND', 'teammates', 'Teammates']]) {
+    await page.goto(`/${hash}`);
+    await waitForAllSections(page);
+    const sec = page.locator(`main [data-section="${id}"]`);
+    expect(await sec.evaluate((e) => getComputedStyle(e).display)).toBe('contents');
+    await page.locator(`#secnav a[data-jump="${id}"]`).click();
+    await expect(page.locator('#secnav [aria-current="true"]')).toHaveText(label);
+    const first = sec.locator('.card').first();
+    await expect.poll(async () => {
+      const top = await first.evaluate((e) => e.getBoundingClientRect().top);
+      const barBottom = await page.locator('#stickybar').evaluate((e) => e.getBoundingClientRect().bottom);
+      return top >= barBottom - 2 && top < barBottom + 120;
+    }).toBe(true);
+  }
 });
 
 test('phones start with the filter bar collapsed when nothing is stored; a stored choice wins', async ({ page }) => {
@@ -1174,6 +1201,7 @@ test('Pokédex: no match shows an empty state and hides Show more', async ({ pag
 });
 
 test('extra styles: each is selectable in settings, persists on reload, no overflow at 390px, no console errors', async ({ page }) => {
+  test.setTimeout(90_000); // one full reload per style (~30s alone), more than the 30s default
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));

@@ -7,8 +7,12 @@ export function pickCurrent(order, inBand, prev) {
   return order.find((id) => inBand.has(id)) ?? prev;
 }
 
+// A section whose cards join the main grid (display: contents) has no box, and scrollIntoView on it does nothing:
+// jump to its first card instead.
 export function jumpTo(id) {
-  document.querySelector(`main [data-section="${id}"]`)?.scrollIntoView({ block: 'start' });
+  const el = document.querySelector(`main [data-section="${id}"]`);
+  const target = el && getComputedStyle(el).display === 'contents' ? el.querySelector('.card') : el;
+  target?.scrollIntoView({ block: 'start' });
 }
 
 export function mountSecnav(nav) {
@@ -34,12 +38,24 @@ export function mountSecnav(nav) {
   });
   for (const ev of ['wheel', 'touchstart', 'keydown']) addEventListener(ev, () => { locked = false; }, { passive: true });
 
+  // Each section and its cards are observed (a display: contents section only has its cards' boxes); a section is
+  // in the band while any of its targets is.
+  const hits = new Map(); // section id -> Set of targets in the band
   const inBand = new Set();
   const io = new IntersectionObserver((entries) => {
-    for (const e of entries) e.isIntersecting ? inBand.add(e.target.dataset.section) : inBand.delete(e.target.dataset.section);
+    for (const e of entries) {
+      const id = e.target.closest('[data-section]').dataset.section;
+      const set = hits.get(id) || new Set();
+      hits.set(id, set);
+      if (e.isIntersecting) set.add(e.target); else set.delete(e.target);
+      if (set.size) inBand.add(id); else inBand.delete(id);
+    }
     if (!locked) setCurrent(pickCurrent(order, inBand, current));
   }, { rootMargin: '-20% 0px -60% 0px' }); // a band 20-40% down the viewport
-  for (const id of order) { const el = document.querySelector(`main [data-section="${id}"]`); if (el) io.observe(el); }
+  const sections = order.map((id) => document.querySelector(`main [data-section="${id}"]`)).filter(Boolean);
+  for (const el of sections) io.observe(el);
+  // Cards are built when the sections mount, after this runs: main.js calls observeCards() then.
+  return { observeCards() { for (const el of sections) for (const card of el.querySelectorAll(':scope > .section__mount > .card')) io.observe(card); } };
 }
 
 const HOWTO = 'metalens.howtoDismissed';

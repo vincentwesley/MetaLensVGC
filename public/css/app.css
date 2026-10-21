@@ -44,6 +44,9 @@
   /* motion block (end of file): entrances decelerate, exits accelerate and are shorter */
   --ease-out: cubic-bezier(.16,1,.3,1); --ease-in: cubic-bezier(.4,0,1,1);
   --dur-open: 320ms; --dur-close: 180ms;
+  /* damped spring (zeta 0.6, ~9% overshoot) as a CSS linear() curve: the springy feel of motion.dev / anime.js springs
+     with no library. Only for scale pops (a translate would overshoot past its edge). */
+  --ease-spring: linear(0, 0.074, 0.244, 0.45, 0.649, 0.817, 0.944, 1.028, 1.075, 1.094, 1.092, 1.078, 1.06, 1.04, 1.023, 1.009, 1, 0.994, 0.992, 0.991, 0.992, 0.994, 0.996, 0.997, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -300,6 +303,35 @@ html { scroll-padding-top: calc(var(--header-real, var(--header-h)) + var(--stic
 @media (min-width: 701px) { :root:not([data-filters-collapsed]) .filterbar { min-height: 85px; } }
 /* while sections are still filling in, keep the page tall so the footer and credits stay below the fold instead of jumping */
 html[data-rendering] main.grid { min-height: 4000px; }
+/* ...and size its rows by content (the spare height goes below the last row, not into stretched rows that resize as cards fill) */
+main.grid { align-content: start; }
+/* The first screen reserves about its filled height, so the cards below it do not move when data lands (CLS). Values sit
+   just under the typical filled height: a smaller card leaves a little space instead of jumping. */
+main.grid > [data-section="snapshot"] { min-height: 400px; }
+html[data-rendering] main.grid > [data-section="usage"], html[data-rendering] main.grid > [data-section="quadrant"] { min-height: 520px; }
+@media (min-width: 1100px) {
+  html[data-rendering] main.grid > [data-section="usage"], html[data-rendering] main.grid > [data-section="quadrant"] { min-height: 840px; }
+}
+@media (max-width: 899px) { main.grid > [data-section="snapshot"] { min-height: 700px; } }
+/* Paired cards end level: a one-card section fills the grid row it shares (the quadrant next to the taller leaderboard). */
+main.grid > .section > .section__mount:not(.sb-grid) { height: 100%; }
+main.grid > .section > .section__mount:not(.sb-grid) > .card:only-child { height: 100%; }
+/* VGC, wide screens: the three trend cards join the main grid, so they pair by height instead of stacking beside one
+   Speed card (which left ~1,100px of empty column): weekly trend | risers & fallers, then speed | regulation shift.
+   main.js and ui/secnav.js observe the cards, since a display: contents section has no box of its own. */
+@media (min-width: 1100px) {
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"],
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] > .section__mount { display: contents; }
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] > .section__mount > .card { grid-column: span 6; min-width: 0; }
+  :root:not([data-family="showdown"]) main.grid .section[data-section="speed"],
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] > .section__mount > .card:nth-child(3) { order: 1; }
+  :root:not([data-family="showdown"]) main.grid .section[data-section="trends"] ~ .section { order: 2; }
+}
+/* Native selects without a section style of their own get the field look (section rules still win). */
+:where(select) {
+  background: var(--surface-1); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 3px 6px; font-size: var(--fs-small);
+}
 main.grid > .section[aria-busy="true"] { visibility: hidden; } /* not yet filled in: invisible, so its growth is not a layout shift */
 /* collapse / expand */
 .filterbar__toggle-btn {
@@ -321,6 +353,12 @@ main.grid > .section[aria-busy="true"] { visibility: hidden; } /* not yet filled
 :root[data-filters-collapsed] .filterbar__body { display: none; }
 :root[data-filters-collapsed] .filterbar__summary { display: block; }
 :root[data-filters-collapsed] .filterbar__toggle-btn { margin-left: auto; }
+/* Wide screens: Copy link + Hide end the first row (Reg / Source / Tier has room) instead of wrapping onto a row of their
+   own, which kept ~40px of sticky chrome over the page. The later groups (placement, dates, min n, sample) follow them. */
+@media (min-width: 1280px) {
+  .filterbar__body > :nth-child(n+4) { order: 1; }
+  :root:not([data-filters-collapsed]) .filterbar__link-btn { margin-left: auto; }
+}
 
 @media (max-width: 700px) {
   /* expanded filters are tall on phones: only stick while collapsed */
@@ -464,6 +502,10 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-s
 table.data-table th, table.data-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 table.data-table th { font-family: var(--font-label); text-transform: uppercase; color: var(--muted); font-size: var(--fs-small); }
 table.data-table td.num, table.data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* sortable header: a button that reads exactly like the header text */
+.th-sort { all: unset; cursor: pointer; text-transform: inherit; }
+.th-sort:hover { color: var(--ink); }
+.th-sort:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 table.data-table tbody tr:hover { background: var(--surface-2); cursor: pointer; }
 
 /* ---------- pill / chip (static, for legends etc.) ---------- */
@@ -710,6 +752,18 @@ tr:nth-child(n+31) .usage-bar__fill { animation: none; }
 .drawer.is-open .drawer__body { animation: drawer-content 360ms var(--ease-out) 80ms both; }
 @keyframes drawer-content { from { opacity: 0; transform: translateX(12px); } }
 
+/* Press feedback on standalone buttons: a small give under the pointer (Pro), a 1px pixel press (Retro).
+   Only while held, transform only; segmented buttons sit in a bordered group, so they keep their colour change. */
+:is(.filterbar__toggle-btn, .chips__clear, .lib-btn, .spx-toggle, .gear, .clock, .howto__close, .drawer__close, .toast__action, .sprite-btn) {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+:is(.filterbar__toggle-btn, .chips__clear, .lib-btn, .spx-toggle, .gear, .clock, .howto__close, .drawer__close, .toast__action, .sprite-btn):active:not(:disabled) {
+  transform: scale(.96); transition-duration: 60ms;
+}
+[data-skin="retro"] :is(.filterbar__toggle-btn, .chips__clear, .lib-btn, .spx-toggle, .gear, .clock, .howto__close, .drawer__close, .toast__action):active:not(:disabled) {
+  transform: translate(1px, 1px);
+}
+
 /* Skin / theme switch: a short cross-fade (View Transitions, where supported). */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 220ms; animation-timing-function: var(--ease); }
 
@@ -741,7 +795,8 @@ table.data-table tbody tr:focus-visible > :first-child { box-shadow: inset 3px 0
 }
 
 /* A new filter chip pops in and a few fireflies lift off it once. */
-.chip--new { animation: chip-pop var(--dur-med) var(--ease); }
+.chip--new { animation: chip-pop 380ms var(--ease); }
+@supports (animation-timing-function: linear(0, 1)) { .chip--new { animation-timing-function: var(--ease-spring); } }
 .chip--new::after {
   content: ""; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none;
   box-shadow: 0 0 14px 2px color-mix(in srgb, var(--accent) 60%, transparent);

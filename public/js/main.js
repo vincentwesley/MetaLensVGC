@@ -101,12 +101,12 @@ async function boot() {
     ro.observe(stickybar);
     ro.observe(header);
   }
+  const secnav = mountSecnav(document.getElementById('secnav'));
   const howto = document.getElementById('howto');
   mountHowto(howto);
   const headerHost = document.getElementById('header-controls');
   const clock = mountClock(headerHost, fmt);
   mountSettings(headerHost, { howto });
-  mountSecnav(document.getElementById('secnav'));
 
   let manifest, dex;
   try {
@@ -136,7 +136,7 @@ async function boot() {
     return;
   }
 
-  const { decode, filterTeams, previousPeriod, projectTeams, speciesChipFilter, fieldChips } = lib.aggregate;
+  const { decodeChunked, filterTeams, previousPeriod, projectTeams, speciesChipFilter, fieldChips } = lib.aggregate;
 
   const ladderCache = new Map();
   const rankedCache = new Map();
@@ -207,9 +207,11 @@ async function boot() {
   }
 
   const NO_TEAMS = { teams: [], events: [], matches: [] };
+  const yieldDecode = () => (globalThis.scheduler?.yield ? globalThis.scheduler.yield() : new Promise((r) => setTimeout(r, 0)));
   async function ensureReg(reg) {
     if (regFamily(reg) === 'showdown') return NO_TEAMS; // ladder only: there are no team sheets
-    return data.getDecoded(reg, dex, decode);
+    // Chunked so a big regulation (M-B: 33k teams) never freezes a phone for one long task.
+    return data.getDecoded(reg, dex, (file, d) => decodeChunked(file, d, yieldDecode));
   }
 
   // The shared `dex` object is swapped in place per mode (sections hold a reference to it):
@@ -289,11 +291,18 @@ async function boot() {
     });
   }
 
+  // A section whose cards join the main grid (display: contents on wide screens: Showdown teammates, VGC trends)
+  // has no box of its own and never intersects, so each section's mount and cards are observed too; a section is
+  // near view while any of its targets is.
+  const nearTargets = new Map(); // section id -> Set of intersecting targets
   const io = new IntersectionObserver((entries) => {
     let any = false;
     for (const e of entries) {
-      const id = e.target.dataset.section;
-      if (e.isIntersecting) { nearView.add(id); any = true; } else nearView.delete(id);
+      const id = e.target.closest('[data-section]').dataset.section;
+      const set = nearTargets.get(id) || new Set();
+      nearTargets.set(id, set);
+      if (e.isIntersecting) { set.add(e.target); any = true; } else set.delete(e.target);
+      if (set.size) nearView.add(id); else nearView.delete(id);
     }
     if (any && lastView && !rendering) flushVisible(lastView, renderSeq);
   }, { rootMargin: '400px 0px' });
@@ -308,8 +317,11 @@ async function boot() {
   }
   for (const s of mounted) {
     const el = document.querySelector(`main [data-section="${s.id}"]`);
-    if (el) io.observe(el);
+    if (!el) continue;
+    io.observe(el);
+    for (const card of el.querySelectorAll(':scope > .section__mount, :scope > .section__mount > .card')) io.observe(card);
   }
+  secnav.observeCards(); // the cards exist now (a display: contents section only has their boxes)
 
   let raf = null;
   let rendering = false;

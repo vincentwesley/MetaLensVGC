@@ -12,6 +12,32 @@ import { displayName, normalizeTerm } from './names.js';
 // to know about a second stone (e.g. big-six) check team.keys directly
 // instead of relying on this single field. Flagged for CLAUDE.md.
 export function decode(file, dex) {
+  const { team, events } = teamDecoder(file, dex);
+  return { teams: file.teams.map(team), events, matches: (file.matches || []).map(match) };
+}
+
+// Same result as decode(), built in slices with `yieldFn()` awaited between them, so a big
+// regulation (M-B: 33k teams, 85k match results) never holds the main thread for one long task.
+export async function decodeChunked(file, dex, yieldFn, size = 500) {
+  const { team, events } = teamDecoder(file, dex);
+  const teams = [];
+  for (let i = 0; i < file.teams.length; i += size) {
+    for (const row of file.teams.slice(i, i + size)) teams.push(team(row, teams.length));
+    await yieldFn();
+  }
+  const raw = file.matches || [];
+  const matches = [];
+  for (let i = 0; i < raw.length; i += size * 10) {
+    for (const m of raw.slice(i, i + size * 10)) matches.push(match(m));
+    await yieldFn();
+  }
+  return { teams, events, matches };
+}
+
+const match = ([a, b, result]) => ({ a, b, result });
+
+// The per-row decoder shared by decode() and decodeChunked(): team(row, i) -> Team.
+function teamDecoder(file, dex) {
   const strings = file.strings;
   const str = (i) => (i == null || i < 0 ? null : strings[i]);
   // Team sheets are hand-typed ("focus sash", "U-Turn", "None"); resolve each
@@ -24,7 +50,7 @@ export function decode(file, dex) {
     return memo.get(i);
   };
   const events = file.events;
-  const teams = file.teams.map((row, i) => {
+  const team = (row, i) => {
     const [evIdx, player, country, placing, w, l, t, monsRaw] = row;
     const ev = events[evIdx];
     const mons = monsRaw.map((mr) => {
@@ -57,9 +83,8 @@ export function decode(file, dex) {
     };
     team.arch = classify(team, dex);
     return team;
-  });
-  const matches = (file.matches || []).map(([a, b, result]) => ({ a, b, result }));
-  return { teams, events, matches };
+  };
+  return { team, events };
 }
 
 // --- filtering ----------------------------------------------------------
@@ -718,12 +743,19 @@ export function speciesDetail(teams, key, dex) {
   };
 }
 
+// Memoized per date string: a few hundred event dates cover every team, and the weekly charts
+// re-bucket tens of thousands of teams on each render.
+const mondayMemo = new Map();
 function mondayOf(dateStr) {
-  const d = new Date(`${dateStr}T00:00:00Z`);
-  const day = d.getUTCDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d.toISOString().slice(0, 10);
+  let wk = mondayMemo.get(dateStr);
+  if (wk === undefined) {
+    const d = new Date(`${dateStr}T00:00:00Z`);
+    const day = d.getUTCDay();
+    d.setUTCDate(d.getUTCDate() + ((day === 0 ? -6 : 1) - day));
+    wk = d.toISOString().slice(0, 10);
+    mondayMemo.set(dateStr, wk);
+  }
+  return wk;
 }
 
 function groupByWeek(teams) {

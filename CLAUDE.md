@@ -290,3 +290,26 @@ These skills are available in every session. The user never types slash commands
 
 ### v1.4.0 notes
 - New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.
+
+### v1.5.0 notes (UI/UX pass, research in `docs/research/ui-ux-2026-10.md`)
+- No motion library: motion.dev / anime.js were evaluated and not vendored; Bklit / Kokonut are React-only (patterns ported). Springs
+  are `--ease-spring` (a CSS `linear()` curve, scale pops only, `@supports`-guarded). Press feedback = `:active` transform on
+  standalone buttons (list in the app.css motion block). Axis tooltips get a dashed crosshair from `withChartDefaults`; trend
+  lines use `emphasis.focus: 'series'` + `order: 'valueDesc'`.
+- CLS: `main.grid { align-content: start }` + first-screen min-heights (snapshot always, usage/quadrant while `data-rendering`),
+  sized just under the filled height. Re-measure (PerformanceObserver layout-shift) if those cards change shape.
+- Leaderboard sortable headers are `<button class="th-sort">` inside the `th`, which carries `aria-sort`.
+- >=1280px: filter-bar children 4+ get `order: 1`, so Copy link + Hide end the first row.
+- v1.5.1: the browser decodes team files with `decodeChunked(file, dex, yieldFn)` (500 teams / 5,000 matches per slice; same
+  output as `decode`, unit-tested); `data.getDecoded` keeps one in-flight promise per reg. A Web Worker was measured and rejected:
+  structured-cloning the decoded teams back costs more main-thread time than parse + decode (M-B 820 ms vs 428 ms in Node).
+  `mondayOf` is memoized per date string.
+- v1.5.2 (layout): one-card sections fill their grid row (`.section__mount:not(.sb-grid) > .card:only-child`, height 100%).
+  VGC >=1100px: trends section + mount are `display: contents`; rows are weekly trend | risers, then speed | regulation shift
+  (`order` 1 on speed + shift, 2 on every later section). A display: contents section has no box: `main.js` and
+  `ui/secnav.js` also observe its mount/cards (any target intersecting = near view / in band), `secnav.jumpTo` scrolls to its
+  first card, and e2e must scroll to a card, not the section. `withChartDefaults` sets `axisLabel.hideOverlap` on every axis.
+  Moves: the list spans the row when the Tera card is hidden (VGC) or only holds its empty state (ND). `:where(select)` base style.
+- v1.5.3: `withChartDefaults` sets `animation: false` unless a chart sets it (motion budget: a filter click must not move
+  every chart; on a 4x-throttled phone, all sections are current after a click in ~4.6 s instead of ~8.1 s). Unit-tested in
+  test/ui-helpers.test.js with the crosshair and hideOverlap defaults.

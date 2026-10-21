@@ -1,6 +1,37 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.3', date: '2026-10-20', title: 'Calmer charts',
+    notes: [
+      { tag: 'IMPROVED', text: 'Charts redraw in place instead of animating after every filter click, so the whole page settles about twice as fast on phones.' },
+    ],
+  },
+  {
+    version: '1.5.2', date: '2026-10-20', title: 'Tidier layout',
+    notes: [
+      { tag: 'IMPROVED', text: 'Wide screens: the trend cards pair up with Speed tiers, so no long empty column; paired cards end level.' },
+      { tag: 'IMPROVED', text: 'Moves list uses the full width where there is no Tera card; Compare table is sized to its columns.' },
+      { tag: 'FIX', text: 'Section nav jumps to Trends and (Showdown) Teammates again on wide screens.' },
+      { tag: 'FIX', text: 'Chart axis labels no longer run together on phones; dropdowns match the other fields.' },
+    ],
+  },
+  {
+    version: '1.5.1', date: '2026-10-20', title: 'Smoother on phones',
+    notes: [
+      { tag: 'IMPROVED', text: 'Loading the team data no longer freezes the page: it is unpacked in small steps, so scrolling and taps keep working.' },
+    ],
+  },
+  {
+    version: '1.5.0', date: '2026-10-20', title: 'Steadier, snappier',
+    notes: [
+      { tag: 'FIX', text: 'The first screen no longer shifts down while data loads in.' },
+      { tag: 'IMPROVED', text: 'On wide screens the filter bar is one row shorter: Copy link and Hide sit at the end of the first row.' },
+      { tag: 'IMPROVED', text: 'Trend charts: hovering a line dims the others, and the tooltip lists the week’s leader first.' },
+      { tag: 'IMPROVED', text: 'Leaderboard column sorting works with the keyboard and tells screen readers the sort order.' },
+      { tag: 'IMPROVED', text: 'Buttons give slightly when pressed; new filter chips pop in with a small spring.' },
+    ],
+  },
+  {
     version: '1.4.2', date: '2026-10-16', title: 'Less page jumping',
     notes: [
       { tag: 'FIX', text: 'The page no longer jumps while sections load in; filter bar and tips strip reserve their space.' },
