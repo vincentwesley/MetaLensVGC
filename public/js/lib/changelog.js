@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.4', date: '2026-10-25', title: 'Clearer spread natures',
+    notes: [
+      { tag: 'IMPROVED', text: 'Spread explorer: the in-game data lists natures separately from spreads, so it now says so up front and lets you pick which of the top natures the stats assume.' },
+    ],
+  },
+  {
     version: '1.5.3', date: '2026-10-20', title: 'Calmer charts',
     notes: [
       { tag: 'IMPROVED', text: 'Charts redraw in place instead of animating after every filter click, so the whole page settles about twice as fast on phones.' },

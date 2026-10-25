@@ -43,18 +43,19 @@ const mkRow = (sp, share, nature, natureShare, natureJoint, bs, rules) => ({
 });
 
 /**
- * Rows for one ranked mon entry (`season.mons[name]`), highest share first. `nature` is the species' most
- * common ranked nature and `natureJoint` is false: ranked natures are not joint with the spread, so `stats`
- * assume that nature. Malformed spread keys are skipped.
+ * Rows for one ranked mon entry (`season.mons[name]`), highest share first. `natureJoint` is false: ranked
+ * natures are a separate list, not paired with spreads, so every row's `stats` assume ONE nature: `nature` if
+ * given (the reader's pick among the real ranked natures), else the species' most common one. Malformed spread
+ * keys are skipped.
  */
-export function rankedSpreadRows(mon, bs, rules = RULES.sp) {
+export function rankedSpreadRows(mon, bs, rules = RULES.sp, nature = null) {
   if (!mon || !bs) return [];
-  const top = rankedEntries(mon.natures)[0];
-  const nature = top?.name ?? null;
+  const natures = rankedEntries(mon.natures);
+  const pick = (nature && natures.find((n) => n.name === nature)) || natures[0];
   const rows = [];
   for (const { name, pct } of rankedEntries(mon.spreads)) {
     const sp = parsePoints(name, rules);
-    if (sp) rows.push(mkRow(sp, pct, nature, top?.pct ?? null, false, bs, rules));
+    if (sp) rows.push(mkRow(sp, pct, pick?.name ?? null, pick?.pct ?? null, false, bs, rules));
   }
   return rows;
 }

@@ -125,11 +125,11 @@ function shiftText(key, dex, bs, cur, prevReg, prevRanked, curReg) {
   if (!prevReg) return 'Change from the previous regulation: none (first regulation).';
   const head = `Change from ${prevReg} to ${curReg}`;
   const last = (prevRanked?.seasons || []).reduce((b, s) => (!b || s.snapshot > b.snapshot ? s : b), null);
-  if (!last) return `${head}: Insufficient data (no ranked data for ${prevReg}).`;
+  if (!last) return `${head}: no ranked data for ${prevReg}.`;
   const rm = rankedMon(last, key, dex);
   if (!rm) return `NEW in ${curReg}: not in ${prevReg}'s ${last.season} ranked data.`;
   const prevRows = rankedSpreadRows(rm.mon, bs);
-  if (!prevRows.length) return `${head}: Insufficient data (no ${last.season} spreads).`;
+  if (!prevRows.length) return `${head}: no ${last.season} spreads recorded.`;
   const a = archetypeShares(prevRows), b = archetypeShares(cur);
   const parts = SPREAD_ARCHETYPES.filter((x) => a.byArch[x.id] || b.byArch[x.id])
     .map((x) => `${x.label} ${Math.round((a.byArch[x.id] || 0) * 100)}% → ${Math.round((b.byArch[x.id] || 0) * 100)}%`);
@@ -209,6 +209,7 @@ export default {
       return prevRankedPromises.get(reg);
     }
     let spSource = 'ranked'; // 'ranked' | 'smogon': the Spread explorer's source toggle
+    let spNature = { key: null, name: null }; // ranked nature the stats assume, picked per Pokémon (null = most common)
     let shiftSeq = 0;
 
     // One "Spread explorer" card: in-game ranked (default) or Smogon, rows with SP, share, nature, Lv50 stats,
@@ -238,7 +239,7 @@ export default {
       const field = metaSpeedField(tiers, { season, merged, rules: (view.rules || RULES.sp) }, dex)
         .filter((f) => f.key !== key);
 
-      const toggle = elm('div', 'spx-toggle');
+      const toggle = elm('div', 'spx-toggle spx-toggle--source');
       toggle.setAttribute('role', 'group');
       toggle.setAttribute('aria-label', 'Spread source');
       const labels = { ranked: `In-game ranked · ${season?.season ?? ''}`, smogon: `Smogon · ${lad?.month ?? ''}` };
@@ -262,12 +263,15 @@ export default {
         if (!avail.length) {
           ctx.meta(metaEl, { source: view.family === 'natdex' ? 'Smogon ladder spreads' : 'In-game ranked and Smogon spreads' });
           if (view.family === 'natdex') { panel.appendChild(elm('div', 'ddv-note', 'No Smogon spreads recorded for this Pokémon in this format.')); return; }
-          emptyState(panel, 'Insufficient data');
+          emptyState(panel, 'No spreads recorded');
           panel.appendChild(elm('div', 'ddv-note', 'No in-game ranked or Smogon spreads for this Pokémon in this regulation (tournament sheets carry none).'));
           return;
         }
         const isRanked = spSource === 'ranked';
-        const rows = isRanked ? rankedRows : smogonRows;
+        // Ranked natures are a separate list from the spreads (not paired), so every ranked row assumes ONE nature:
+        // the reader's pick among the real top ranked natures, the most common by default.
+        const picked = spNature.key === key ? spNature.name : null;
+        const rows = isRanked ? rankedSpreadRows(rm.mon, bs, (view.rules || RULES.sp), picked) : smogonRows;
         if (isRanked) {
           const of = rm.name === key ? '' : ` · spreads are ${rm.name}'s ranked entry (Megas are tracked as base + stone); stats use ${key} base stats`;
           ctx.meta(metaEl, { source: `${rankedSource(season)} · sample size not published${of}` });
@@ -277,9 +281,23 @@ export default {
         const shares = archetypeShares(rows);
         panel.appendChild(shareBar(shares));
         panel.appendChild(elm('div', 'ddv-note spx-cover', `The spreads below cover ${pctText(shares.covered)}${isRanked ? " of this Pokémon's ranked players" : ' of its Smogon sets'}; the bar splits them by type.`));
-        if (isRanked && rm.mon.natures) {
-          const nats = rankedEntries(rm.mon.natures).slice(0, 3).map((n) => `${n.name} ${pctText(n.pct)}`).join(' · ');
-          if (nats) panel.appendChild(elm('div', 'spx-natures', `Natures: ${nats}`));
+        const nats = isRanked ? rankedEntries(rm.mon.natures).slice(0, 3) : [];
+        if (nats.length) {
+          const pick = elm('div', 'spx-natures');
+          pick.appendChild(elm('span', 'spx-natures__label', 'Stats assume'));
+          const seg = elm('div', 'spx-toggle spx-toggle--nature');
+          seg.setAttribute('role', 'group');
+          seg.setAttribute('aria-label', 'Nature the stats assume');
+          for (const n of nats) {
+            const b = elm('button', 'spx-toggle__btn', `${n.name} ${pctText(n.pct)}`);
+            b.type = 'button';
+            b.setAttribute('aria-pressed', String(n.name === rows[0]?.nature));
+            b.addEventListener('click', () => { spNature = { key, name: n.name }; paint(); });
+            seg.appendChild(b);
+          }
+          pick.appendChild(seg);
+          panel.appendChild(pick);
+          panel.appendChild(elm('div', 'ddv-note', `The game reports natures separately from spreads, so one nature is applied to every spread below (% = its share of ranked players).${smogonRows.length ? ' Smogon spreads show each spread\'s own nature.' : ''}`));
         }
         if (isRanked) {
           const shift = elm('div', 'ddv-note spx-shift');
@@ -289,7 +307,7 @@ export default {
           else {
             shift.textContent = `Change from ${pReg} to ${view.reg}: loading…`;
             prevRankedFor(pReg).then((pr) => { if (seq === shiftSeq) shift.textContent = shiftText(key, dex, bs, rows, pReg, pr, view.reg); })
-              .catch(() => { if (seq === shiftSeq) shift.textContent = `Change from ${pReg} to ${view.reg}: Insufficient data.`; });
+              .catch(() => { if (seq === shiftSeq) shift.textContent = `Change from ${pReg} to ${view.reg}: the ${pReg} ranked data could not be loaded.`; });
           }
         }
 
@@ -313,12 +331,10 @@ export default {
           else if (!r.nature) mid.append(elm('span', 'spx-row__nat', 'no nature reported'));
           const stats = elm('span', 'spx-row__stats', `Lv${(view.rules || RULES.sp).level} ${r.stats.join(' / ')}`);
           mid.append(stats);
-          if (isRanked && r.nature) stats.after(elm('span', 'spx-row__assume', `* ${r.nature}`));
           li.append(top, mid, elm('div', 'ddv-note spx-row__bench', field.length ? `Spe ${r.stats[5]}: ${benchText(r.stats[5], field)}` : `Spe ${r.stats[5]}`));
           list.appendChild(li);
         }
         panel.appendChild(list);
-        if (isRanked) panel.appendChild(elm('div', 'ddv-note', `* Ranked data reports natures separately from spreads, so Lv${(view.rules || RULES.sp).level} stats assume the most common nature (${rows[0]?.nature ?? '—'}).`));
         panel.appendChild(elm('div', 'ddv-note', `Type describes the SP only (${SPREAD_ARCHETYPES.slice(0, 4).map((a) => `${a.label}: ${a.desc}`).join('; ')}; first match wins). Speed benchmark: the ${field.length} most-used Pokémon of this view with a known speed (Speed Tiers sources).`));
         if (isRanked) {
           const attr = elm('div', 'ddv-note');

@@ -781,19 +781,30 @@ test('Spread explorer (M-C, Rillaboom): rows with 6 numeric stats, archetype str
   }
   await expect(card.locator('.spx-cover')).toContainText(/cover \d+%/);
   expect(await card.locator('.spx-bar__seg').count()).toBeGreaterThanOrEqual(2);
-  await expect(card.locator('.spx-natures')).toContainText(/Natures: \w+ \d+%/);
+  // Ranked natures are not paired with spreads: one picker says which real ranked nature every row's stats assume.
+  const natBtns = card.locator('.spx-toggle--nature .spx-toggle__btn');
+  expect(await natBtns.count()).toBeGreaterThanOrEqual(2);
+  await expect(natBtns.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(natBtns.first()).toHaveText(/^\w+ \d+%$/);
+  await expect(card).toContainText('The game reports natures separately from spreads');
+  await expect(card.locator('.spx-row__assume')).toHaveCount(0);
+  const before = await rows.first().locator('.spx-row__stats').innerText();
+  await natBtns.nth(1).click();
+  await expect(natBtns.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(card.locator('.spx-row').first().locator('.spx-row__stats')).not.toHaveText(before);
   await expect(card.locator('.spx-shift')).toContainText(/NEW in M-C|Change from M-B to M-C/, { timeout: 15000 });
   await expect(card.locator('.spx-shift')).not.toContainText('loading');
   await expect(card).toContainText('sample size not published');
   await expect(card).toContainText('Battle data provided by Pokémon Champions Battle Data');
   // The Smogon toggle follows the data: none until Smogon publishes an M-C month, then it must appear.
   const mcMonths = await page.evaluate(async () => ((await (await fetch('data/ladder-M-C.json')).json()).months || []).length);
-  await expect(card.locator('.spx-toggle')).toHaveCount(mcMonths ? 1 : 0);
+  await expect(card.locator('.spx-toggle--source')).toHaveCount(mcMonths ? 1 : 0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect(await card.evaluate((c) => c.scrollWidth <= c.clientWidth + 1)).toBe(true);
   const text = await card.innerText();
   expect(text).not.toMatch(/\bNaN\b|\bundefined\b|Infinity/);
+  expect(text).not.toContain('Insufficient data');
   // the old duplicate cards are gone
   await expect(page.locator('#deepdive').getByText('Top SP spreads & natures')).toHaveCount(0);
 });
@@ -850,7 +861,7 @@ test('when Smogon publishes an M-C month (simulated with the M-B file), Ladder m
   await expect(rate).toContainText('Ladder (Smogon)');
   expect(await page.locator('body').innerText()).not.toMatch(/\bNaN\b|\bundefined\b/);
   const card = await openDeepDive(page, '/', 'Incineroar');
-  await expect(card.locator('.spx-toggle')).toHaveCount(1);
+  await expect(card.locator('.spx-toggle--source')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 

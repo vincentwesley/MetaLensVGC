@@ -313,3 +313,6 @@ These skills are available in every session. The user never types slash commands
 - v1.5.3: `withChartDefaults` sets `animation: false` unless a chart sets it (motion budget: a filter click must not move
   every chart; on a 4x-throttled phone, all sections are current after a click in ~4.6 s instead of ~8.1 s). Unit-tested in
   test/ui-helpers.test.js with the crosshair and hideOverlap defaults.
+- v1.5.4: Spread explorer (ranked) has a "Stats assume" picker of the top 3 real ranked natures (`.spx-toggle--nature`;
+  the source toggle is `.spx-toggle--source`); `rankedSpreadRows(mon, bs, rules, nature?)` applies the pick to every row
+  (unknown → most common). No per-row "* Nature" tags: ranked natures are never paired with spreads (not joint).

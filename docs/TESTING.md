@@ -303,6 +303,14 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Considered: memoizing archetypeMatrix / cores / weekly. Skipped, because each runs once per state change, so a memo would not help a click.
 - `npm run e2e:cloud` 67/67, section specs 13/13, 380 unit.
 
+### v1.5.4 (spread explorer natures), 2026-10-25
+- Owner question: "why is every nature the same under the spreads?" Not a bug: ranked natures and spreads are separate
+  distributions, so all ranked rows assumed the top nature. Now one picker of the real top 3 ranked natures (unit test for the
+  override; e2e: picker present, first pressed, clicking the 2nd changes the first row's stats, no per-row tags, no
+  "Insufficient data"). Screenshot at 390: fits.
+- Not changed: other drawer cards still title empty states "Insufficient data" (win rate, teammates, ranked teammates, item
+  bars) and so do items.js / archetypes.js defaults. Each needs its own "what is missing" title.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

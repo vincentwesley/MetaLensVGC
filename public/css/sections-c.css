@@ -265,7 +265,8 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 .spx-bar__seg + .spx-bar__seg { box-shadow: inset 1px 0 0 var(--surface-1); }
 .spx-legend { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
 .spx-legend__item::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 4px; background: var(--sw); border-radius: 1px; }
-.spx-natures { font-size: var(--fs-small); font-weight: 600; }
+.spx-natures { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-small); }
+.spx-natures__label { font-weight: 600; }
 .spx-head { display: flex; justify-content: space-between; gap: var(--space-2); font-family: var(--font-label); font-size: var(--fs-label); color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: var(--space-1); }
 .spx-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .spx-row { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid var(--grid); min-width: 0; }
@@ -279,7 +280,6 @@ table.scn-grid td.scn-cell { font-variant-numeric: tabular-nums; font-size: 12px
 .spx-row__mid { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
 .spx-row__bench { margin: 0; }
 .scn-muted { font-style: italic; }
-.spx-row__assume { color: var(--muted); margin-left: calc(-1 * var(--space-2)); }
 
 /* ---------- meta by country (sections/countries.js) ---------- */
 .cty-table td { vertical-align: middle; }

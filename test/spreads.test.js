@@ -40,6 +40,19 @@ test('rankedSpreadRows: real Rillaboom rows, stats from calcStats with the top n
   assert.equal(rows[0].sp.join('/'), Object.entries(rilla.spreads).sort((a, b) => b[1] - a[1])[0][0]);
 });
 
+test('rankedSpreadRows: a picked ranked nature applies to every row; an unknown one falls back to the top nature', () => {
+  const nats = Object.entries(rilla.natures).sort((a, b) => b[1] - a[1]);
+  assert.ok(nats.length >= 2);
+  const [second, share] = nats[1];
+  const rows = rankedSpreadRows(rilla, bs, undefined, second);
+  for (const r of rows) {
+    assert.equal(r.nature, second);
+    assert.equal(r.natureShare, share);
+    assert.deepEqual(r.stats, calcStats(bs, r.sp, second));
+  }
+  assert.deepEqual(rankedSpreadRows(rilla, bs, undefined, 'NotANature'), rankedSpreadRows(rilla, bs));
+});
+
 test('rankedSpreadRows: empty / malformed inputs', () => {
   assert.deepEqual(rankedSpreadRows(null, bs), []);
   assert.deepEqual(rankedSpreadRows(rilla, null), []);
