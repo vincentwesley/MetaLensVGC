@@ -323,6 +323,9 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   index.html), frame-ancestors none, nosniff, X-Frame-Options DENY. External links carry `rel=noopener`.
 - e2e fixture: the rare-species test used Pikachu (21 M-C teams after the 2026-11-02 refresh, over min n); now Thievul (5).
 - 382 unit, 67 e2e green.
+- Accepted risk (owner delegated the call): ECharts 5 has GHSA-fgmj-fm8m-jvvx (XSS, fixed only in breaking 6.1.0). Not
+  upgraded: CSP `script-src 'self'` with no inline scripts blocks script execution, and the probe above found no injection
+  path. Revisit if the CSP is ever loosened. Other `npm audit` hits are pokemon-showdown's server deps (build-time only).
 
 ## Not yet tested (candidates for the next pass)
 
