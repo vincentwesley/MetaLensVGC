@@ -6,6 +6,7 @@ import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 const { Dex } = pkg;
 import { showdownDex } from './dex.js';
+import { decode } from '../public/js/lib/aggregate.js';
 
 const NATDEX_ORDER = ['AG', 'Uber', 'OU', 'UUBL', 'UU', 'RUBL', 'RU', 'NUBL', 'NU', 'PUBL', 'PU', 'ZUBL', 'ZU', 'NFE', 'LC'];
 const DOUBLES_ORDER = ['DUber', 'DOU', 'DBL', 'DUU', 'NFE', 'LC']; // Showdown's Doubles tiers (gen9 Doubles OU; NatDex Doubles has no list of its own)
@@ -59,11 +60,35 @@ export function build(dex, { natdex, seen = new Set() }) {
 
 const natdexOnly = (name, o, d) => (name === 'natdex' ? { ...o, dTierOrder: d } : o);
 
+export const MIN_SHEETS = 5; // a species on fewer current-reg sheets than this is treated as a typo / joke entry
+
+/** Species with real evidence of being legal in the current VGC regulation (the installed Showdown champions mod lags
+ * behind new regulations): any in-game ranked season, any Smogon ladder month, or MIN_SHEETS+ tournament sheets.
+ * Whole-dex names (dex.json) are NOT evidence: stray sheets once put Calyrex-Shadow, Koraidon etc. in the M-C Pokédex. */
+export function seenFrom({ ranked, ladder, teams }) {
+  const seen = new Set();
+  for (const s of ranked?.seasons || []) for (const k of s.ranking || []) seen.add(k);
+  for (const m of Object.values(ladder?.months || {})) for (const k of Object.keys(m.mons || {})) seen.add(k);
+  const n = new Map();
+  for (const t of teams || []) for (const k of t.keys) n.set(k, (n.get(k) || 0) + 1);
+  for (const [k, c] of n) if (c >= MIN_SHEETS) seen.add(k);
+  return seen;
+}
+
+async function seenInCurrentReg(dataDir) {
+  const rd = (f) => readFile(path.join(dataDir, f), 'utf8').then(JSON.parse, () => null);
+  const reg = (await rd('manifest.json'))?.current;
+  const dex = await rd('dex.json');
+  if (!reg || !dex) return new Set();
+  const file = await rd(`teams-${reg}.json`);
+  return seenFrom({ ranked: await rd(`ranked-${reg}.json`), ladder: await rd(`ladder-${reg}.json`), teams: file ? decode(file, dex).teams : [] });
+}
+
 export async function buildPokedex(dataDir) {
   await mkdir(dataDir, { recursive: true });
   const generated = new Date().toISOString();
   const out = {};
-  const seen = new Set(Object.keys((await readFile(path.join(dataDir, 'dex.json'), 'utf8').then(JSON.parse, () => ({}))).species || {}));
+  const seen = await seenInCurrentReg(dataDir);
   for (const [name, dex, natdex] of [['vgc', showdownDex(), false], ['natdex', Dex, true]]) {
     const { species, learn, moveNames, tierOrder, dTierOrder } = build(dex, { natdex, seen });
     const moves = Object.fromEntries(Object.keys(moveNames).sort().map((k) => [k, moveNames[k]]));

@@ -13,3 +13,10 @@ test('vgc build keeps `seen` species the mod marks Past/Illegal, tier left unset
   assert.equal(r.species[past.name].tier, undefined);
   assert.ok(r.learn[past.id].length);
 });
+
+test('seenFrom: ranked, ladder and MIN_SHEETS+ sheets count; stray sheets do not', async () => {
+  const { seenFrom, MIN_SHEETS } = await import('../scripts/build-pokedex.js');
+  const teams = [...Array(MIN_SHEETS)].map(() => ({ keys: ['Sneasler'] })).concat([{ keys: ['Calyrex-Shadow'] }]);
+  const s = seenFrom({ ranked: { seasons: [{ ranking: ['Houndstone'] }] }, ladder: { months: { a: { mons: { 'Sceptile-Mega': {} } } } }, teams });
+  assert.deepEqual([...s].sort(), ['Houndstone', 'Sceptile-Mega', 'Sneasler']);
+});

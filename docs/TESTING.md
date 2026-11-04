@@ -311,6 +311,19 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Not changed: other drawer cards still title empty states "Insufficient data" (win rate, teammates, ranked teammates, item
   bars) and so do items.js / archetypes.js defaults. Each needs its own "what is missing" title.
 
+### v1.5.5 (legal Pokédex roster, chip-note crash, security pass), 2026-11-04
+- Owner report: Calyrex-Shadow etc. in the VGC Pokédex. Roster now = mod-tiered + current-reg evidence (unit test `seenFrom`).
+  M-C roster 421 -> 378; checked against upstream Showdown master `data/mods/champions/formats-data.ts` (M-C rules): no
+  upstream-illegal species kept except base Floette (180 M-C sheets name it, holding Floettite); Persian, Farfetch'd and
+  Squawkabilly-Yellow are legal upstream but missing (untiered in npm 0.11.11, unused in M-C).
+- Bug found by a probe: `chips.js#scopeNote` passed `Array.map`'s index as `teamLabel` -> TypeError and no chip bar on Ladder/
+  Ranked/Showdown with a team chip. Fixed; probe re-run clean.
+- Security probe (ad-hoc Playwright, not in the suite): HTML/`onerror` payloads in every chip kind via the hash, in VGC and ND,
+  plus a Scanner paste: 0 injected elements, 0 page errors. Live headers checked: CSP `script-src 'self'` (no inline scripts in
+  index.html), frame-ancestors none, nosniff, X-Frame-Options DENY. External links carry `rel=noopener`.
+- e2e fixture: the rare-species test used Pikachu (21 M-C teams after the 2026-11-02 refresh, over min n); now Thievul (5).
+- 382 unit, 67 e2e green.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),

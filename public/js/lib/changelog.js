@@ -1,6 +1,13 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.5', date: '2026-11-04', title: 'Only legal Pokémon in the Pokédex',
+    notes: [
+      { tag: 'FIX', text: 'The VGC Pokédex no longer lists Pokémon that are not allowed in the current regulation (Calyrex-Shadow, Koraidon, Zacian and others that only came from a handful of stray team sheets).' },
+      { tag: 'FIX', text: 'Switching Source to Ladder or In-game ranked with a team or item filter active no longer breaks the filter chips.' },
+    ],
+  },
+  {
     version: '1.5.4', date: '2026-10-25', title: 'Clearer spread natures',
     notes: [
       { tag: 'IMPROVED', text: 'Spread explorer: the in-game data lists natures separately from spreads, so it now says so up front and lets you pick which of the top natures the stats assume.' },

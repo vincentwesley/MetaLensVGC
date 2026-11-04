@@ -900,7 +900,7 @@ test('cross-filters: the quadrant plots a single selected Pokémon; a rare one f
   const pts = await quad.locator('[_echarts_instance_]').evaluate((e) => echarts.getInstanceByDom(e).getOption().series[0].data.map((d) => d.key));
   expect(pts).toEqual(['Rillaboom']);
 
-  await page.goto('/#chips=species:Pikachu'); // 9 teams on M-C, under the default min n of 20
+  await page.goto('/#chips=species:Thievul'); // 5 teams on M-C (2026-11-02 data), under the default min n of 20; was Pikachu until it reached 21
   await waitForAllSections(page);
   for (const id of ['snapshot', 'usage', 'quadrant', 'items']) {
     const sec = page.locator(`main [data-section="${id}"]`);

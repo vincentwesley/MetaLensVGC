@@ -39,11 +39,11 @@ function labelFor(chip, teamLabel = () => null) {
 }
 
 // One line under the chips saying what they do to the page.
-function scopeNote(state, dex) {
+function scopeNote(state, dex, teamLabel) {
   if (state.source !== 'tournaments') {
     const un = speciesChipFilter ? speciesChipFilter(state.chips, dex).unsupported : state.chips;
     if (!un.length) return 'Ladder and in-game ranked rows are per Pokémon: only the Pokémon matching the chips are shown.';
-    return `${un.map(labelFor).join(', ')} need${un.length === 1 ? 's' : ''} tournament team sheets and ${un.length === 1 ? 'is' : 'are'} ignored for this source; switch Source to Tournaments to apply ${un.length === 1 ? 'it' : 'them'}.`;
+    return `${un.map((c) => labelFor(c, teamLabel)).join(', ')} need${un.length === 1 ? 's' : ''} tournament team sheets and ${un.length === 1 ? 'is' : 'are'} ignored for this source; switch Source to Tournaments to apply ${un.length === 1 ? 'it' : 'them'}.`;
   }
   const mon = state.chips.filter((c) => MON_KINDS.has(c.kind) && !c.neg);
   if (!mon.length) return 'Showing teams that match every chip.';
@@ -112,7 +112,7 @@ export function mountChips(el, ctx) {
     el.appendChild(clear);
     const note = document.createElement('span');
     note.className = 'chips__note';
-    note.textContent = scopeNote(state, ctx.dex);
+    note.textContent = scopeNote(state, ctx.dex, ctx.teamLabel);
     title.title = note.textContent; // the note is hidden on phones
     el.appendChild(note);
   }
