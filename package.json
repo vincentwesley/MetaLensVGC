@@ -25,5 +25,11 @@
   "private": true,
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "tar": "7.5.22",
+    "nodemailer": "10.3.1",
+    "uuid": "14.0.3",
+    "@tootallnate/once": "3.0.1"
   }
 }
