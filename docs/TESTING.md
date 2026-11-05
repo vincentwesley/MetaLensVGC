@@ -326,6 +326,8 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Accepted risk (owner delegated the call): ECharts 5 has GHSA-fgmj-fm8m-jvvx (XSS, fixed only in breaking 6.1.0). Not
   upgraded: CSP `script-src 'self'` with no inline scripts blocks script execution, and the probe above found no injection
   path. Revisit if the CSP is ever loosened. Other `npm audit` hits are pokemon-showdown's server deps (build-time only).
+- CI identity allowlist (ci.yml) now also accepts `Claude <noreply@anthropic.com>`: 11 Claude Code commits are on the default
+  branch and history is never rewritten there. Owner approved ("just go ahead and push"), 2026-11-05.
 
 ## Not yet tested (candidates for the next pass)
 
