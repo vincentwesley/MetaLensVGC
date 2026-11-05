@@ -1,4 +1,4 @@
-# VGC MetaScope — Goal Prompt
+# MetaLens VGC — Goal Prompt
 
 > Historical: the original build prompt. The site has since been renamed **MetaLens VGC** (`metalensvgc.pages.dev`).
 
@@ -6,7 +6,7 @@ Paste everything below into a fresh Claude Code session (with open network acces
 
 ---
 
-You are building **VGC MetaScope**. It's an interactive, cross-filtering metagame dashboard for **Pokémon Champions, the VGC 2026 format**. It will run as a free static site on **Cloudflare Pages**, from the GitHub repo `vincentwesley/VGCMetaScope`. It is its own standalone website, separate from my portfolio at vwesley.dev, so don't link it to or reference that domain. The Pages project should be named `vgcmetascope`, which gives the site `https://vgcmetascope.pages.dev`. The name is permanent, so use "VGC MetaScope" as the site's brand everywhere. I will not be involved: treat this as a goal and work autonomously until it is done, deployed-ready, tested, committed and pushed. Make reasonable decisions yourself and write them down in the README. Use a task list to track progress.
+You are building **MetaLens VGC**. It's an interactive, cross-filtering metagame dashboard for **Pokémon Champions, the VGC 2026 format**. It will run as a free static site on **Cloudflare Pages**, from the GitHub repo `vincentwesley/MetaLensVGC`. It is its own standalone website, separate from my portfolio at vwesley.dev, so don't link it to or reference that domain. The Pages project should be named `metalensvgc`, which gives the site `https://metalensvgc.pages.dev`. The name is permanent, so use "MetaLens VGC" as the site's brand everywhere. I will not be involved: treat this as a goal and work autonomously until it is done, deployed-ready, tested, committed and pushed. Make reasonable decisions yourself and write them down in the README. Use a task list to track progress.
 
 ### 0. Non-negotiables
 - **Accuracy over everything.** Every number shown must come from real data you fetched, never invented or "calibrated" synthetic data. If a stat isn't available, hide that widget for that filter state or say "insufficient data". Don't fake it. Every view shows the data source, the sample size (n teams / n battles) and the "last updated" date.
@@ -111,7 +111,7 @@ Keep what's useful. Add better ideas if you find them.
   - archetype classification
   - the aggregation and filter logic
   - paste export and parse
-- Write a `README.md` covering the features, data sources and licensing notes, the Cloudflare Pages setup (connect the GitHub repo, set the project name to `vgcmetascope`, leave the build command empty, set the output dir to `public`, and the site goes live at `vgcmetascope.pages.dev`), and how the data refresh works.
+- Write a `README.md` covering the features, data sources and licensing notes, the Cloudflare Pages setup (connect the GitHub repo, set the project name to `metalensvgc`, leave the build command empty, set the output dir to `public`, and the site goes live at `metalensvgc.pages.dev`), and how the data refresh works.
 - Write a `CLAUDE.md` with the project conventions for future sessions. Set up a SessionStart hook that runs `npm ci && npm test`.
 - Show a footer credit that sprites belong to Pokémon Showdown and data belongs to its sources, with a note that this is a fan project not affiliated with Nintendo, Game Freak or The Pokémon Company.
 
