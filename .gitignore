@@ -16,3 +16,18 @@ graphify-out/
 
 # QA output (design review, axe, lighthouse)
 qa-output/
+
+# --- house safety additions ---
+dist/
+.env
+.env.*
+!.env.example
+.dev.vars
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+data/
+coverage/
+*.log
+.playwright-mcp/
