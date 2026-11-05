@@ -175,7 +175,7 @@ Second smoke + UX round (2026-09-29, evening; sonnet sweep with measurements, fi
 - Verified fine (measured): type-chart clicks (plain type chip, leaderboard only that type, 36 hover
   tooltips clean), every chart click matches what it plots, Teammate rate fallbacks (M-C sheets, M-B
   ladder, M-C ladder -> sheets), scanner two columns at >= 1200px, credits links/image, no
-  vgcmetascope leftovers, no overflow at 390 in six modes.
+  old-name leftovers, no overflow at 390 in six modes.
 - UX: section jump nav (sticky, aria-current follows scroll), first-visit tips strip, aria-busy cue on
   sections catching up, snapshot change line, hyphen-only Mega name breaks, quadrant corner labels
   (all in e2e). Screenshots reviewed with real network: 390 pro dark, 1440 retro light, quadrant.

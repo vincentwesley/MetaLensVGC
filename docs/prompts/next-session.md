@@ -2,7 +2,7 @@ Continue work on **MetaLens VGC** (repo `vincentwesley/MetaLensVGC`, live at htt
 Handover updated 2026-10-12 after v1.3.1 (smoke-test fixes). Everything is live and tests are green. Only do what the owner asks.
 
 ## Before anything
-1. Local clone: `C:\Coding Projects\VGCMetaScope`. `git pull --rebase` first: the weekly bot (`metalensvgc-bot`, "chore: refresh data") pushes to the same branch.
+1. Local clone: this repo's folder under `C:\Coding Projects`. `git pull --rebase` first: the weekly bot (`metalensvgc-bot`, "chore: refresh data") pushes to the same branch.
 2. Read `CLAUDE.md` in full (hard rules, data notes, "v1.1.0 / v1.2.0 / v1.3.0 additions") and `docs/TESTING.md` (coverage ledger). Don't re-verify what the ledger covers unless its code changed. Don't edit `.gitattributes` or the graphify / skill-trigger parts of `CLAUDE.md`.
 
 ## How to work here

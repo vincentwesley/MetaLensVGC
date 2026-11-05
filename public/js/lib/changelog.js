@@ -138,7 +138,7 @@ export const CHANGELOG = [
   {
     version: '0.2.0', date: '2026-09-29', title: 'Renamed to MetaLens VGC',
     notes: [
-      { tag: 'IMPROVED', text: 'The site is now MetaLens VGC (it was VGC MetaScope).' },
+      { tag: 'IMPROVED', text: 'The site is now MetaLens VGC.' },
       { tag: 'NEW', text: 'Item Usage section and in-game ranked (Battle Data) source.' },
       { tag: 'NEW', text: 'Collapsible filter bar with active-filter chips and Clear all.' },
       { tag: 'FIX', text: 'Type-chart clicks and tooltip crashes; tooltips stay on screen.' },

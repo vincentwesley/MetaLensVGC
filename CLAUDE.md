@@ -117,8 +117,7 @@ the 96 px gen5 sprites (xs inline, sm rows, md scanner grid, lg snapshot hero + 
 Percentages via `fmt.pct` (one decimal; a nonzero share shows "<0.1%", never 0). Owner calls 2026-09-30.
 
 ## Name
-The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). It was "VGC MetaScope" until
-2026-09-29; the old `vgcmetascope` Pages project has been deleted. Use the new name everywhere.
+The site is **MetaLens VGC** (`metalensvgc.pages.dev`, repo `MetaLensVGC`). Use this name everywhere.
 Creator credits (owner's request): the "Credits" card at the end of `index.html` ("Made by Vin", no full name) links vwesley.dev, Instagram @vinnql
 and X @Vin_Koe, with the owner's character art (`public/img/creator.webp`, white keyed out); the footer links vwesley.dev.
 
