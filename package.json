@@ -12,12 +12,16 @@
   },
   "license": "MIT",
   "author": "Vin, Vin's Atelier (https://vwesley.dev)",
-  "repository": { "type": "git", "url": "git+https://github.com/vincentwesley/MetaLensVGC.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vincentwesley/MetaLensVGC.git"
+  },
   "description": "MetaLens VGC: cross-filtering metagame dashboard for Pokémon Champions (VGC 2026)",
   "dependencies": {
     "echarts": "^5.6.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@playwright/test": "^1.63.0",
     "pokemon-showdown": "^0.11.11"
   },

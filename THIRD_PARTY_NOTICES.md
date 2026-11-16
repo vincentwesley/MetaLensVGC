@@ -8,6 +8,7 @@ MetaLens VGC code is MIT-licensed (`LICENSE`). Everything below belongs to its r
 | [Apache ECharts](https://echarts.apache.org/) 5 (`public/vendor/echarts.min.js`, licence in `public/vendor/echarts.LICENSE`) | Apache-2.0 | Charts (vendored) |
 | [pokemon-showdown](https://www.npmjs.com/package/pokemon-showdown) (dev dependency) | MIT | Dex data at build time (types, base stats, abilities, moves, learnsets) |
 | [Playwright](https://playwright.dev/) (dev dependency) | Apache-2.0 | End-to-end tests |
+| [@axe-core/playwright](https://www.npmjs.com/package/@axe-core/playwright) (dev dependency) | MPL-2.0 | Accessibility checks in e2e |
 
 ## Fonts (loaded from Google Fonts at runtime)
 Press Start 2P, Silkscreen, VT323, JetBrains Mono, Inter, Newsreader, Nunito: all SIL Open Font License 1.1.
