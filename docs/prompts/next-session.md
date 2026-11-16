@@ -37,4 +37,3 @@ When you finish a piece of work, update `CLAUDE.md` and `docs/TESTING.md`, then 
 - Mobile performance is low (Lighthouse mobile perf under 10 headless/throttled; main-thread work decoding ~9 MB data). Profile `data.js` decode.
 - Owner: disable Cloudflare Pages Web Analytics (the injected beacon is blocked by the CSP and logs a console error).
 - No section-by-section design review done (full-page screenshots in qa-output/ are too tall); slice with `scripts/slice-shots.mjs`.
-- Minor axe: `empty-table-header` (usage table).
