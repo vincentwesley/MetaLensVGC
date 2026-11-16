@@ -10,6 +10,11 @@ try {
   }
   if (p && typeof p.anim === 'boolean') root.setAttribute('data-anim', p.anim ? 'on' : 'off');
 } catch { /* no storage: defaults */ }
+// Vin's Atelier logo form (credits sign-off), applied before paint.
+try {
+  const logo = localStorage.getItem('logo-form');
+  if (logo === 'short' || logo === 'middle' || logo === 'long') document.documentElement.setAttribute('data-logo', logo);
+} catch { /* defaults */ }
 // Layout state that main.js would otherwise set after first paint (avoids layout shift): collapsed filter bar, dismissed tips.
 try {
   const c = localStorage.getItem('metalens.filtersCollapsed');

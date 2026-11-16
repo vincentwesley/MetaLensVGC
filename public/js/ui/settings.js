@@ -118,6 +118,27 @@ export function mountSettings(host, { howto } = {}) {
   store.subscribe((s) => { syncSwatches(s); if (pop.matches(':popover-open')) paintSwatches(); });
   pop.appendChild(row('Palette', sw));
 
+  // Vin's Atelier logo form (the draggable logo in the Credits card; wired by js/logo-resize.js).
+  const logoPick = document.createElement('div');
+  logoPick.className = 'logo-pick';
+  logoPick.setAttribute('role', 'radiogroup');
+  logoPick.setAttribute('aria-label', 'Logo');
+  const logoNow = root.dataset.logo || 'middle';
+  for (const [value, text] of [['short', 'Short'], ['middle', 'Middle'], ['long', 'Long']]) {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'logo-form';
+    input.value = value;
+    input.checked = value === logoNow;
+    input.setAttribute('data-logo-form', '');
+    const span = document.createElement('span');
+    span.textContent = text;
+    label.append(input, span);
+    logoPick.appendChild(label);
+  }
+  pop.appendChild(row('Logo', logoPick));
+
   const anim = toggle('Animated sprites', store.get().anim, (v) => store.set({ anim: v }));
   store.subscribe((s) => { anim.input.checked = s.anim; });
   const clock = toggle('Show clock', clockOn(), (on) => {

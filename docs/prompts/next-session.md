@@ -18,6 +18,9 @@ Handover updated 2026-10-12 after v1.3.1 (smoke-test fixes). Everything is live 
 - Pokédex: A-Z by default in VGC, Tier by default in Showdown (ND official tiers; NDD uses Showdown's Doubles tiers DUber/DOU/DUU since NatDex Doubles has no list); follows dashboard chips (species/type/weak/core) but clicking it never adds a chip; list scrolls in a fixed-height box.
 - Weekly refresh: `.github/workflows/refresh-data.yml`, Mondays 00:00 UTC; also refreshes ND/NDD (Smogon months appear once published; October 2026 not out yet at time of writing).
 
+## Brand (2026-11-16)
+- Vin's Atelier draggable logo + sign-off sit at the bottom of the Credits card (`css/logo.css`, `js/logo-resize.js`, `js/notch.js`; radios in settings.js; `data-logo` in prefs-init.js). Header untouched. Spec: e2e/logo.spec.js.
+
 ## Known gaps / ideas (none block "done")
 1. Showdown has no usage x win-rate quadrant (Smogon publishes no win rates). Offered but not built: a quadrant of rating-weighted usage vs raw usage share ("favoured by top players"), clearly labelled as not win rate.
 2. (done in 1.3.1) hint wording.

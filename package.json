@@ -11,7 +11,7 @@
     "e2e:cloud": "playwright test -c playwright.cloud.config.js e2e/app.spec.js"
   },
   "license": "MIT",
-  "author": "Vincent Wesley",
+  "author": "Vin, Vin's Atelier (https://vwesley.dev)",
   "repository": { "type": "git", "url": "git+https://github.com/vincentwesley/MetaLensVGC.git" },
   "description": "MetaLens VGC: cross-filtering metagame dashboard for Pokémon Champions (VGC 2026)",
   "dependencies": {

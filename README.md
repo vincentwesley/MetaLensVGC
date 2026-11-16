@@ -242,3 +242,7 @@ Fonts and Pokémon Showdown sprites).
 ## Project layout
 
 See `CLAUDE.md` for conventions and module contracts, and `public/data/SCHEMA.md` for the data contract.
+
+## Credits
+
+Designed and built by Vin, Vin's Atelier (https://vwesley.dev). Logo by @portus_workstation / @wason25_pz (Instagram); the logo is all rights reserved (see `NOTICE.md`), not covered by the MIT licence. Pokémon trademarks and data credits are in the disclaimer under "Data sources" above and in `THIRD_PARTY_NOTICES.md`.
