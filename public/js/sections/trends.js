@@ -334,7 +334,7 @@ export default {
       wrap.className = 'table-wrap table-wrap--scroll';
       const table = document.createElement('table');
       table.className = 'data-table';
-      table.innerHTML = '<thead><tr><th>#</th><th></th><th>Pokémon</th><th>n now</th><th>n prev</th><th>Prev rank</th><th>Change</th></tr></thead><tbody></tbody>';
+      table.innerHTML = '<thead><tr><th>#</th><th><span class="sr-only">Sprite</span></th><th>Pokémon</th><th>n now</th><th>n prev</th><th>Prev rank</th><th>Change</th></tr></thead><tbody></tbody>';
       const tbody = table.querySelector('tbody');
       for (const r of rows) {
         const tr = document.createElement('tr');

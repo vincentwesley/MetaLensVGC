@@ -233,7 +233,7 @@ export default {
       const trh = table.createTHead().insertRow();
       const heads = [['', 'col-sprite'], ['Pokémon', 'col-name'], ['Most common item', ''], ['2nd', ''], ['3rd', '']];
       if (tableUnit) heads.push([tableUnit === 'battles' ? 'N (battles)' : 'N', 'num col-n']);
-      for (const [label, cls] of heads) { const th = el('th', cls, label); trh.appendChild(th); }
+      for (const [label, cls] of heads) { const th = el('th', cls, label); if (!label) th.innerHTML = '<span class="sr-only">Sprite</span>'; trh.appendChild(th); }
       const tbody = table.createTBody();
       for (const r of rows) {
         const tr = tbody.insertRow();

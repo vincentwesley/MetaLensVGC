@@ -122,7 +122,7 @@ export default {
       const showChange = !!r.a;
       const wrap = el('div', 'table-wrap table-wrap--scroll');
       const table = el('table', 'data-table');
-      table.innerHTML = `<thead><tr><th>#</th><th></th><th>Pokémon</th>${showChange ? `<th>${r.a}</th>` : ''}<th>${r.b}</th>${showChange ? '<th>Change</th>' : ''}<th>Top item</th></tr></thead><tbody></tbody>`;
+      table.innerHTML = `<thead><tr><th>#</th><th><span class="sr-only">Sprite</span></th><th>Pokémon</th>${showChange ? `<th>${r.a}</th>` : ''}<th>${r.b}</th>${showChange ? '<th>Change</th>' : ''}<th>Top item</th></tr></thead><tbody></tbody>`;
       const tbody = table.querySelector('tbody');
       r.rows.forEach((x, i) => {
         const tr = el('tr');

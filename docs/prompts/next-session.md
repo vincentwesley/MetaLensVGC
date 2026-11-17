@@ -37,3 +37,8 @@ When you finish a piece of work, update `CLAUDE.md` and `docs/TESTING.md`, then 
 - Mobile performance is low (Lighthouse mobile perf under 10 headless/throttled; main-thread work decoding ~9 MB data). Profile `data.js` decode.
 - Owner: disable Cloudflare Pages Web Analytics (the injected beacon is blocked by the CSP and logs a console error).
 - No section-by-section design review done (full-page screenshots in qa-output/ are too tall); slice with `scripts/slice-shots.mjs`.
+
+## 2026-11-17
+- Refresh data failure fixed: validate.js required every dex.json species in pokedex-vgc.json, but v1.5.5 narrowed the roster to current-reg species (43 past-reg names missing). Check removed; next scheduled run should pass.
+- `empty-table-header` fixed (sr-only "Sprite" in compare, items, trends, usage tables).
+- Full e2e (port 4212, 1 worker): 108/110. Open failures, not from these changes: `compare.spec.js:39` (expects "Only one Smogon month so far" for M-C; M-C now has more months, test stale) and `events.spec.js:9` (no `.ev-row` rendered; investigate events data/offline fixture).

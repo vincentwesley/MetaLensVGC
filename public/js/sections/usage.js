@@ -335,7 +335,7 @@ export default {
       for (const [label, cls] of headers) {
         const th = document.createElement('th');
         th.className = cls;
-        th.textContent = label;
+        if (label) th.textContent = label; else th.innerHTML = '<span class="sr-only">Sprite</span>';
         trh.appendChild(th);
       }
       const tbody = table.createTBody();
