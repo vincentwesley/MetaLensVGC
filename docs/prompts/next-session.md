@@ -42,3 +42,4 @@ When you finish a piece of work, update `CLAUDE.md` and `docs/TESTING.md`, then 
 - Refresh data failure fixed: validate.js required every dex.json species in pokedex-vgc.json, but v1.5.5 narrowed the roster to current-reg species (43 past-reg names missing). Check removed; next scheduled run should pass.
 - `empty-table-header` fixed (sr-only "Sprite" in compare, items, trends, usage tables).
 - Full e2e (port 4212, 1 worker): 108/110. Open failures, not from these changes: `compare.spec.js:39` (expects "Only one Smogon month so far" for M-C; M-C now has more months, test stale) and `events.spec.js:9` (no `.ev-row` rendered; investigate events data/offline fixture).
+- e2e: compare.spec.js:39 made data-independent (note only while M-C has one ladder month). events.spec.js:9 passes on a fresh server (4251, 1 worker); earlier fail was not reproducible, no code change.

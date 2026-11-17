@@ -36,10 +36,12 @@ test('ND: two different months, changing a select updates the table', async ({ p
   expect(errors).toEqual([]);
 });
 
-test('M-C: a single ladder month shows the note and the table', async ({ page }) => {
+test('M-C: the single-month note shows only while one ladder month exists, table renders', async ({ page }) => {
   const errors = [];
   const sec = await open(page, 'M-C', errors);
-  await expect(sec).toContainText('Only one Smogon month so far; the comparison appears when a second month is published');
+  const months = (await (await page.request.get('/data/manifest.json')).json()).regs.find((r) => r.id === 'M-C').ladderMonths.length;
+  const note = 'Only one Smogon month so far; the comparison appears when a second month is published';
+  if (months === 1) await expect(sec).toContainText(note); else expect(await sec.innerText()).not.toContain(note);
   expect(await sec.locator('tbody tr').count()).toBeGreaterThan(5);
   expect(await sec.innerText()).not.toMatch(/NaN|undefined/);
   expect(errors).toEqual([]);
