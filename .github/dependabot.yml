@@ -7,6 +7,10 @@ updates:
     open-pull-requests-limit: 3
     groups:
       minor-and-patch: { update-types: [minor, patch] }
+    ignore:
+      # The app runs the vendored public/vendor/echarts.min.js (v5); a major move is a manual swap + visual check.
+      - dependency-name: "echarts"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
