@@ -25,7 +25,7 @@ public/js/lib/      PURE modules (no DOM, no fetch). Shared by browser, pipeline
 public/js/          Browser shell: main.js, state.js, data.js, ui/*.js
 public/js/sections/ One module per dashboard section.
 public/css/         app.css (tokens + layout), skins in the same file via [data-skin] / [data-theme].
-public/vendor/      Vendored ECharts 5 (from npm). Don't load anything from CDNs except sprites and Google Fonts.
+public/vendor/      Vendored ECharts 5 (from npm). Don't load anything from CDNs except sprites; fonts are self-hosted in public/fonts (css/fonts.css, OFL).
 test/               node:test unit tests (npm test). e2e/ Playwright checks (npm run e2e) and screenshots (npm run shot).
 ```
 
@@ -251,8 +251,7 @@ Background: pixel field canvas.
 
 ### Working in a cloud session
 - The SessionStart hook runs `npm ci && npm test`. For browser checks use `npm run e2e:cloud` (preinstalled Chromium at
-  `/opt/pw-browsers/chromium`; don't `playwright install`). Sprites and Google Fonts are unreachable there, so placeholders
-  and fallback fonts are expected. See `docs/TESTING.md` for probe-script tips.
+  `/opt/pw-browsers/chromium`; don't `playwright install`). Sprites are unreachable there, so placeholders are expected (fonts are self-hosted and load). See `docs/TESTING.md` for probe-script tips.
 - `npm run data` needs outbound access to play.limitlesstcg.com, limitlessvgc.com, standings.limitlessvgc.com, smogon.com, championsbattledata.com and play.pokemonshowdown.com. The raw cache (`data-raw/`) is gitignored, so it starts empty. It still runs incrementally from the committed `public/data` (completed tournaments and finished ranked seasons are reused), so a refresh is minutes, not hours. The weekly GitHub Action does this anyway, so only run it if you need fresh data now.
 - Visual review: `npm run serve`, then `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` writes viewport-sized slices into `screenshots/tmp/` (gitignored). The committed full-page shots come from `npm run shot`.
 

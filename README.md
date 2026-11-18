@@ -87,7 +87,7 @@ components and data are listed in `THIRD_PARTY_NOTICES.md`.
 
 - Player names and countries come from public tournament results (Limitless, official event pages) and are credited above. To request removal of your name, open an issue or contact the owner through GitHub (@vincentwesley).
 - No analytics, no cookies, no accounts.
-- The site only calls its own origin and the sprite host (plus Google Fonts for typefaces).
+- The site only calls its own origin and the sprite host (typefaces are self-hosted).
 
 ## Decisions and known gaps
 

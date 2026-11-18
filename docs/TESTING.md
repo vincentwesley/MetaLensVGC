@@ -12,17 +12,17 @@ sessions don't re-test it.
 | `npm run serve` | static server for `public/` on :8080 | anywhere |
 | `npm run e2e` | Playwright checks + screenshots (`e2e/`) with Playwright's own browser | machines with internet (`npx playwright install chromium` first) |
 | `npm run e2e:cloud` | the functional checks (`e2e/app.spec.js`) with the preinstalled Chromium (`/opt/pw-browsers/chromium`, override with `PW_CHROMIUM`) and third-party hosts stubbed (`E2E_OFFLINE=1`) | Claude Code cloud sessions / offline sandboxes |
-| `npm run shot` | regenerates the committed `screenshots/*.png` | only with internet (sprites + Google Fonts must load, or the shots are wrong; never commit shots taken offline) |
+| `npm run shot` | regenerates the committed `screenshots/*.png` | only with internet (sprites must load, or the shots are wrong; never commit shots taken offline) |
 | `node scripts/slice-shots.mjs "<hash>" <prefix> [width]` | viewport-sized slices of a long page into `screenshots/tmp/` (gitignored) for visual review; waits for rendering to settle | with `npm run serve` running; cloud: prefix `PW_CHROMIUM=/opt/pw-browsers/chromium E2E_OFFLINE=1` |
 
 Cloud-session notes:
-- The container can't reach play.pokemonshowdown.com or Google Fonts. Sprites show their
-  type-coloured placeholder and text uses fallback fonts. That is expected, not a bug.
+- The container can't reach play.pokemonshowdown.com. Sprites show their
+  type-coloured placeholder. That is expected, not a bug (fonts are self-hosted).
 - Kill the server with `pkill -f "node scripts/serve.js"` **in its own command**. Putting
   `pkill -f` in a compound command can match and kill that shell itself.
 - Ad-hoc probes: write throwaway Playwright scripts at the repo root (so `@playwright/test`
   resolves), launch with `executablePath: '/opt/pw-browsers/chromium'`, and delete them after.
-  `page.route(/pokemonshowdown|googleapis|gstatic/, r => r.abort())` keeps them fast.
+  `page.route(/pokemonshowdown/, r => r.abort())` keeps them fast.
 - Wait for rendering with `html:not([data-rendering])`. `<html data-rendering>` is present
   while any section (including off-screen ones catching up in idle time) is out of date.
 - Chart instances: `echarts.getInstanceByDom(el)` on any `[_echarts_instance_]` element.

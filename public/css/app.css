@@ -4,7 +4,7 @@
    Categorical chart palette validated via dataviz skill's validate_palette.js
    against all four skin×theme surfaces (see agent report). */
 
-/* Google Fonts are loaded by a <link> in index.html (an @import here would
+/* Fonts are self-hosted (css/fonts.css, linked from index.html; an @import here would
    delay them until this file has downloaded). */
 
 /* ---------- tokens ---------- */

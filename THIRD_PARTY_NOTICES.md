@@ -10,8 +10,8 @@ MetaLens VGC code is MIT-licensed (`LICENSE`). Everything below belongs to its r
 | [Playwright](https://playwright.dev/) (dev dependency) | Apache-2.0 | End-to-end tests |
 | [@axe-core/playwright](https://www.npmjs.com/package/@axe-core/playwright) (dev dependency) | MPL-2.0 | Accessibility checks in e2e |
 
-## Fonts (loaded from Google Fonts at runtime)
-Press Start 2P, Silkscreen, VT323, JetBrains Mono, Inter, Newsreader, Nunito: all SIL Open Font License 1.1.
+## Fonts (self-hosted, public/fonts/)
+Press Start 2P, Silkscreen, VT323, JetBrains Mono, Inter, Newsreader, Nunito: all SIL Open Font License 1.1, Latin subset woff2 from [Fontsource](https://fontsource.org) 5.3.0. Each family folder carries its OFL.txt; the fonts are not sold on their own.
 
 ## Data
 | Source | Used for |

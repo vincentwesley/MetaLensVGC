@@ -1,6 +1,6 @@
 {
   "name": "metalensvgc",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "scripts": {
     "data": "node scripts/build-data.js",
     "pokedex": "node scripts/build-pokedex.js",

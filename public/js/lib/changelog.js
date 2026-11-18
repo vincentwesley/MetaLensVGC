@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.5.6', date: '2026-11-18', title: 'Faster, private fonts',
+    notes: [
+      { tag: 'IMPROVED', text: 'The typefaces now load from this site instead of Google, so the page makes no font requests to third parties and text appears sooner. Nothing looks different.' },
+    ],
+  },
+  {
     version: '1.5.5', date: '2026-11-04', title: 'Only legal Pokémon in the Pokédex',
     notes: [
       { tag: 'FIX', text: 'The VGC Pokédex no longer lists Pokémon that are not allowed in the current regulation (Calyrex-Shadow, Koraidon, Zacian and others that only came from a handful of stray team sheets).' },
