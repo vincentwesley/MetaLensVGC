@@ -2,6 +2,7 @@
 // contract). Exits non-zero on any error when run standalone.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { seenInCurrentReg } from './build-pokedex.js';
 import { REGULATIONS, REG_IDS, VGC_IDS, SHOWDOWN_IDS, inWindow } from './lib/regs.js';
 
 async function readJSON(file) {
@@ -192,10 +193,14 @@ export async function validateAll(dataDir) {
   });
   if (dexNat) validateDexFile(dexNat, errors, 'dex-natdex.json');
 
+  // The VGC roster must hold every species with current-regulation evidence (seenFrom). Not every dex.json species:
+  // dex.json also keeps stray-sheet names (Calyrex-Shadow etc.) that the roster drops on purpose (v1.5.5).
+  const evidence = dex ? await seenInCurrentReg(dataDir) : new Set();
   for (const kind of ['vgc', 'natdex']) {
     const dx = await readJSON(path.join(dataDir, `pokedex-${kind}.json`)).catch((e) => (errors.push(`pokedex-${kind}.json: ${e.message}`), null));
     const ln = await readJSON(path.join(dataDir, `learnsets-${kind}.json`)).catch((e) => (errors.push(`learnsets-${kind}.json: ${e.message}`), null));
     if (dx && ln) validatePokedex(kind, dx, ln, errors);
+    if (kind === 'vgc' && dx && dex) for (const n of evidence) if (dex.species?.[n] && !dx.species?.[n]) errors.push(`pokedex-vgc.json: current-regulation species ${n} missing`);
   }
 
   for (const reg of REG_IDS) {

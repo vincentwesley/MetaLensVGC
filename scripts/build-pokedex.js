@@ -75,7 +75,7 @@ export function seenFrom({ ranked, ladder, teams }) {
   return seen;
 }
 
-async function seenInCurrentReg(dataDir) {
+export async function seenInCurrentReg(dataDir) {
   const rd = (f) => readFile(path.join(dataDir, f), 'utf8').then(JSON.parse, () => null);
   const reg = (await rd('manifest.json'))?.current;
   const dex = await rd('dex.json');

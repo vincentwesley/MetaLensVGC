@@ -329,6 +329,14 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - CI identity allowlist (ci.yml) now also accepts `Claude <noreply@anthropic.com>`: 11 Claude Code commits are on the default
   branch and history is never rewritten there. Owner approved ("just go ahead and push"), 2026-11-05.
 
+### Pipeline validator guard, 2026-11-23
+- The weekly refresh failed 2026-11-09 and 11-16 (issue #11): v1.5.5 shrank the VGC roster, but validate.js still required
+  every dex.json species in pokedex-vgc.json (43 errors). The rule was removed 2026-11-17 (72c64fe). Missed in v1.5.5 because
+  nothing ran the validator before shipping.
+- Now: validate.js requires every species with current-regulation evidence (`seenInCurrentReg`, 304 on M-C) to be in the
+  roster (checked: dropping Rillaboom from a copy of the data is reported), and `test/validate-data.test.js` runs
+  `validateAll` on the committed data in `npm test`, so CI catches a data/validator mismatch before the Monday refresh.
+
 ## Not yet tested (candidates for the next pass)
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
