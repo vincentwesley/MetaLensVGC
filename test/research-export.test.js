@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { TABLES, tablesFor, buildExport, codebook, confirmationSplit, buildAggregates, AGG_TABLES, releaseTables, limitations, PAPER, LICENCE } from '../scripts/lib/research-export.js';
+import { TABLES, tablesFor, buildExport, codebook, confirmationSplit, eventSizes, outsizedEvents, buildAggregates, AGG_TABLES, releaseTables, limitations, PAPER, LICENCE } from '../scripts/lib/research-export.js';
 import { decode } from '../public/js/lib/aggregate.js';
 import { parseArgs, defaultRegs, countryRecord } from '../scripts/release.js';
 import { REGIONS, REGION_MIN_GROUP, regionOf, countryColumn, checkPolicy, RELEASE_COUNTRY_POLICIES } from '../scripts/lib/geo-regions.js';
@@ -126,26 +126,62 @@ test('effective_ability: the Mega form ability for a holder of its own stone, th
   for (const r of rows) if (col(r, 'holds_own_mega_stone') === '1') assert.equal(col(r, 'effective_ability'), dex.species[col(r, 'form')].abilities[0]);
 });
 
-test('confirmation split: 30% confirm per regulation, whole events, deterministic in the seed, recorded counts', () => {
-  const regs = ['M-A', 'M-B', 'M-C'].map((reg) => ({ reg, ids: read(`teams-${reg}.json`).events.map((e) => e.id) }));
+test('confirmation split: whole events, size blocks of 10, outsized events explore, 28-32% of decided matches per regulation and overall', () => {
+  const regs = ['M-A', 'M-B', 'M-C'].map((reg) => ({ reg, events: eventSizes(read(`teams-${reg}.json`)) }));
   const a = confirmationSplit(regs, 'seed-1');
-  assert.deepEqual(confirmationSplit(regs, 'seed-1'), a);
-  for (const { reg, ids } of regs) {
-    const mine = a.rows.filter((r) => r.regulation === reg);
-    assert.equal(mine.length, new Set(ids).size, 'every event once');
-    const c = mine.filter((r) => r.split === 'confirm').length;
-    assert.equal(c, Math.round(ids.length * 0.3));
-    assert.deepEqual(a.counts[reg], { events: ids.length, explore: ids.length - c, confirm: c });
+  assert.deepEqual(confirmationSplit(regs, 'seed-1'), a, 'deterministic');
+  const split = new Map(a.rows.map((r) => [r.event_id, r.split]));
+  for (const { reg, events } of regs) {
+    assert.equal(a.rows.filter((r) => r.regulation === reg).length, events.length, 'every event once');
+    const out = outsizedEvents(events);
+    for (const id of out) assert.equal(split.get(id), 'explore', `${id} outsized -> explore`);
+    // size blocks: exactly round(0.3 x block) confirm in each block of 10 (by team count)
+    const pool = events.filter((e) => !out.has(e.id)).sort((x, y) => y.teams - x.teams || (x.id < y.id ? -1 : 1));
+    for (let i = 0; i < pool.length; i += 10) {
+      const blk = pool.slice(i, i + 10);
+      assert.equal(blk.filter((e) => split.get(e.id) === 'confirm').length, Math.round(blk.length * 0.3), `${reg} block ${i / 10}`);
+    }
+    const d = pool.reduce((n, e) => n + e.decided, 0);
+    const dc = pool.filter((e) => split.get(e.id) === 'confirm').reduce((n, e) => n + e.decided, 0);
+    assert.ok(dc / d >= 0.28 && dc / d <= 0.32, `${reg} ${dc / d}`);
+    assert.equal(a.shares[reg].confirmMatchShare, Math.round((dc / d) * 10000) / 10000);
   }
+  assert.ok(a.shares.overall.confirmMatchShare >= 0.28 && a.shares.overall.confirmMatchShare <= 0.32);
+  assert.ok(Number.isInteger(a.draw) && a.draw >= 0);
   const b = confirmationSplit(regs, 'seed-2');
   assert.notDeepEqual(b.rows.map((r) => r.split), a.rows.map((r) => r.split), 'another seed draws another split');
   assert.throws(() => confirmationSplit(regs, ''));
 });
 
+test('confirmation split redraws until the band holds (synthetic: draw 0 can fail), and records how many', () => {
+  // 40 events (each < 5% of teams, so none outsized) with uneven decided-match counts: many draws miss 28-32%
+  const events = Array.from({ length: 40 }, (_, i) => ({ id: `e${i}`, teams: 100 - i, decided: i % 10 === 0 ? 400 : 20 + i }));
+  const res = confirmationSplit([{ reg: 'X', events }], 'redraw-seed');
+  assert.ok(res.shares.X.confirmMatchShare >= 0.28 && res.shares.X.confirmMatchShare <= 0.32);
+  const draws = Array.from({ length: 20 }, (_, k) => confirmationSplit([{ reg: 'X', events }], `s${k}`).draw);
+  assert.ok(draws.some((d) => d > 0), 'some seeds need redraws');
+  assert.throws(() => confirmationSplit([{ reg: 'X', events: [{ id: 'a', teams: 10, decided: 10 }, { id: 'b', teams: 10, decided: 10 }] }], 's'), /no confirmation split/);
+});
+
+test('outsized_event: exactly the two Grand Champions Festival events in M-A..M-C, from the size rule (no hardcoded ids)', () => {
+  const flagged = [];
+  for (const reg of ['M-A', 'M-B', 'M-C']) {
+    const file = read(`teams-${reg}.json`);
+    const out = outsizedEvents(eventSizes(file));
+    for (const e of file.events) if (out.has(e.id)) flagged.push(e.name);
+    const csv = buildExport([{ reg, teams: file }], dex)['events.csv'].trimEnd().split('\n');
+    const h = csv[0].split(',');
+    const n = csv.slice(1).filter((l) => l.split(',')[h.indexOf('outsized_event')] === '1').length;
+    assert.equal(n, out.size, reg);
+  }
+  assert.equal(flagged.length, 2);
+  assert.ok(flagged.every((n) => /Grand Champions Festival/.test(n)), flagged.join(' | '));
+});
+
 test('aggregates: no pids or team ids; totals agree with the row-level data; matchups counted from both sides', () => {
   const file = read('teams-M-C.json');
   const ids = file.events.map((e) => e.id);
-  const split = new Map(confirmationSplit([{ reg: 'M-C', ids }], 's').rows.map((r) => [r.event_id, r.split]));
+  const split = new Map(confirmationSplit([{ reg: 'M-C', events: eventSizes(file) }], 's').rows.map((r) => [r.event_id, r.split]));
   const out = buildAggregates([{ reg: 'M-C', teams: file }], dex, (id) => split.get(id));
   for (const [name, t] of Object.entries(AGG_TABLES)) assert.equal(out[name].split('\n')[0], t.columns.map((c) => c[0]).join(','), name);
   const all = Object.values(out).join('\n');
@@ -169,7 +205,7 @@ test('aggregates: no pids or team ids; totals agree with the row-level data; mat
 });
 
 test('codebook: paper, attribution, licence pending, limitations, split section; aggregates codebook lists only aggregate tables', () => {
-  const split = { seed: 'abc', sha256: 'f'.repeat(64), counts: { 'M-C': { events: 10, explore: 7, confirm: 3 } } };
+  const split = { seed: 'abc', redraws: 2, sha256: 'f'.repeat(64), shares: { 'M-C': { events: 10, explore: 7, confirm: 3, outsized: 0, confirmTeamShare: 0.3, confirmMatchShare: 0.3, confirmMatchShareAll: 0.3 } } };
   const cb = codebook({ split, onlineShare: 0.981 });
   for (const s of [PAPER.title, 'Vincent Wesley', 'in preparation', LICENCE, 'About 98%', 'four brought', 'pseudonymized, not anonymous', '## Confirmation split', 'f'.repeat(64), 'confirmation_split.csv']) assert.ok(cb.includes(s), s);
   assert.equal(limitations(0.981).length, 4);

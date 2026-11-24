@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.8.3', date: '2026-11-24', title: 'Balanced research split',
+    notes: [
+      { tag: 'IMPROVED', text: 'The research release’s explore / confirm split is now balanced by event size and redrawn until about 30% of decided matches fall in “confirm”, and it flags the two very large Grand Champions Festival events so they can be left out of robustness checks.' },
+    ],
+  },
+  {
     version: '1.8.2', date: '2026-11-24', title: 'Research release ready to freeze',
     notes: [
       { tag: 'NEW', text: 'Research releases record when a player dropped, each Pokémon’s ability after Mega Evolution, and a pre-registered explore / confirm split of events fixed at release time.' },

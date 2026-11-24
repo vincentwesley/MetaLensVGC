@@ -401,6 +401,14 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   build still saves its downloads. A bad regulation fails before any request.
 - Not yet: drop rounds and pids in the committed data (per-regulation refetch runs).
 
+### v1.8.3 (split addendum), 2026-11-24
+- Simulation (20,000 draws, size blocks of 10): with the Festivals in the draw, 0 pass 28-32% (M-A 19.9-51.9%); with them
+  always explore, 18,362 pass. Unit: every event once, outsized -> explore, round(0.3 x block) confirm per size block,
+  band holds per regulation + overall, deterministic, another seed differs, a synthetic set needs redraws and records them,
+  an impossible set throws; outsized_event flags exactly the two Grand Champions Festival events. 417 unit green.
+- Build twice: byte-identical (dry-run seed: 0 redraws; confirm = 29.4% / 31.0% / 29.8% of non-outsized decided matches
+  in M-A / M-B / M-C, 30.2% overall; 25.4% of all decided matches). Throwaway clone freeze (random seed) + verify: 12 files reproduce.
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

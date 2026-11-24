@@ -19,6 +19,12 @@ const PID = 'Pseudonymous player id: first 16 hex characters of HMAC-SHA256(secr
 const NS = '1 = Limitless username (online events), 2 = standings.limitlessvgc.com player id (official events), ' +
   '3 = event-scoped official id (no standings record; never links across events), 0 = unknown. Namespaces 1 and 2 cannot be linked.';
 
+// An event holding at least this share of its regulation's full team lists is "outsized" (events.csv outsized_event).
+// In M-A..M-C that is exactly the two Grand Champions Festival events (25.4% of M-A, 12.8% of M-B; the next largest
+// event holds 2.2%). One of them holds 29.9% of M-A's decided matches, so no whole-event split can put 28-32% of M-A's
+// matches in confirm with it in the draw (0 of 20,000 simulated draws): outsized events always go to explore.
+export const OUTSIZED_SHARE = 0.05;
+
 /** One schema drives the CSV headers and CODEBOOK.md. */
 export const TABLES = {
   'events.csv': {
@@ -38,6 +44,7 @@ export const TABLES = {
       ['cut', 'integer', 'Top-cut size; empty when unknown.'],
       ['rounds', 'integer', 'Rounds as published (official: all rounds including top cut; online: Swiss rounds).'],
       ['fetched', 'date', 'Day the event was first built into MetaLens; empty for events built before v1.7.0.'],
+      ['outsized_event', 'boolean', `1 if the event holds at least ${OUTSIZED_SHARE * 100}% of its regulation's full team lists (in M-A..M-C: the two Grand Champions Festival online events). Exclude these for robustness checks; they are always "explore" in confirmation_split.csv.`],
       ['drop_reported', 'boolean', '1 if teams.csv drop_round is known for this event (empty drop_round = did not drop); 0 = built before MetaLens v1.8.2 or no standings record, drop_round unknown.'],
     ],
   },
@@ -181,10 +188,11 @@ export function buildExport(regs, dex, { country = DEFAULT_COUNTRY_POLICY } = {}
     const colName = COUNTRY_COLUMN[country]?.[0];
     const lists = new Map();
     for (const tm of teams) lists.set(tm.ev.id, (lists.get(tm.ev.id) || 0) + 1);
+    const outsized = outsizedEvents(eventSizes(file));
     for (const ev of events) {
       t['events.csv'].add({ event_id: ev.id, regulation: reg, name: ev.name, date: ev.date, tier: ev.tier, source: ev.source, url: ev.url,
         players: ev.players, lists: lists.get(ev.id) || 0, coverage_rate: ev.coverage?.rate, coverage_kind: ev.coverage?.kind,
-        cut: ev.cut, rounds: ev.rounds, fetched: ev.fetched, drop_reported: !!ev.dropReported });
+        cut: ev.cut, rounds: ev.rounds, fetched: ev.fetched, outsized_event: outsized.has(ev.id), drop_reported: !!ev.dropReported });
     }
     const tid = (i) => `${reg}-${i}`;
     teams.forEach((tm, k) => {
@@ -267,23 +275,82 @@ export function limitations(onlineShare) {
 
 // --- confirmation split (pre-registration) ------------------------------------------------------------------------
 export const SPLIT_CONFIRM_SHARE = 0.3;
-export const SPLIT_METHOD = 'Per regulation, events are ordered by SHA-256("<seed>:<event_id>") (hex, ascending); the first '
-  + 'round(0.30 x events) are "confirm", the rest "explore". Whole events only (no tournament is split); stratified by regulation.';
+export const SPLIT_BAND = [0.28, 0.32]; // confirm share of decided matches, overall and per regulation
+export const SPLIT_BLOCK = 10;
+export const SPLIT_MAX_DRAWS = 10000;
+export const SPLIT_METHOD = `Whole events only (no tournament is split). Outsized events (>= ${OUTSIZED_SHARE * 100}% of their regulation's `
+  + 'full team lists, events.csv outsized_event = 1) are always "explore". The other events are stratified by regulation and by '
+  + `size: sorted by full-list count (descending, ties by event_id) and cut into blocks of ${SPLIT_BLOCK}; in each block the events `
+  + 'are ordered by SHA-256("<seed>:<draw>:<event_id>") and the first round(0.30 x block size) are "confirm". Draw 0, 1, 2... is '
+  + `repeated until confirm holds ${SPLIT_BAND[0] * 100}-${SPLIT_BAND[1] * 100}% of the decided matches (matches.csv result 1 or 2) of `
+  + 'non-outsized events, overall and within each regulation; the first draw that passes is used.';
 const sha = (x) => createHash('sha256').update(x).digest('hex');
 
-/** eventsByReg: [{ reg, ids: [event_id] }]. Returns { rows: [{event_id, regulation, split}], counts }. Deterministic in (ids, seed). */
-export function confirmationSplit(eventsByReg, seed) {
+/** Per-event sizes from a teams file: [{ id, teams, decided }] (decided = matches with a winner, both lists in the file). */
+export function eventSizes(file) {
+  const ev = file.events.map((e) => ({ id: e.id, teams: 0, decided: 0 }));
+  for (const t of file.teams) ev[t[0]].teams++;
+  for (const m of file.matches) if (m[2] === 1 || m[2] === 2) ev[file.teams[m[0]][0]].decided++;
+  return ev;
+}
+
+/** Ids of outsized events of one regulation (see OUTSIZED_SHARE). */
+export function outsizedEvents(sizes) {
+  const total = sizes.reduce((n, e) => n + e.teams, 0);
+  return new Set(sizes.filter((e) => total && e.teams / total >= OUTSIZED_SHARE).map((e) => e.id));
+}
+
+const share = (a, b) => (b ? Math.round((a / b) * 10000) / 10000 : null);
+
+/**
+ * regs: [{ reg, events: eventSizes(teamsFile) }]. Returns { rows: [{event_id, regulation, split}], draw (accepted draw
+ * number = redraws before it), shares: { <reg>|overall: { events, explore, confirm, outsized, confirmTeamShare,
+ * confirmMatchShare (of non-outsized decided matches), confirmMatchShareAll (of all decided matches) } } }.
+ * Deterministic in (events, seed).
+ */
+export function confirmationSplit(regs, seed) {
   if (!seed) throw new Error('confirmation split needs a seed');
-  const rows = [];
-  const counts = {};
-  for (const { reg, ids } of eventsByReg) {
-    const order = [...new Set(ids)].sort().map((id) => [sha(`${seed}:${id}`), id]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-    const nConfirm = Math.round(order.length * SPLIT_CONFIRM_SHARE);
-    const confirm = new Set(order.slice(0, nConfirm).map(([, id]) => id));
-    counts[reg] = { events: order.length, explore: order.length - nConfirm, confirm: nConfirm };
-    for (const id of [...new Set(ids)].sort()) rows.push({ event_id: id, regulation: reg, split: confirm.has(id) ? 'confirm' : 'explore' });
+  const prepared = regs.map(({ reg, events }) => {
+    const out = outsizedEvents(events);
+    const pool = events.filter((e) => !out.has(e.id)).sort((a, b) => b.teams - a.teams || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const blocks = [];
+    for (let i = 0; i < pool.length; i += SPLIT_BLOCK) blocks.push(pool.slice(i, i + SPLIT_BLOCK));
+    return { reg, events, out, blocks };
+  });
+  const inBand = (x) => x != null && x >= SPLIT_BAND[0] && x <= SPLIT_BAND[1];
+  for (let draw = 0; draw < SPLIT_MAX_DRAWS; draw++) {
+    const confirm = new Set();
+    for (const { blocks } of prepared) {
+      for (const blk of blocks) {
+        const k = Math.round(blk.length * SPLIT_CONFIRM_SHARE);
+        blk.map((e) => [sha(`${seed}:${draw}:${e.id}`), e.id]).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(0, k).forEach(([, id]) => confirm.add(id));
+      }
+    }
+    const shares = {};
+    const tot = { events: 0, explore: 0, confirm: 0, outsized: 0, t: 0, tc: 0, d: 0, dc: 0, da: 0 };
+    for (const { reg, events, out } of prepared) {
+      const r = { events: 0, explore: 0, confirm: 0, outsized: 0, t: 0, tc: 0, d: 0, dc: 0, da: 0 };
+      for (const e of events) {
+        const c = confirm.has(e.id);
+        r.events++; r[c ? 'confirm' : 'explore']++; if (out.has(e.id)) r.outsized++;
+        r.t += e.teams; if (c) r.tc += e.teams;
+        r.da += e.decided; if (!out.has(e.id)) r.d += e.decided; if (c) r.dc += e.decided;
+      }
+      for (const k of Object.keys(tot)) tot[k] += r[k];
+      shares[reg] = r;
+    }
+    shares.overall = tot;
+    const fmt = (r) => ({ events: r.events, explore: r.explore, confirm: r.confirm, outsized: r.outsized,
+      confirmTeamShare: share(r.tc, r.t), confirmMatchShare: share(r.dc, r.d), confirmMatchShareAll: share(r.dc, r.da) });
+    if (Object.values(shares).every((r) => inBand(r.d ? r.dc / r.d : null))) {
+      const rows = [];
+      for (const { reg, events } of prepared) {
+        for (const id of events.map((e) => e.id).sort()) rows.push({ event_id: id, regulation: reg, split: confirm.has(id) ? 'confirm' : 'explore' });
+      }
+      return { rows, draw, shares: Object.fromEntries(Object.entries(shares).map(([k, r]) => [k, fmt(r)])) };
+    }
   }
-  return { rows, counts };
+  throw new Error(`no confirmation split within ${SPLIT_BAND.join('-')} after ${SPLIT_MAX_DRAWS} draws`);
 }
 
 export const SPLIT_TABLE = {
@@ -418,9 +485,12 @@ export function codebook({ release = null, regs = [], country = DEFAULT_COUNTRY_
     '- Text is exactly as published (UTF-8, RFC 4180 quoting). A cell starting with = + - or @ is left as is: import as text, not into a spreadsheet that evaluates formulas.',
     '', ...(content === 'rows' ? countrySection(country) : ['## Country policy', '', 'No country or region in an aggregates release.', '']));
   if (split) {
-    out.push('## Confirmation split', '', SPLIT_METHOD, '', `Seed: \`${split.seed}\`. confirmation_split.csv SHA-256: \`${split.sha256}\`.`, '',
-      '| regulation | events | explore | confirm |', '|---|---|---|---|');
-    for (const [reg, c] of Object.entries(split.counts)) out.push(`| ${reg} | ${c.events} | ${c.explore} | ${c.confirm} |`);
+    out.push('## Confirmation split', '', SPLIT_METHOD, '',
+      `Seed: \`${split.seed}\`; redraws before the accepted draw: ${split.redraws}. confirmation_split.csv SHA-256: \`${split.sha256}\`.`, '',
+      '| stratum | events | explore | confirm | outsized (explore) | confirm share of teams | of decided matches (non-outsized) | of all decided matches |',
+      '|---|---|---|---|---|---|---|---|');
+    const pc = (x) => (x == null ? '' : `${(x * 100).toFixed(1)}%`);
+    for (const [reg, c] of Object.entries(split.shares)) out.push(`| ${reg} | ${c.events} | ${c.explore} | ${c.confirm} | ${c.outsized} | ${pc(c.confirmTeamShare)} | ${pc(c.confirmMatchShare)} | ${pc(c.confirmMatchShareAll)} |`);
     out.push('');
   }
   for (const [name, t] of Object.entries(tables)) {
@@ -465,12 +535,12 @@ export async function writeExport(dataDir, outDir, regs, { release = null, count
   let split = null;
   let splitOf = null;
   if (splitSeed) {
-    const { rows, counts } = confirmationSplit(input.map(({ reg, teams }) => ({ reg, ids: teams.events.map((e) => e.id) })), splitSeed);
+    const { rows, draw, shares } = confirmationSplit(input.map(({ reg, teams }) => ({ reg, events: eventSizes(teams) })), splitSeed);
     const st = table(SPLIT_TABLE, 'confirmation_split.csv');
     rows.forEach((r) => st.add(r));
     const text = st.text();
     files['confirmation_split.csv'] = text;
-    split = { seed: splitSeed, method: SPLIT_METHOD, file: 'confirmation_split.csv', sha256: sha(text), counts };
+    split = { seed: splitSeed, redraws: draw, method: SPLIT_METHOD, file: 'confirmation_split.csv', sha256: sha(text), shares };
     const byEvent = new Map(rows.map((r) => [r.event_id, r.split]));
     splitOf = (id) => byEvent.get(id);
   }

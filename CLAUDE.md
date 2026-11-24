@@ -358,6 +358,12 @@ These skills are available in every session. The user never types slash commands
   pids. RELEASE.json/codebook/README carry `PAPER`, `SOURCES`, `ATTRIBUTION`, `LICENCE` ("pending permission from
   Limitless") and `limitations(onlineShare)` from research-export.js; .zenodo.json has no licence while pending.
   data-v1.0: `--country drop`, rows content (rosters included).
+- **v1.8.3 split addendum**: `events.csv outsized_event` = event with >= `OUTSIZED_SHARE` (5%) of its regulation's full lists
+  (rule, no ids; in M-A..M-C exactly the two Grand Champions Festival events, 25.4% / 12.8%). Outsized events are always
+  explore (owner's call 2026-11-24: with the M-A Festival in the draw, 28-32% is unreachable, 0/20,000 draws). The rest:
+  size blocks of 10 per regulation, round(0.3 x block) confirm by SHA-256(seed:draw:event), redrawn until confirm holds
+  28-32% of non-outsized decided matches per regulation and overall. RELEASE.json `confirmationSplit` = seed, redraws,
+  method, sha256, shares (events, team share, match share non-outsized and all) per regulation + overall.
 - Credit all research work to Vincent Wesley (Vin's Atelier): CITATION.cff, .zenodo.json, codebook, README.
 - Known: in-game ranked season M7 started before 2026-12-02 (snapshot 2026-11-24), so `regForDate` files it under M-C,
   not M-D (seasons are classified by start date).
