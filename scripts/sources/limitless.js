@@ -3,7 +3,7 @@
 import { fetchJSON } from '../lib/http.js';
 import { inWindow } from '../lib/regs.js';
 import { normalizeSpecies } from '../../public/js/lib/names.js';
-import { ltKey } from '../lib/ids.js';
+import { ltKey, dropRoundOf } from '../lib/ids.js';
 
 const API = 'https://play.limitlesstcg.com/api';
 const MIN_PLAYERS = 16;
@@ -87,7 +87,7 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
       if (!mons.length) { drops.emptyTeam++; continue; }
       rows.push({
         player: ltKey(p.player), // source key: stable Limitless username
-        dropped: p.drop ?? null,
+        dropRound: dropRoundOf(p.drop), // rounds played before dropping (dropped players have no placing); null = did not drop
         name: p.name,
         country: p.country || '',
         placing: p.placing ?? null,
@@ -119,6 +119,7 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
       rounds,
       phases: eventPhases(details.phases),
       coverage: coverageOf(t.players, rows.length),
+      dropReported: true,
       rows,
       matches,
       pairingStats,

@@ -3,7 +3,7 @@
 import { fetchText } from '../lib/http.js';
 import { REGULATIONS, VGC_IDS } from '../lib/regs.js';
 import { normalizeSpecies } from '../../public/js/lib/names.js';
-import { lvKey, lvxKey } from '../lib/ids.js';
+import { lvKey, lvxKey, dropRoundOf } from '../lib/ids.js';
 import { coverageOf } from './limitless.js';
 
 const BASE = 'https://limitlessvgc.com';
@@ -275,6 +275,7 @@ export async function fetchOfficialEvents(dex, opts = {}) {
           wins: match?.wins ?? 0,
           losses: match?.losses ?? 0,
           ties: 0, // standings.limitlessvgc.com's player summary doesn't publish a ties field
+          dropRound: match ? dropRoundOf(match.drop_round) : null, // unknown without a standings record
           mons,
         });
       }
@@ -312,6 +313,7 @@ export async function fetchOfficialEvents(dex, opts = {}) {
         cut,
         rounds: standingsData?.rounds ?? null,
         coverage: coverageOf(listed, rawRows.length),
+        dropReported: players.length > 0, // drop_round comes from the standings site's player records
         rows: rawRows,
         matches,
         pairingStats: pairingStats && { ...pairingStats, skippedRoundBudget },

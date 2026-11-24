@@ -36,3 +36,6 @@ export function nsOf(sourceKey) {
 export const ltKey = (username) => `lt:${String(username).toLowerCase()}`;
 export const lvKey = (playerId) => `lv:${playerId}`;
 export const lvxKey = (eventId, placing) => `lvx:${eventId}:${placing}`;
+
+/** A source's drop round as a positive integer, or null (not dropped / not a round number). */
+export const dropRoundOf = (v) => (v != null && Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null);

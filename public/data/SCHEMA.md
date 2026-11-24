@@ -84,7 +84,11 @@ client only ever requests URLs known to exist:
   (official events: limitlessvgc.com links full lists for top finishers only, ~14%). Analyses can split on `kind`.
 - `events[].fetched` (v1.7.0+): the day the event was first built into MetaLens; `null` for events built earlier.
 - `idVersion` (v1.7.0+): 1 when every team row has a pid, else 0. Absent in files built before v1.7.0.
-- team row: `[eventIdx, player, country|"" , placing|null, wins, losses, ties, mons, pid|null, ns]`. `player` is the display
+- `events[].dropReported` (v1.8.2+): `true` when the event was built with drop rounds (online: Limitless standings `drop`;
+  official: standings.limitlessvgc.com `drop_round`). Absent = drop rounds unknown for that event.
+- team row index 10 `dropRound` (v1.8.2+): rounds played before the player dropped (a dropped online player has no
+  placing); `null` = did not drop when the event is `dropReported`, unknown otherwise (also official rows with ns 3).
+- team row: `[eventIdx, player, country|"" , placing|null, wins, losses, ties, mons, pid|null, ns, dropRound|null]`. `player` is the display
   name as published. `pid` (v1.7.0+) = first 16 hex chars of HMAC-SHA256(METALENS_ID_SALT, source key), the same for one
   player across events and refreshes; `null` when built without the salt or before v1.7.0. `ns`: id namespace of the
   source key: `1` Limitless username (`lt:<username>`, every online event), `2` standings.limitlessvgc.com `player_id`

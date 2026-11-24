@@ -385,6 +385,18 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   America, 24,693 Europe, 12,548 Latin America, 10,025 Asia, 334 Oceania, 26 Africa, 4,041 suppressed, 8,919 none.
 - Throwaway clone: `freeze` + `verify` for `--country region` and the default: all 11 files reproduce byte for byte.
 
+### v1.8.2 (research decisions: drop round, effective ability, split, aggregates), 2026-11-24
+- Live check: Limitless standings `drop` = rounds played before dropping (dropped players: placing null, w+l = drop).
+- Unit: drop round stored/reused/flagged (`dropReported`); effective_ability = Mega ability for every own-stone holder
+  (Charizard-Mega-Y -> Drought); split 30% per regulation, every event once, deterministic per seed, another seed differs;
+  aggregates: headers = codebook, no pids or team ids, primary counts = teams, week_teams sums to teams, Rillaboom
+  usage = row-level count, matchups count every linked match twice with wins = losses; codebook carries paper, licence
+  pending, limitations (computed online share: 98%), split section. 414 unit green.
+- `release.js build` twice, rows and `--aggregates-only` (M-A..M-C): byte-identical. Split counts: M-A 230/98, M-B 325/139,
+  M-C 286/123 (explore/confirm). Throwaway clone: freeze (random 128-bit seed) + verify for rows (12 files) and aggregates
+  (9 files) reproduce byte for byte; the record's split sha256 equals the file checksum; a tampered tag fails verify.
+- Not yet: drop rounds in the committed data (needs a `refetch_online` run after the current backfill).
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

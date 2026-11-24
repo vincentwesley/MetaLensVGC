@@ -44,7 +44,9 @@ function validateTeamsFile(file, data, errors) {
   });
 
   data.teams.forEach((row, i) => {
-    const [eventIdx, player, country, placing, wins, losses, ties, mons, pid = null, ns = 0] = row;
+    const [eventIdx, player, country, placing, wins, losses, ties, mons, pid = null, ns = 0, dropRound = null] = row;
+    if (dropRound != null && (!Number.isInteger(dropRound) || dropRound < 1)) errors.push(`${file}: teams[${i}] bad drop round ${dropRound}`);
+    if (dropRound != null && !data.events[eventIdx]?.dropReported) errors.push(`${file}: teams[${i}] has a drop round but its event is not dropReported`);
     if (pid != null && !PID_RE.test(pid)) errors.push(`${file}: teams[${i}] bad pid ${pid}`);
     if (data.idVersion === 1 && pid == null) errors.push(`${file}: teams[${i}] has no pid but idVersion is 1`);
     if (![0, 1, 2, 3].includes(ns)) errors.push(`${file}: teams[${i}] bad id namespace ${ns}`);

@@ -104,6 +104,10 @@ labels, official-event rosters) and a generated `CODEBOOK.md`, into `data-export
 - **Country**: the internal `data-export/` keeps each sheet's country for analysis; releases never publish it as listed.
   They drop it (default) or, with `--country region`, group it into UN M49 world regions, with a region shown only
   when 5+ lists at the same event share it. `RELEASE.json` records the policy used.
+- **Pre-registration split**: every release carries `confirmation_split.csv` (70% explore / 30% confirm per regulation,
+  whole events), fixed by a seed drawn at freeze; RELEASE.json records the seed, method and the file's SHA-256.
+- **Aggregates-only releases** (`--aggregates-only`): usage and archetype matchups by regulation and week, with no
+  row-level teams, matches or player ids, while Limitless's permission to redistribute row-level data is pending.
 - **Archetype labels** come from a versioned, sourced rule set (`ARCHETYPE_RULESET` in `public/js/lib/archetypes.js`).
 - **Frozen releases**: `npm run release -- freeze data-v1.0` builds `dist/data-v1.0/` (CSVs, codebook, quality files,
   README, CITATION.cff, .zenodo.json, RELEASE.json with SHA-256 checksums), commits `releases/data-v1.0.json` and tags

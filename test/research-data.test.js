@@ -178,3 +178,21 @@ test('countNormalization and qualityFile totals add up to the teams file', () =>
   assert.equal(q.totals.events, 1);
   assert.deepEqual(q.totals.eventsByCoverage, { complete: 1 });
 });
+
+test('drop round: stored at team row index 10 for dropReported events, kept on reuse, checked by the validator', async () => {
+  const ev = { ...rawEvent(), dropReported: true };
+  ev.rows = ev.rows.map((r) => ({ ...r, dropRound: r.player === 'lt:carol' ? 3 : null }));
+  const f = JSON.parse(JSON.stringify(assembleTeamsFile('M-C', [ev], { salt: SALT })));
+  assert.deepEqual(f.teams.map((t) => t[10]), [null, null, 3]);
+  assert.equal(f.events[0].dropReported, true);
+  const again = assembleTeamsFile('M-C', decodeExistingTeamsFile(f), { salt: SALT });
+  assert.deepEqual(again.teams, f.teams);
+  assert.equal(again.events[0].dropReported, true);
+  const old = assembleTeamsFile('M-C', [rawEvent()], { salt: SALT });
+  assert.equal(old.events[0].dropReported, undefined, 'events built without drop data are not flagged');
+});
+
+test('dropRoundOf: positive integers (number or string) only', async () => {
+  const { dropRoundOf } = await import('../scripts/lib/ids.js');
+  assert.deepEqual([3, '4', 0, -1, null, undefined, '', 'x', 2.5].map(dropRoundOf), [3, 4, null, null, null, null, null, null, null]);
+});

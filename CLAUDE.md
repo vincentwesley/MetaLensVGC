@@ -346,6 +346,16 @@ These skills are available in every session. The user never types slash commands
   (default: no column) | `region` (UN M49 regions, Americas split; `suppressed` when < `REGION_MIN_GROUP` (5) lists at the
   event share it). `raw` only for the internal `npm run data` export (data-export/, gitignored); release.js refuses it.
   `RELEASE.json.country` records the policy; `verify` rebuilds with it. The dashboard's country data and section are untouched.
+- **v1.8.2 (research decisions 2026-11-24)**: team row index 10 = `dropRound` (+ `events[].dropReported`; online
+  rows need one `refetch_online` run). Export: `teams.drop_round`, `events.drop_reported`, `team_members.effective_ability`
+  (Mega form's ability for its own-stone holder). Confirmation split (`confirmationSplit`, 30% confirm per regulation by
+  SHA-256 of seed:event_id): `freeze` draws a random seed once (or `--split-seed`), `build` defaults to `dry-run:<v>`,
+  `verify` reuses the recorded seed; RELEASE.json `confirmationSplit {seed, method, sha256, counts}`. `--aggregates-only`
+  (fallback while Limitless permission is pending; no Zenodo upload of row data without written permission, aggregates
+  only if no reply by 2027-03-01): events + agg_usage_species/agg_usage_archetype/agg_archetype_matchups + split, no
+  pids. RELEASE.json/codebook/README carry `PAPER`, `SOURCES`, `ATTRIBUTION`, `LICENCE` ("pending permission from
+  Limitless") and `limitations(onlineShare)` from research-export.js; .zenodo.json has no licence while pending.
+  data-v1.0: `--country drop`, rows content (rosters included).
 - Credit all research work to Vincent Wesley (Vin's Atelier): CITATION.cff, .zenodo.json, codebook, README.
 - Known: in-game ranked season M7 started before 2026-12-02 (snapshot 2026-11-24), so `regForDate` files it under M-C,
   not M-D (seasons are classified by start date).

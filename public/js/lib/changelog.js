@@ -1,6 +1,13 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.8.2', date: '2026-11-24', title: 'Research release ready to freeze',
+    notes: [
+      { tag: 'NEW', text: 'Research releases record when a player dropped, each Pokémon’s ability after Mega Evolution, and a pre-registered explore / confirm split of events fixed at release time.' },
+      { tag: 'NEW', text: 'An aggregates-only release (usage and archetype matchups by regulation and week, no individual teams or players), ready in case row-level data can’t be shared.' },
+    ],
+  },
+  {
     version: '1.8.1', date: '2026-11-24', title: 'Safer research releases',
     notes: [
       { tag: 'IMPROVED', text: 'Published research data no longer lists each team’s country: it is left out, or grouped into world regions with small groups hidden, so players from small countries cannot be picked out. Meta by country on this site is unchanged.' },

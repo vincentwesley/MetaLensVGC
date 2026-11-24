@@ -14,7 +14,7 @@ export function decodeExistingTeamsFile(file) {
   });
   const rowToEvent = [];
   teams.forEach((row, rowIdx) => {
-    const [eventIdx, name, country, placing, wins, losses, ties, mons, pid = null, ns = 0] = row;
+    const [eventIdx, name, country, placing, wins, losses, ties, mons, pid = null, ns = 0, dropRound = null] = row;
     const decodedMons = mons.map(([species, item, ability, moves, nature, sp]) => ({
       species: str(species),
       item: str(item),
@@ -25,7 +25,7 @@ export function decodeExistingTeamsFile(file) {
     }));
     // A reused row keeps its pid; its source key is gone, so it gets a unique internal key (`row:<i>`), which also keeps
     // two same-named players apart when their pairings are rebuilt below.
-    rawEvents[eventIdx].rows.push({ player: `row:${rowIdx}`, pid, ns, name, country, placing, wins, losses, ties, mons: decodedMons });
+    rawEvents[eventIdx].rows.push({ player: `row:${rowIdx}`, pid, ns, name, country, placing, wins, losses, ties, dropRound, mons: decodedMons });
     rowToEvent.push(eventIdx);
   });
   // Rebuild per-event matches keyed by those internal keys, keeping the match context (round, phase, bo, games).
@@ -80,6 +80,8 @@ export function assembleTeamsFile(reg, rawEvents, { salt = null, quality = {} } 
       ...(ev.phases ? { phases: ev.phases } : {}),
       coverage: ev.coverage ?? null,
       fetched: ev.fetched ?? null,
+      // true when the event was built with drop rounds (v1.8.2+); teams row[10] is then null only for players who didn't drop
+      ...(ev.dropReported ? { dropReported: true } : {}),
     });
 
     // Dedupe rows by source key (stable username / player id) within the event, keep the first. Two different players
@@ -102,7 +104,7 @@ export function assembleTeamsFile(reg, rawEvents, { salt = null, quality = {} } 
       // pid: reused rows keep theirs; fresh rows hash their source key (no salt -> null, see scripts/lib/ids.js)
       const pid = row.pid !== undefined ? row.pid : salt ? pidOf(row.player, salt) : null;
       const ns = row.ns !== undefined ? row.ns : nsOf(row.player);
-      teams.push([eventIdx, row.name, row.country || '', row.placing ?? null, row.wins || 0, row.losses || 0, row.ties || 0, mons, pid, ns]);
+      teams.push([eventIdx, row.name, row.country || '', row.placing ?? null, row.wins || 0, row.losses || 0, row.ties || 0, mons, pid, ns, row.dropRound ?? null]);
       rowIndexByPlayer.set(row.player, rowIdx); // the source key only links pairings; pid + display name are stored
     }
     // Fresh events record their quality here; reused ones keep the record from the previous quality file.
