@@ -409,6 +409,13 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Build twice: byte-identical (dry-run seed: 0 redraws; confirm = 29.4% / 31.0% / 29.8% of non-outsized decided matches
   in M-A / M-B / M-C, 30.2% overall; 25.4% of all decided matches). Throwaway clone freeze (random seed) + verify: 12 files reproduce.
 
+### v1.8.4 (regulations.csv; schema locked), 2026-11-24
+- Unit: dates from regs.js; M-A = whole championsregma roster (249 Pokémon + 60 Megas); M-B = exact dex diff (22 + 16, incl.
+  Staraptor-Mega, Raichu-Mega-Y, Gholdengo, Grimmsnarl); every M-C form has 5+ M-C lists, < 5 in M-B and is not legal under
+  M-B's mod (25 + 6, incl. Garchomp-Mega-Z, Salamence-Mega, Rillaboom; Floette excluded); Mega/non-Mega columns consistent.
+  418 unit green.
+- Build twice, rows and aggregates: byte-identical. Throwaway clone freeze + verify: 16 files (rows) / 13 (aggregates).
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

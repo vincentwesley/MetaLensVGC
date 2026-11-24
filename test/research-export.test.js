@@ -211,5 +211,30 @@ test('codebook: paper, attribution, licence pending, limitations, split section;
   assert.equal(limitations(0.981).length, 4);
   const agg = codebook({ content: 'aggregates', split, onlineShare: 0.98 });
   assert.ok(agg.includes('## agg_usage_species.csv') && !agg.includes('## teams.csv') && !agg.includes('## matches.csv'));
-  assert.deepEqual(Object.keys(releaseTables({ content: 'aggregates' })), ['events.csv', ...Object.keys(AGG_TABLES)]);
+  assert.deepEqual(Object.keys(releaseTables({ content: 'aggregates' })), ['events.csv', ...Object.keys(AGG_TABLES), 'regulations.csv']);
+  assert.ok(Object.keys(releaseTables()).includes('regulations.csv'));
+  assert.ok(cb.includes('## Regulations') && cb.includes('pokemon-showdown'));
+});
+
+test('regulations.csv: dates from regs.js; new forms from the dex mods (M-A roster, M-B diff) and the data (M-C)', async () => {
+  const { regulationRows, formCounts, legalForms, isMegaForm, MIN_LISTS } = await import('../scripts/lib/regulation-table.js');
+  const counts = new Map(['M-A', 'M-B', 'M-C'].map((r) => [r, formCounts(read(`teams-${r}.json`), dex)]));
+  const rows = Object.fromEntries(regulationRows(['M-A', 'M-B', 'M-C'], (r) => counts.get(r)).map((r) => [r.regulation, r]));
+  assert.deepEqual([rows['M-A'].start_date, rows['M-A'].end_date, rows['M-B'].start_date, rows['M-C'].end_date], ['2026-04-08', '2026-06-17', '2026-06-17', '2026-12-02']);
+  const A = legalForms('championsregma');
+  const B = legalForms('champions');
+  const list = (r) => [...r.new_pokemon.split('|'), ...r.new_megas.split('|')].filter(Boolean);
+  assert.equal(list(rows['M-A']).length, A.size, 'M-A = its whole legal roster');
+  assert.deepEqual(new Set(list(rows['M-B'])), new Set([...B].filter((f) => !A.has(f))), 'M-B = dex diff');
+  for (const f of ['Staraptor-Mega', 'Raichu-Mega-Y', 'Gholdengo', 'Grimmsnarl']) assert.ok(list(rows['M-B']).includes(f), f);
+  for (const f of list(rows['M-C'])) {
+    assert.ok((counts.get('M-C').get(f) || 0) >= MIN_LISTS && (counts.get('M-B').get(f) || 0) < MIN_LISTS && !B.has(f), f);
+  }
+  for (const f of ['Garchomp-Mega-Z', 'Salamence-Mega', 'Rillaboom']) assert.ok(list(rows['M-C']).includes(f), f);
+  assert.ok(!list(rows['M-C']).includes('Floette'), 'sheet spelling present in M-B is not new');
+  for (const r of Object.values(rows)) {
+    assert.ok(r.new_megas.split('|').filter(Boolean).every(isMegaForm));
+    assert.ok(!r.new_pokemon.split('|').some(isMegaForm));
+    assert.equal(r.n_new_megas, r.new_megas.split('|').filter(Boolean).length);
+  }
 });

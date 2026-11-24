@@ -7,6 +7,8 @@
 import { createHash } from 'node:crypto';
 import { decode } from '../../public/js/lib/aggregate.js';
 import { ARCHETYPES, ARCHETYPE_RULESET } from '../../public/js/lib/archetypes.js';
+import { MIN_LISTS, formCounts, regulationRows, showdownVersion } from './regulation-table.js';
+import { VGC_IDS } from './regs.js';
 import { DEFAULT_COUNTRY_POLICY, REGIONS, REGION_MIN_GROUP, REGION_SCHEME, checkPolicy, countryColumn } from './geo-regions.js';
 
 const RESULT = '1 = side A won, 2 = side B won, 0 = tie, 3 = no result (double loss / unreported). Rows built before ' +
@@ -353,6 +355,37 @@ export function confirmationSplit(regs, seed) {
   throw new Error(`no confirmation split within ${SPLIT_BAND.join('-')} after ${SPLIT_MAX_DRAWS} draws`);
 }
 
+export const REG_TABLE = {
+  'regulations.csv': {
+    desc: 'One row per regulation in the release: dates, and the Pokémon and Mega forms newly legal compared with the previous '
+      + 'regulation. Derived, never typed by hand; new_basis says how (see "Regulations").',
+    columns: [
+      ['regulation', 'string', 'Regulation id (M-A, M-B, M-C...).'],
+      ['start_date', 'date', 'First day of the regulation (UTC), YYYY-MM-DD.'],
+      ['end_date', 'date', 'Day the next regulation starts (exclusive end), YYYY-MM-DD; empty while not announced.'],
+      ['showdown_format', 'string', 'Pokémon Showdown format id of the regulation.'],
+      ['previous', 'string', 'The regulation compared against; empty for the first.'],
+      ['new_basis', 'string', 'How the new forms were derived: an initial roster or a diff of two pokemon-showdown mods (rules), or the tournament data when the installed package has no mod for the regulation.'],
+      ['n_new_pokemon', 'integer', 'Number of new non-Mega forms.'],
+      ['n_new_megas', 'integer', 'Number of new Mega forms.'],
+      ['new_pokemon', 'string', 'New non-Mega forms (Showdown names), "|"-separated, sorted.'],
+      ['new_megas', 'string', 'New Mega forms, "|"-separated, sorted.'],
+    ],
+  },
+};
+
+function regulationsSection(version) {
+  return ['## Regulations', '',
+    `regulations.csv is derived from the installed pokemon-showdown package (version ${version}) and the release's own data:`,
+    '- A regulation the package has a Champions mod for (M-A: championsregma, M-B: champions) takes its legal forms from that mod',
+    '  (existing, standard, not tiered Illegal or Unreleased); M-A lists its whole initial roster, M-B the forms legal under its',
+    '  mod and not under M-A\'s.',
+    `- A regulation without a mod (M-C: the package predates it) lists the forms on ${MIN_LISTS}+ full team lists in it that were`,
+    `  neither legal under the previous regulation's mod nor on ${MIN_LISTS}+ of its lists (the second rule drops sheet spellings`,
+    '  the mod does not list, such as Floette). It therefore lists only new forms that were actually used; a new form on fewer',
+    `  than ${MIN_LISTS} lists is missing.`, ''];
+}
+
 export const SPLIT_TABLE = {
   'confirmation_split.csv': {
     desc: 'Pre-registered confirmation split, fixed at freeze: every event of the release is "explore" (70%) or "confirm" (30%). See "Confirmation split".',
@@ -461,12 +494,12 @@ const eventsOnly = (regs, dex) => buildExport(regs, dex)['events.csv'];
 
 /** The tables a release of `content` ships, for the codebook. */
 export function releaseTables({ country = DEFAULT_COUNTRY_POLICY, content = 'rows', split = false } = {}) {
-  const base = content === 'aggregates' ? { 'events.csv': TABLES['events.csv'], ...AGG_TABLES } : tablesFor(country);
+  const base = { ...(content === 'aggregates' ? { 'events.csv': TABLES['events.csv'], ...AGG_TABLES } : tablesFor(country)), ...REG_TABLE };
   return split ? { ...base, ...SPLIT_TABLE } : base;
 }
 
 /** CODEBOOK.md, generated from the table schemas and the archetype rule set (so it can't drift from the CSVs). */
-export function codebook({ release = null, regs = [], country = DEFAULT_COUNTRY_POLICY, content = 'rows', split = null, onlineShare = null } = {}) {
+export function codebook({ release = null, regs = [], country = DEFAULT_COUNTRY_POLICY, content = 'rows', split = null, onlineShare = null, showdown = showdownVersion() } = {}) {
   const tables = releaseTables({ country, content, split: !!split });
   const out = [];
   out.push('# MetaLens VGC research data: codebook', '');
@@ -484,6 +517,7 @@ export function codebook({ release = null, regs = [], country = DEFAULT_COUNTRY_
     ...(content === 'rows' ? ['- Ids ending in a row number (team_id, match_id, roster_id) are stable within one release only; join across releases on event_id + pid.'] : []),
     '- Text is exactly as published (UTF-8, RFC 4180 quoting). A cell starting with = + - or @ is left as is: import as text, not into a spreadsheet that evaluates formulas.',
     '', ...(content === 'rows' ? countrySection(country) : ['## Country policy', '', 'No country or region in an aggregates release.', '']));
+  out.push(...regulationsSection(showdown));
   if (split) {
     out.push('## Confirmation split', '', SPLIT_METHOD, '',
       `Seed: \`${split.seed}\`; redraws before the accepted draw: ${split.redraws}. confirmation_split.csv SHA-256: \`${split.sha256}\`.`, '',
@@ -532,6 +566,19 @@ export async function writeExport(dataDir, outDir, regs, { release = null, count
   const online = input.reduce((n, { teams }) => n + teams.teams.filter((r) => teams.events[r[0]]?.tier === 'online').length, 0);
   const onlineShare = all.length ? online / all.length : 0;
   const files = {};
+  // regulations.csv (needs the previous regulation's teams file too, for the data-derived rows)
+  const countsCache = new Map();
+  const countsOf = async (reg) => {
+    if (!countsCache.has(reg)) {
+      const t = input.find((x) => x.reg === reg)?.teams || await readIf(`teams-${reg}.json`);
+      countsCache.set(reg, t ? formCounts(t, dex) : null);
+    }
+    return countsCache.get(reg);
+  };
+  for (const reg of regs) { await countsOf(reg); const i = VGC_IDS.indexOf(reg); if (i > 0) await countsOf(VGC_IDS[i - 1]); }
+  const rt = table(REG_TABLE, 'regulations.csv');
+  regulationRows(regs, (reg) => countsCache.get(reg) ?? null).forEach((r) => rt.add(r));
+  files['regulations.csv'] = rt.text();
   let split = null;
   let splitOf = null;
   if (splitSeed) {
@@ -555,5 +602,5 @@ export async function writeExport(dataDir, outDir, regs, { release = null, count
   }
   files['CODEBOOK.md'] = codebook({ release, regs, country: countryStats.policy, content, split, onlineShare });
   for (const [name, text] of Object.entries(files)) await writeFile(path.join(outDir, name), text);
-  return { files: Object.keys(files), country: countryStats, split, onlineShare };
+  return { files: Object.keys(files), country: countryStats, split, onlineShare, showdown: showdownVersion() };
 }

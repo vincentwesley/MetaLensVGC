@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.8.4', date: '2026-11-24', title: 'Regulations table for the research release',
+    notes: [
+      { tag: 'NEW', text: 'Research releases include a regulations table: each regulation’s dates and the Pokémon and Mega forms it newly allowed, worked out from Pokémon Showdown’s rules and the tournament data rather than typed by hand.' },
+    ],
+  },
+  {
     version: '1.8.3', date: '2026-11-24', title: 'Balanced research split',
     notes: [
       { tag: 'IMPROVED', text: 'The research release’s explore / confirm split is now balanced by event size and redrawn until about 30% of decided matches fall in “confirm”, and it flags the two very large Grand Champions Festival events so they can be left out of robustness checks.' },

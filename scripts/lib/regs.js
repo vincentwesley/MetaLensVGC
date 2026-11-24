@@ -3,8 +3,10 @@
 // family 'vgc' = Champions regs with a date window; 'showdown' = Smogon-ladder-only formats
 // (no window, no tournaments/ranked, rolling last 3 months of stats).
 export const REGULATIONS = {
-  'M-A': { family: 'vgc', format: 'gen9championsvgc2026regma', level: 50, label: 'Reg M-A', start: '2026-04-08', end: '2026-06-17' },
-  'M-B': { family: 'vgc', format: 'gen9championsvgc2026regmb', level: 50, label: 'Reg M-B', start: '2026-06-17', end: '2026-09-09' },
+  // dexMod: the installed pokemon-showdown (0.11.11) mod whose legality matches the regulation (regulations.csv in the
+  // research release); M-C onward have none until the package is updated, so their new forms come from the data.
+  'M-A': { family: 'vgc', format: 'gen9championsvgc2026regma', level: 50, label: 'Reg M-A', start: '2026-04-08', end: '2026-06-17', dexMod: 'championsregma' },
+  'M-B': { family: 'vgc', format: 'gen9championsvgc2026regmb', level: 50, label: 'Reg M-B', start: '2026-06-17', end: '2026-09-09', dexMod: 'champions' },
   'M-C': { family: 'vgc', format: 'gen9championsvgc2026regmc', level: 50, label: 'Reg M-C', start: '2026-09-09', end: '2026-12-02' },
   // M-D: format id follows the M-A..M-C pattern (Showdown had not published it on 2026-11-24); set `end` once announced.
   'M-D': { family: 'vgc', format: 'gen9championsvgc2026regmd', level: 50, label: 'Reg M-D', start: '2026-12-02', end: null },

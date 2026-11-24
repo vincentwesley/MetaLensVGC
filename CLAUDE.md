@@ -364,6 +364,12 @@ These skills are available in every session. The user never types slash commands
   size blocks of 10 per regulation, round(0.3 x block) confirm by SHA-256(seed:draw:event), redrawn until confirm holds
   28-32% of non-outsized decided matches per regulation and overall. RELEASE.json `confirmationSplit` = seed, redraws,
   method, sha256, shares (events, team share, match share non-outsized and all) per regulation + overall.
+- **v1.8.4 regulations.csv** (`scripts/lib/regulation-table.js`): per release regulation: dates (regs.js), Showdown format,
+  new non-Mega and Mega forms vs the previous regulation. Basis: `REGULATIONS[reg].dexMod` (pokemon-showdown 0.11.11:
+  M-A `championsregma` = initial roster, M-B `champions` = diff vs M-A); no mod (M-C) -> data: forms on 5+ M-C lists, < 5
+  in M-B and not legal under M-B's mod. RELEASE.json `regulationsSource.pokemonShowdown` records the package version.
+  Updating pokemon-showdown changes what `champions` means: set `dexMod` per regulation again after an upgrade.
+- **Schema locked for data-v1.0** (owner, 2026-11-24): v1.8.4 tables and columns. No schema change before the freeze.
 - Credit all research work to Vincent Wesley (Vin's Atelier): CITATION.cff, .zenodo.json, codebook, README.
 - Known: in-game ranked season M7 started before 2026-12-02 (snapshot 2026-11-24), so `regForDate` files it under M-C,
   not M-D (seasons are classified by start date).

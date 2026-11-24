@@ -103,6 +103,7 @@ async function build({ version, regs, out, allowNoPids, country = DEFAULT_COUNTR
     pids: content === 'aggregates' ? null : pids, // false only for dry runs built with --allow-no-pids
     paper: PAPER,
     archetypeRules: { version: ARCHETYPE_RULESET.version, fingerprint: ARCHETYPE_RULESET.fingerprint },
+    regulationsSource: { file: 'regulations.csv', pokemonShowdown: exported.showdown }, // dex mods + data, see CODEBOOK.md
     country: countryRecord(exported.country),
     confirmationSplit: exported.split,
     sources: SOURCES,
