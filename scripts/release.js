@@ -56,10 +56,12 @@ async function build({ version, regs, out, allowNoPids }) {
 
   const manifest = await readJSON(path.join(DATA, 'manifest.json'));
   const counts = {};
+  let pids = true;
   const fetched = [];
   const eventDates = [];
   for (const reg of regs) {
     const teams = await readJSON(path.join(DATA, `teams-${reg}.json`));
+    if (teams.idVersion !== 1) pids = false;
     if (teams.idVersion !== 1 && !allowNoPids) throw new Error(`teams-${reg}.json has no player ids (idVersion ${teams.idVersion ?? 'missing'}): run the pipeline with METALENS_ID_SALT first, or pass --allow-no-pids for a dry run`);
     for (const ev of teams.events) {
       if (ev.fetched) fetched.push(ev.fetched);
@@ -83,6 +85,7 @@ async function build({ version, regs, out, allowNoPids }) {
     regulations: regs,
     commit: git('rev-parse', 'HEAD'),
     dataGenerated: manifest.generated,
+    pids, // false only for dry runs built with --allow-no-pids
     archetypeRules: { version: ARCHETYPE_RULESET.version, fingerprint: ARCHETYPE_RULESET.fingerprint },
     sources: [
       { id: 'limitless', name: 'Limitless Play (online tournaments)', url: 'https://play.limitlesstcg.com' },
@@ -148,7 +151,8 @@ async function verify({ version }) {
   git('worktree', 'add', '--detach', tmp, version);
   try {
     await symlink(path.join(ROOT, 'node_modules'), path.join(tmp, 'node_modules'));
-    execFileSync('node', ['scripts/release.js', 'build', version, '--regs', record.regulations.join(','), '--out', 'dist'], { cwd: tmp, stdio: 'inherit' });
+    const args = ['scripts/release.js', 'build', version, '--regs', record.regulations.join(','), '--out', 'dist', ...(record.pids === false ? ['--allow-no-pids'] : [])];
+    execFileSync('node', args, { cwd: tmp, stdio: 'inherit' });
     const rebuilt = await readJSON(path.join(tmp, 'dist', version, 'RELEASE.json'));
     const bad = Object.keys({ ...record.files, ...rebuilt.files }).filter((f) => f !== 'RELEASE.json' && record.files[f] !== rebuilt.files[f]);
     if (bad.length) throw new Error(`${version}: checksums differ for ${bad.join(', ')}`);
