@@ -367,9 +367,18 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Not yet: the real pid backfill (needs the METALENS_ID_SALT secret, then a `refetch_online` run), `release.js freeze` /
   `verify` on a real tag (data-v1.0 after M-C settles, ~2026-12-04).
 
+### v1.8.0 (multi-mode teams), 2026-11-24
+- Unit: archetype chip keeps teams whose secondary archetype matches (negation is the exact complement); split modes
+  (primary sums to n; all = per-id team counts, sums past 100%); matrix mode all = sum of |archA| x |archB| over linked
+  matches; Mega Stones filter 0/1/2+ partitions the teams; `stones` hash round trip + fallback; scanner stone count.
+- e2e: split row click -> that archetype at 100% "Teams matching"; "All matches" = bar chart summing past 100%,
+  "Primary only" = pie summing to 100%; Mega Stones 2+ in the hash, library badge, survives reload.
+- Visual (1280px, pro dark): filter bar wraps Mega Stones after Placement; bars + table; library pills + badge.
+- 407 unit, 69 e2e green.
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
-  ranked M7 is in `ranked-M-D.json`; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only
+  ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only
   once `pokemon-showdown` knows them (npm 0.11.11 predates M-C): update the package when Showdown ships the M-D mod. Verify
   the Smogon format id (`gen9championsvgc2026regmd`) once Showdown publishes it, and the Limitless format code (`M-D`). Smogon's
   first M-D month (2026-12) appears in early January. Set the real M-D `end` when announced.

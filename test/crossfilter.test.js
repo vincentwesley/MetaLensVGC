@@ -49,7 +49,8 @@ test('item / species / archetype / core clicks: the clicked mark is 100% of its 
   assert.deepEqual(usage(vs.mon).map((r) => [r.key, r.pct]), [[sp, 1]]);
   const arch = archetypeSplit(all)[0].id;
   const va = view({ kind: 'archetype', value: arch });
-  assert.deepEqual(archetypeSplit(va.teams).map((r) => [r.id, r.pct]), [[arch, 1]]);
+  assert.equal(archetypeSplit(va.teams, { mode: 'all' }).find((r) => r.id === arch).pct, 1);
+  assert.ok(va.teams.every((t) => t.arch.includes(arch)));
   const [a, b] = usage(all).slice(0, 2).map((r) => r.key);
   const vc = view({ kind: 'core', value: [a, b] });
   assert.deepEqual(usage(vc.mon).map((r) => r.pct), [1, 1]);

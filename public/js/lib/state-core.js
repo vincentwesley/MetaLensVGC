@@ -5,6 +5,7 @@ export const DEFAULT_STATE = {
   source: 'tournaments', // 'tournaments' | 'ladder' | 'ranked'
   tiers: ['worlds', 'international', 'regional', 'online'],
   place: 'all',
+  stones: 'any', // Mega Stones carried: 'any' | '0' | '1' | '2' (2 = two or more)
   from: '',
   to: '',
   minN: 20,
@@ -67,6 +68,7 @@ export const CHIP_KINDS = ['species', 'mega', 'core', 'type', 'weak', 'item', 'm
 const ENUMS = {
   source: ['tournaments', 'ladder', 'ranked'],
   place: ['all', 'topcut', 'top8', 'winner'],
+  stones: ['any', '0', '1', '2'],
   skin: ['pro', 'retro', 'glass', 'paper', 'terminal', 'soft'],
   theme: ['dark', 'light', 'auto'],
   palette: ['grass', 'ghost', 'water', 'fire', 'fairy', 'electric', 'steel'],

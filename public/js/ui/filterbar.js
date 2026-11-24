@@ -19,6 +19,14 @@ const PLACEMENTS = [
   ['winner', 'Winner'],
 ];
 
+// Mega Stones carried by a team (tournament sheets only).
+const STONES = [
+  ['any', 'Any'],
+  ['0', 'None'],
+  ['1', '1'],
+  ['2', '2+'],
+];
+
 function segmented(name, options, onPick) {
   const wrap = document.createElement('div');
   wrap.className = 'segmented';
@@ -135,6 +143,17 @@ export function mountFilterbar(root, ctx, manifest) {
   const place = segmented('Placement', PLACEMENTS, (v) => ctx.store.set({ place: v }));
   placeGroup.append(placeLabel, place.el);
 
+  // Mega Stones carried
+  const stonesGroup = document.createElement('div');
+  stonesGroup.className = 'filterbar__group';
+  stonesGroup.dataset.g = 'stones';
+  const stonesLabel = document.createElement('span');
+  stonesLabel.className = 'filterbar__label';
+  stonesLabel.textContent = 'Mega Stones';
+  stonesLabel.setAttribute('data-tip', 'Mega Stones carried by the team (tournament sheets). 2 = two or more; a team still Mega Evolves only one per battle.');
+  const stones = segmented('Mega Stones carried', STONES, (v) => ctx.store.set({ stones: v }));
+  stonesGroup.append(stonesLabel, stones.el);
+
   // Date range
   const dateGroup = document.createElement('div');
   dateGroup.className = 'filterbar__group';
@@ -179,7 +198,7 @@ export function mountFilterbar(root, ctx, manifest) {
   sample.className = 'filterbar__sample';
   sample.textContent = 'Loading…';
 
-  body.append(regGroup, srcGroup, tierGroup, placeGroup, dateGroup, sliderGroup, sample);
+  body.append(regGroup, srcGroup, tierGroup, placeGroup, stonesGroup, dateGroup, sliderGroup, sample);
 
   function regMeta(id) { return regs.find((r) => r.id === id); }
 
@@ -193,6 +212,7 @@ export function mountFilterbar(root, ctx, manifest) {
     }
     for (const [id, btn] of source.buttons) btn.setAttribute('aria-pressed', String(id === state.source));
     for (const [id, btn] of place.buttons) btn.setAttribute('aria-pressed', String(id === state.place));
+    for (const [id, btn] of stones.buttons) btn.setAttribute('aria-pressed', String(id === state.stones));
     for (const [value, cb] of tierInputs) cb.checked = state.tiers.includes(value);
 
     const rm = regMeta(state.reg);
@@ -253,6 +273,7 @@ export function mountFilterbar(root, ctx, manifest) {
     if (state.source === 'tournaments') {
       if (state.tiers.length !== TIERS.length) parts.push(TIERS.filter(([v]) => state.tiers.includes(v)).map(([, l]) => l).join('+') || 'No tiers');
       if (state.place !== 'all') parts.push(PLACEMENTS.find(([v]) => v === state.place)?.[1] || state.place);
+      if (state.stones !== 'any') parts.push(state.stones === '0' ? 'No Mega Stone' : state.stones === '1' ? '1 Mega Stone' : '2+ Mega Stones');
     }
     if (state.from || state.to) parts.push(`${state.from || '…'} → ${state.to || '…'}`);
     if (state.chips.length) parts.push(`${state.chips.length} filter${state.chips.length === 1 ? '' : 's'} active`);

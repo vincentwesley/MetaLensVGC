@@ -383,15 +383,44 @@ test('ladderMerge with dex maps Smogon ids to display names; ladderItemUsage wei
 // --- cross-filter semantics ---
 import { projectTeams } from '../public/js/lib/aggregate.js';
 
-test('archetype chip matches the primary archetype only (same as the donut)', () => {
+test('archetype chip matches any archetype a team matches, not only the primary one', () => {
   const multi = teams.find((t) => t.arch.length > 1);
   assert.ok(multi, 'fixture has a team with more than one archetype');
   const secondary = multi.arch[1];
   const got = filterTeams(teams, {}, [{ kind: 'archetype', value: secondary, neg: false }], dex);
-  assert.ok(got.every((t) => t.arch[0] === secondary));
-  assert.ok(!got.includes(multi));
-  const split = archetypeSplit(got);
-  assert.equal(split.length, got.length ? 1 : 0, 'donut of the filtered view is a single slice');
+  assert.ok(got.every((t) => t.arch.includes(secondary)));
+  assert.ok(got.includes(multi), 'a team whose secondary archetype is the chip is kept');
+  assert.deepEqual(archetypeSplit(got, { mode: 'all' }).find((r) => r.id === secondary).pct, 1, 'the chosen archetype is 100% of the multi-mode split');
+  const neg = filterTeams(teams, {}, [{ kind: 'archetype', value: secondary, neg: true }], dex);
+  assert.equal(neg.length + got.length, teams.length);
+});
+
+test('archetypeSplit modes: primary sums to 100%; all counts every matched archetype', () => {
+  const primary = archetypeSplit(teams);
+  assert.equal(primary.reduce((a, r) => a + r.n, 0), teams.length);
+  const all = archetypeSplit(teams, { mode: 'all' });
+  assert.equal(all.reduce((a, r) => a + r.n, 0), teams.reduce((a, t) => a + t.arch.length, 0));
+  for (const r of all) assert.equal(r.n, teams.filter((t) => t.arch.includes(r.id)).length, r.id);
+  assert.ok(all.reduce((a, r) => a + r.pct, 0) > 1, 'multi-label shares sum past 100%');
+});
+
+test('archetypeMatrix mode all: a match counts once per pair of matched archetypes', () => {
+  const byI = new Map(teams.map((t) => [t.i, t]));
+  const linked = matches.filter((m) => byI.has(m.a) && byI.has(m.b));
+  const all = archetypeMatrix(teams, matches, null, { mode: 'all' });
+  const pairs = linked.reduce((a, m) => a + byI.get(m.a).arch.length * byI.get(m.b).arch.length, 0);
+  assert.equal(all.cells.reduce((a, c) => a + c.n, 0), pairs);
+  assert.equal(archetypeMatrix(teams, matches).cells.reduce((a, c) => a + c.n, 0), linked.length);
+});
+
+test('Mega Stones filter: 0 = none, 1 = exactly one, 2 = two or more; any = no filter', () => {
+  const by = (stones) => filterTeams(teams, { stones }, [], dex);
+  assert.equal(by('any').length, teams.length);
+  assert.ok(by('0').every((t) => t.megas.length === 0));
+  assert.ok(by('1').every((t) => t.megas.length === 1));
+  assert.ok(by('2').every((t) => t.megas.length >= 2));
+  assert.equal(by('0').length + by('1').length + by('2').length, teams.length);
+  assert.ok(by('1').length > 0);
 });
 
 test('type chip: team kept if it has a Pokémon of that type; Pokémon views only count that type', () => {
@@ -425,7 +454,9 @@ test('archetypeMatrix with opponents counts filtered teams against the whole fie
   const vsField = archetypeMatrix(sel, matches, teams);
   const n = (m) => (m ? m.cells.reduce((a, c) => a + c.n, 0) : 0);
   assert.ok(n(vsField) >= n(inner));
-  assert.ok(vsField.cells.every((c) => c.a === id || c.b === id), 'every counted match involves the selected archetype');
+  assert.ok(sel.every((t) => t.arch.includes(id)));
+  const vsAll = archetypeMatrix(sel, matches, teams, { mode: 'all' });
+  assert.ok(vsAll.cells.some((c) => c.a === id), 'the selected archetype has a row in multi-mode');
   assert.deepEqual(archetypeMatrix(teams, matches, teams), archetypeMatrix(teams, matches));
 });
 

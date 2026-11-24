@@ -115,3 +115,11 @@ test('skin enum accepts the extra styles and rejects unknown values', () => {
   for (const skin of ['pro', 'retro', 'glass', 'paper', 'terminal', 'soft']) assert.equal(sanitizeState({ ...DEFAULT_STATE, skin }).skin, skin);
   assert.equal(sanitizeState({ ...DEFAULT_STATE, skin: 'neon' }).skin, 'pro');
 });
+
+test('stones (Mega Stones carried) round-trips the hash; unknown values fall back to any', () => {
+  const s = { ...DEFAULT_STATE, stones: '2' };
+  assert.equal(toHash(s), 'stones=2');
+  assert.equal(sanitizeState(fromHash('stones=2')).stones, '2');
+  assert.equal(sanitizeState(fromHash('stones=3')).stones, 'any');
+  assert.equal(toHash(DEFAULT_STATE), '');
+});

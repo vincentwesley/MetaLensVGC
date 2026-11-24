@@ -1,6 +1,14 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.8.0', date: '2026-11-24', title: 'Teams with more than one plan',
+    notes: [
+      { tag: 'NEW', text: 'Archetypes count every archetype a team matches, so a Tailwind team that also sets Sun shows up under both. The split is a bar list of “share of teams matching” (it can add up past 100%); “Primary only” brings back the one-archetype donut.' },
+      { tag: 'NEW', text: 'Mega Stones filter in the filter bar: Any, None, 1 or 2+ stones carried. It stays in the link.' },
+      { tag: 'IMPROVED', text: 'An archetype filter now keeps every team that matches that archetype, not only teams where it comes first. Library cards show all of a team’s archetypes and how many Mega Stones it carries; the Scanner shows the count too.' },
+    ],
+  },
+  {
     version: '1.7.0', date: '2026-11-24', title: 'Research-grade data',
     notes: [
       { tag: 'NEW', text: 'Every match now records its round, Swiss or top cut, and best-of; every event says how many of its players published a team list.' },

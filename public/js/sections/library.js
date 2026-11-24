@@ -134,10 +134,21 @@ export default {
       }
       c.appendChild(mons);
 
-      const archPill = elm('button', 'pill lib-arch', archLabel(t.arch[0]));
-      archPill.type = 'button';
-      archPill.addEventListener('click', (e) => ctx.chip('archetype', t.arch[0], e));
-      c.appendChild(archPill);
+      // Every archetype the team matches (primary first), then the Mega Stones it carries.
+      const tags = elm('div', 'lib-tags');
+      for (const id of t.arch) {
+        const archPill = elm('button', 'pill lib-arch', archLabel(id));
+        archPill.type = 'button';
+        archPill.title = id === t.arch[0] ? 'Primary archetype' : 'Also matches this archetype';
+        archPill.addEventListener('click', (e) => ctx.chip('archetype', id, e));
+        tags.appendChild(archPill);
+      }
+      if (t.megas.length) {
+        const stones = elm('span', 'pill lib-stones', `${t.megas.length} Mega Stone${t.megas.length === 1 ? '' : 's'}`);
+        stones.title = `Carries: ${t.megas.join(', ')}`;
+        tags.appendChild(stones);
+      }
+      c.appendChild(tags);
 
       const actions = elm('div', 'lib-card__actions');
       const copyBtn = elm('button', 'lib-btn', 'Copy');

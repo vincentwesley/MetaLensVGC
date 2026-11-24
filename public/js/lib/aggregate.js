@@ -105,7 +105,8 @@ function teamDecoder(file, dex) {
 //   slot test (and every species/core chip's Pokémon), and Pokémon-level views
 //   (projectTeams) only count the Pokémon that pass it. Negative Pokémon chips
 //   remove teams that have any matching Pokémon.
-// - Team chips (archetype = primary archetype, team) select whole teams.
+// - Team chips select whole teams: archetype (the team matches that archetype, primary or not; a team can
+//   match several), team, country.
 const KEY_KINDS = new Set(['species', 'mega', 'core']);
 const ATTR_KINDS = new Set(['type', 'weak', 'item', 'move', 'movetype']);
 
@@ -133,7 +134,7 @@ function teamHasChip(team, chip, dex) {
     case 'species':
     case 'mega':
     case 'core': return chipKeys(chip).every((k) => team.keys.includes(k));
-    case 'archetype': return team.arch[0] === chip.value; // same as the donut / library pill
+    case 'archetype': return team.arch.includes(chip.value); // any matched archetype, not only the primary
     case 'team': return team.id === chip.value;
     case 'country': return team.country === chip.value;
     default: return ATTR_KINDS.has(chip.kind) ? team.mons.some((mon) => monMatchesAttr(mon, chip, dex)) : false;
@@ -149,15 +150,15 @@ function slotTest(chips, dex, { keys = true } = {}) {
   return (mon) => (!keySet.size || keySet.has(mon.k)) && attrs.every((c) => monMatchesAttr(mon, c, dex));
 }
 
+// Mega Stones carried filter (state.stones): '0' none, '1' exactly one, '2' two or more; 'any' = no filter.
+const STONES = { 0: 0, 1: 1, 2: 2 };
+
 export function filterTeams(teams, filters = {}, chips = [], dex) {
-  const { tiers, place, from, to } = filters;
+  const { from, to } = filters;
   const slot = slotTest(chips, dex);
   const hasAttr = chips.some((c) => !c.neg && ATTR_KINDS.has(c.kind));
   return teams.filter((team) => {
-    if (tiers && tiers.length && !tiers.includes(team.tier)) return false;
-    if (place === 'topcut' && !team.topCut) return false;
-    if (place === 'top8' && !(team.placing != null && team.placing <= 8)) return false;
-    if (place === 'winner' && team.placing !== 1) return false;
+    if (!barFilter(team, filters)) return false;
     if (from && team.date < from) return false;
     if (to && team.date > to) return false;
     for (const c of chips) {
@@ -222,6 +223,8 @@ function barFilter(t, filters) {
   if (filters.place === 'topcut' && !t.topCut) return false;
   if (filters.place === 'top8' && !(t.placing != null && t.placing <= 8)) return false;
   if (filters.place === 'winner' && t.placing !== 1) return false;
+  const stones = STONES[filters.stones];
+  if (stones != null && (stones === 2 ? t.megas.length < 2 : t.megas.length !== stones)) return false;
   return true;
 }
 
@@ -425,16 +428,22 @@ export function countrySplit(teams) {
   return { rows, total, unknown: teams.length - total };
 }
 
-export function archetypeSplit(teams) {
+/** The archetypes a team counts under: every match (mode 'all') or the primary one only (`arch[0]`). */
+export const archIds = (team, mode = 'primary') => (mode === 'all' ? team.arch : team.arch.slice(0, 1));
+
+// mode 'primary' (default): one archetype per team, shares sum to 100%. mode 'all': a team counts under every
+// archetype it matches, so pct = share of teams matching and the shares can sum past 100%.
+export function archetypeSplit(teams, { mode = 'primary' } = {}) {
   const n = teams.length;
   const groups = new Map();
   for (const team of teams) {
-    const id = team.arch[0];
-    const g = groups.get(id) || { n: 0, w: 0, l: 0 };
-    g.n++;
-    g.w += team.w;
-    g.l += team.l;
-    groups.set(id, g);
+    for (const id of archIds(team, mode)) {
+      const g = groups.get(id) || { n: 0, w: 0, l: 0 };
+      g.n++;
+      g.w += team.w;
+      g.l += team.l;
+      groups.set(id, g);
+    }
   }
   return [...groups.entries()]
     .map(([id, g]) => ({
@@ -444,13 +453,14 @@ export function archetypeSplit(teams) {
     .sort((a, b) => b.n - a.n);
 }
 
-// Matches are classified by each side's primary archetype. By default only
+// Matches are classified by each side's archetype(s): the primary one by default, or (mode 'all') every archetype
+// each side matches, so one match counts once per pair of archetypes. By default only
 // matches where BOTH sides are in `teams` count. Pass `opponents` (e.g. the
 // same bar filters without chips) to also count matches of a team in `teams`
 // against any team in `opponents`, so filtering to one archetype still shows
 // how it does against the rest of the field. Returns null with no resolvable
 // matches.
-export function archetypeMatrix(teams, matches, opponents = null) {
+export function archetypeMatrix(teams, matches, opponents = null, { mode = 'primary' } = {}) {
   if (!matches || !matches.length) return null;
   const byIdx = new Map(teams.map((t) => [t.i, t]));
   const oppIdx = opponents && opponents !== teams ? new Map(opponents.map((t) => [t.i, t])) : byIdx;
@@ -465,16 +475,18 @@ export function archetypeMatrix(teams, matches, opponents = null) {
     const tb = inB || oppIdx.get(m.b);
     if (!ta || !tb) continue;
     any = true;
-    const ia = ta.arch[0];
-    const ib = tb.arch[0];
-    idSet.add(ia);
-    idSet.add(ib);
-    const key = `${ia}|${ib}`;
-    const c = cellMap.get(key) || { a: ia, b: ib, w: 0, l: 0, n: 0 };
-    c.n++;
-    if (m.result === 1) c.w++;
-    else if (m.result === 2) c.l++;
-    cellMap.set(key, c);
+    for (const ia of archIds(ta, mode)) {
+      for (const ib of archIds(tb, mode)) {
+        idSet.add(ia);
+        idSet.add(ib);
+        const key = `${ia}|${ib}`;
+        const c = cellMap.get(key) || { a: ia, b: ib, w: 0, l: 0, n: 0 };
+        c.n++;
+        if (m.result === 1) c.w++;
+        else if (m.result === 2) c.l++;
+        cellMap.set(key, c);
+      }
+    }
   }
   if (!any) return null;
   return { ids: [...idSet], cells: [...cellMap.values()] };

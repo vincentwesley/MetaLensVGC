@@ -47,7 +47,7 @@ test/               node:test unit tests (npm test). e2e/ Playwright checks (npm
   Orb" = a Rillaboom holding Life Orb). Teams are kept when they have every species/core chip's Pokémon and a Pokémon passing
   the slot test; `projectTeams(teams, chips, dex)` keeps only the passing Pokémon for Pokémon-level views
   (`{keys:false}` = attribute chips only, for the deep dive). Negative Pokémon chips drop teams with any matching Pokémon.
-  Team chips: archetype (PRIMARY archetype `arch[0]`, same as the donut), team, country (ISO-2 from the sheet; `sanitizeState`
+  Team chips: archetype (the team MATCHES it: `arch.includes`, primary or not; v1.8.0), team, country (ISO-2 from the sheet; `sanitizeState`
   keeps only 2-letter codes, uppercased; labelled via `fmt.country`). Ladder / ranked rows are per species:
   `speciesChipFilter(chips, dex)` applies species/mega/core/type/weak there (main filters `view.ladder` / `view.ranked`) and
   reports the rest as unsupported (shown under the chips). `archetypeMatrix(teams, matches, opponents)` counts the view's
@@ -78,6 +78,7 @@ state = {
   reg: "M-C", source: "tournaments" | "ladder" | "ranked",
   tiers: ["worlds","international","regional","online"],   // enabled tiers
   place: "all" | "topcut" | "top8" | "winner",
+  stones: "any" | "0" | "1" | "2",   // Mega Stones carried (2 = two or more), team.megas.length; bar filter (barFilter)
   from: "" | "YYYY-MM-DD", to: "" | "YYYY-MM-DD", minN: 20,
   chips: [ { kind: "species"|"mega"|"core"|"type"|"weak"|"item"|"move"|"movetype"|"archetype"|"team"|"country", value: string | string[], neg: false } ],
   skin: "pro" | "retro", theme: "dark" | "light" | "auto", anim: false,   // defaults: pro, dark
@@ -248,7 +249,7 @@ Background: pixel field canvas.
 - **Archetype colours** follow the archetype, never its rank: `archetypeColors(regTeams, theme)` in archetypes.js ranks
   the named archetypes once per regulation (unfiltered); top 8 take `--series-1..8`, the rest and Other `--muted`
   (overflow ones dashed in the trend). Donut, table swatches and the weekly trend share it. `weekly(teams, keys, has)`
-  takes a membership test; the trend passes the primary archetype. With an archetype chip the trend shows `view.base`.
+  takes a membership test; the trend passes the section's mode (every matched archetype, or the primary one). With an archetype chip the trend shows `view.base`.
 - **Refresh workflow** rebases its data commit onto the latest branch tip before pushing (with retries). Pushes to the
   branch during a run are fine.
 
@@ -343,3 +344,13 @@ These skills are available in every session. The user never types slash commands
 - Credit all research work to Vincent Wesley (Vin's Atelier): CITATION.cff, .zenodo.json, codebook, README.
 - Known: in-game ranked season M7 started before 2026-12-02 (snapshot 2026-11-24), so `regForDate` files it under M-C,
   not M-D (seasons are classified by start date).
+
+## v1.8.0: multi-mode teams (item 8 of the research brief)
+- `archetypeSplit(teams, {mode})` / `archetypeMatrix(teams, matches, opponents, {mode})`: mode `'primary'` (default, one
+  archetype per team, shares sum to 100%) or `'all'` (`archIds(team, 'all')` = every id in `team.arch`; split pct =
+  share of teams matching, sums past 100%; the matrix counts a match once per pair of matched archetypes). Library-level
+  callers (scan.js, events, digest, colour order) stay on primary.
+- Archetypes section: local toggle "All matches" (default; horizontal bars, table column "Teams matching") / "Primary
+  only" (donut). Not in the URL. Trend and heatmap follow it; colours still come from the primary ranking per regulation.
+- Archetype chip = team matches the archetype (any position). Filter bar "Mega Stones" (`state.stones`, hidden in Showdown).
+  Library cards: every archetype pill (primary filled, others outlined) + "N Mega Stones"; Scanner: "Mega Stones carried".

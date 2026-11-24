@@ -321,7 +321,7 @@ test('chart tooltips never show NaN / undefined (hover sweep over the type chart
   expect(seen).toBeGreaterThan(0);
 });
 
-test('archetype chip from the donut leaves a single slice; species chip leaves only that Pokémon', async ({ page }) => {
+test('archetype chip from the split: every team in view matches it (100%); species chip leaves only that Pokémon', async ({ page }) => {
   await page.goto('/');
   await waitForUsageRendered(page);
   const first = page.locator('[data-section="usage"] tbody tr').first();
@@ -334,9 +334,40 @@ test('archetype chip from the donut leaves a single slice; species chip leaves o
   await waitForAllSections(page);
   const row = page.locator('main [data-section="archetypes"] tbody tr').first();
   await row.scrollIntoViewIfNeeded();
+  const name = (await row.locator('td').first().textContent()).trim();
   await row.click();
   await waitForAllSections(page);
-  await expect(page.locator('main [data-section="archetypes"] tbody tr')).toHaveCount(1);
+  const picked = page.locator('main [data-section="archetypes"] tbody tr', { hasText: name }).first();
+  await expect(picked.locator('td').nth(2)).toHaveText('100.0%');
+});
+
+test('archetypes: "All matches" bars (shares can pass 100%) vs "Primary only" donut (sums to 100%); Mega Stones filter round-trips the hash', async ({ page }) => {
+  await page.goto('/');
+  await waitForAllSections(page);
+  const sec = page.locator('main [data-section="archetypes"]');
+  const chartEl = sec.locator('.card').first().locator('[_echarts_instance_]');
+  await chartEl.scrollIntoViewIfNeeded();
+  const seriesType = () => chartEl.evaluate((e) => echarts.getInstanceByDom(e).getOption().series[0].type);
+  const shareSum = async () => (await sec.locator('tbody tr td:nth-child(3)').allTextContents()).reduce((a, t) => a + parseFloat(t), 0);
+  await expect(sec.locator('.arch-mode button[data-value="all"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await seriesType()).toBe('bar');
+  await expect(sec.locator('thead th').nth(2)).toHaveText('Teams matching');
+  expect(await shareSum()).toBeGreaterThan(100.5);
+  await sec.locator('.arch-mode button[data-value="primary"]').click();
+  await expect(sec.locator('.arch-mode button[data-value="primary"]')).toHaveAttribute('aria-pressed', 'true');
+  expect(await seriesType()).toBe('pie');
+  expect(Math.abs(await shareSum() - 100)).toBeLessThan(1);
+
+  const bar = page.locator('[data-g="stones"]');
+  await bar.locator('button[data-value="2"]').click();
+  await waitForAllSections(page);
+  expect(await page.evaluate(() => location.hash)).toContain('stones=2');
+  const card = page.locator('[data-section="library"] .lib-card').first();
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.locator('.lib-stones')).toHaveText(/^[2-6] Mega Stones$/);
+  await page.reload();
+  await waitForAllSections(page);
+  await expect(page.locator('[data-g="stones"] button[data-value="2"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('active filters stay visible while scrolling and Clear all empties them', async ({ page }) => {

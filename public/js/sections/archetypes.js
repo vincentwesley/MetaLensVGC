@@ -1,5 +1,7 @@
-// Archetypes section: primary-archetype split donut, weekly archetype-share trend,
-// archetype-vs-archetype win-rate heatmap (real match results only), and a classification disclosure.
+// Archetypes section: archetype split, weekly archetype-share trend, archetype-vs-archetype win-rate heatmap
+// (real match results only), and a classification disclosure. A local toggle picks how teams count:
+// "All matches" (default; a team counts under every archetype it matches, shown as bars of "share of teams
+// matching", which can sum past 100%) or "Primary only" (one archetype per team, the donut).
 import { archetypeSplit, archetypeMatrix, atMinN, weekly } from '../lib/aggregate.js';
 import { ARCHETYPES } from '../lib/archetypes.js';
 import { RANKED_NA, rankedSource, clickHint } from '../ui/meta.js';
@@ -121,13 +123,37 @@ export default {
     const heat = card('Archetype matchup win rate');
     const disc = card('How archetypes are classified');
     for (const c of [donut, trend, heat, disc]) c.el.classList.add('sb-full');
+
+    let api = null;
+    // --- counting mode (local to this section, not in the URL) ---------------
+    let mode = 'all';
+    const modeSeg = document.createElement('div');
+    modeSeg.className = 'segmented arch-mode';
+    modeSeg.setAttribute('role', 'radiogroup');
+    modeSeg.setAttribute('aria-label', 'Count teams under');
+    const modeBtns = new Map();
+    for (const [value, label, tip] of [
+      ['all', 'All matches', 'A team counts under every archetype it matches (a Tailwind Sun team counts for both).'],
+      ['primary', 'Primary only', 'A team counts once, under its first matching archetype.'],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.dataset.value = value;
+      b.setAttribute('data-tip', tip);
+      b.addEventListener('click', () => { if (mode !== value) { mode = value; if (lastView) api.update(lastView); } });
+      modeSeg.appendChild(b);
+      modeBtns.set(value, b);
+    }
+    donut.el.querySelector('.card__head').insertBefore(modeSeg, donut.meta);
     el.append(donut.el, trend.el, heat.el, disc.el);
 
     // --- weekly share trend ------------------------------------------------
     const trendChartEl = document.createElement('div');
     trendChartEl.className = 'sb-chart';
     const trendEmptyEl = document.createElement('div');
-    trend.body.append(clickHint(`Share of teams by main archetype, per week (top ${TREND_TOP}). Click a line: show only teams of that archetype. Shift-click to exclude.`), trendChartEl, trendEmptyEl);
+    const trendHint = clickHint('');
+    trend.body.append(trendHint, trendChartEl, trendEmptyEl);
     const trendChart = ctx.echarts.init(trendChartEl);
     new ResizeObserver(() => trendChart.resize()).observe(trendChartEl);
     let trendIds = [];
@@ -159,7 +185,8 @@ export default {
     // --- donut + legend side by side (falls back to stacked on narrow screens) ---
     const donutRow = document.createElement('div');
     donutRow.className = 'sb-split';
-    donut.body.append(clickHint('Teams grouped by main archetype. Click a slice or table row: show only teams of that archetype. Shift-click to exclude.'), donutRow);
+    const donutHint = clickHint('');
+    donut.body.append(donutHint, donutRow);
 
     const donutChartEl = document.createElement('div');
     donutChartEl.className = 'sb-chart';
@@ -171,7 +198,7 @@ export default {
     listWrap.className = 'table-wrap';
     const table = document.createElement('table');
     table.className = 'data-table';
-    table.innerHTML = '<thead><tr><th>Archetype</th><th>n</th><th>Share</th><th>Win %</th></tr></thead><tbody></tbody>';
+    table.innerHTML = '<thead><tr><th>Archetype</th><th>n</th><th class="arch-share-h">Share</th><th>Win %</th></tr></thead><tbody></tbody>';
     listWrap.appendChild(table);
     donutRow.appendChild(listWrap);
 
@@ -179,7 +206,8 @@ export default {
     const heatChartEl = document.createElement('div');
     heatChartEl.className = 'sb-chart sb-chart--tall';
     const heatEmptyEl = document.createElement('div');
-    heat.body.append(clickHint('Row archetype’s win rate against each column. Click a cell: show only teams of the row archetype.'), heatChartEl, heatEmptyEl);
+    const heatHint = clickHint('');
+    heat.body.append(heatHint, heatChartEl, heatEmptyEl);
     const heatChart = ctx.echarts.init(heatChartEl);
     new ResizeObserver(() => heatChart.resize()).observe(heatChartEl);
 
@@ -189,6 +217,7 @@ export default {
     function renderDonut(theme) {
       donutChartEl.style.display = lastSplit.length ? '' : 'none';
       if (!lastSplit.length) return;
+      if (mode === 'all') { renderBars(theme); return; }
       donutChart.setOption({
         color: theme.series,
         tooltip: {
@@ -211,6 +240,31 @@ export default {
           label: { show: false },
           labelLine: { show: false },
           data: lastSplit.map((r) => ({ name: labelOf(r.id), value: r.n, archId: r.id, itemStyle: { color: colorOf(r.id) } })),
+        }],
+      }, true);
+    }
+
+    // Multi-label shares don't sum to 100%, so "All matches" draws bars, not a pie.
+    function renderBars(theme) {
+      donutChart.setOption({
+        tooltip: {
+          trigger: 'item',
+          backgroundColor: theme.tooltipBg, borderColor: theme.border,
+          textStyle: { color: theme.ink, fontFamily: theme.fontFamily },
+          formatter: (p) => {
+            const r = lastSplit[p.dataIndex];
+            if (!r) return '';
+            const win = r.winPct != null ? `${(r.winPct * 100).toFixed(1)}%` : '—';
+            return `<b>${labelOf(r.id)}</b><br/>${(r.pct * 100).toFixed(1)}% of teams match (n=${r.n})<br/>win rate ${win}`;
+          },
+        },
+        grid: { left: 8, right: 44, top: 6, bottom: 6, containLabel: true },
+        xAxis: { type: 'value', max: (v) => Math.min(100, Math.ceil(v.max / 10) * 10), axisLabel: { color: theme.muted, fontFamily: theme.fontFamily, formatter: (v) => `${v}%` }, splitLine: { lineStyle: { color: theme.grid } } },
+        yAxis: { type: 'category', inverse: true, data: lastSplit.map((r) => axisLabelOf(r.id)), axisLabel: { color: theme.inkSecondary, fontFamily: theme.fontFamily }, axisLine: { lineStyle: { color: theme.axis } } },
+        series: [{
+          type: 'bar', barMaxWidth: 18,
+          label: { show: true, position: 'right', color: theme.muted, fontFamily: theme.fontFamily, fontSize: 11, formatter: (p) => ctx.fmt.pct(p.value / 100) },
+          data: lastSplit.map((r) => ({ name: labelOf(r.id), value: +(r.pct * 100).toFixed(2), archId: r.id, itemStyle: { color: colorOf(r.id) } })),
         }],
       }, true);
     }
@@ -242,7 +296,7 @@ export default {
     }
 
     function renderHeatmap(view, theme) {
-      const mat = archetypeMatrix(view.teams, view.matches, view.base);
+      const mat = archetypeMatrix(view.teams, view.matches, view.base, { mode });
       if (!mat) {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';
@@ -293,7 +347,7 @@ export default {
             const [c, r, val, n] = p.data.value;
             const row = labels[r]; const col = labels[c];
             if (val == null) return `<b>${row}</b> vs <b>${col}</b><br/>insufficient data (n=${n})`;
-            return `<b>${row}</b> vs <b>${col}</b><br/>${row} wins ${val}% (n=${n})`;
+            return `<b>${row}</b> vs <b>${col}</b><br/>${row} wins ${val}% (n=${n}${mode === 'all' ? ' match-ups; a match counts for every archetype pair the two teams match' : ''})`;
           },
         },
         grid: { left: narrow ? 74 : 130, right: 20, top: 10, bottom: narrow ? 60 : 80, containLabel: false },
@@ -336,9 +390,9 @@ export default {
     function renderTrend(view, theme) {
       const picked = view.state.chips.filter((c) => c.kind === 'archetype' && !c.neg).map((c) => c.value);
       const teams = picked.length ? view.base : view.teams;
-      const ranked = archetypeSplit(teams).map((r) => r.id);
+      const ranked = archetypeSplit(teams, { mode }).map((r) => r.id);
       trendIds = [...new Set([...picked, ...ranked])].slice(0, Math.max(TREND_TOP, picked.length));
-      const wk = weekly(teams, trendIds, (t, id) => t.arch[0] === id);
+      const wk = weekly(teams, trendIds, mode === 'all' ? (t, id) => t.arch.includes(id) : (t, id) => t.arch[0] === id);
       ctx.meta(trend.meta, { source: picked.length ? 'Tournaments · whole field, chosen archetype highlighted' : 'Tournaments', n: teams.length, unit: 'teams' });
       trendEmptyEl.textContent = '';
       if (wk.weeks.length < 2) {
@@ -373,8 +427,21 @@ export default {
     }
 
     let colorOf = () => '';
+    const setHint = (el, text) => { el.textContent = text; };
+    function paintMode() {
+      for (const [v, b] of modeBtns) b.setAttribute('aria-pressed', String(v === mode));
+      const all = mode === 'all';
+      setHint(donutHint, all
+        ? 'Share of teams matching each archetype; a team can match several, so shares add up past 100%. Click a bar or row: show only teams that match it. Shift-click to exclude.'
+        : 'Teams grouped by primary archetype (one per team). Click a slice or row: show only teams that match that archetype. Shift-click to exclude.');
+      setHint(trendHint, `Share of teams ${all ? 'matching each archetype' : 'by primary archetype'}, per week (top ${TREND_TOP}). Click a line: show only teams that match it. Shift-click to exclude.`);
+      setHint(heatHint, `Row archetype’s win rate against each column${all ? ' (every archetype each team matches)' : ' (primary archetypes)'}. Click a cell: show only teams that match the row archetype.`);
+      table.querySelector('.arch-share-h').textContent = all ? 'Teams matching' : 'Share';
+    }
+
     function rerender(view) {
       const theme = ctx.chartTheme();
+      paintMode();
       colorOf = archetypeColors(view.regTeams, theme);
       renderDonut(theme);
       renderList();
@@ -395,7 +462,7 @@ export default {
       if (rowId) ctx.chip('archetype', rowId, p.event?.event);
     });
 
-    return {
+    api = {
       update(view) {
         lastView = view;
         if (view.state.source !== 'tournaments') {
@@ -415,7 +482,7 @@ export default {
         donut.el.style.display = '';
         trend.el.style.display = '';
         listWrap.style.display = '';
-        const split = atMinN(archetypeSplit(view.teams), view.state.minN);
+        const split = atMinN(archetypeSplit(view.teams, { mode }), view.state.minN);
         lastSplit = split.rows;
         if (!lastSplit.length) {
           donutChartEl.style.display = 'none';
@@ -432,5 +499,6 @@ export default {
         // No species-keyed marks in this section.
       },
     };
+    return api;
   },
 };

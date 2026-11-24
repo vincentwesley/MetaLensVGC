@@ -48,7 +48,8 @@ export function archLabel(id) {
 export function teamArchetype(mons, dex) {
   const team = { mons, keys: mons.map((m) => m.k), species: new Set(mons.map((m) => m.k)) };
   const ids = classify(team, dex);
-  return { ids, id: ids[0], label: archLabel(ids[0]) };
+  // Mega Stones carried: Pokémon holding their own stone (paste.js marks them mega), as decode() counts `megas`.
+  return { ids, id: ids[0], label: archLabel(ids[0]), stones: mons.filter((m) => m.mega).length };
 }
 
 /** Per-team count of how many of `keys` (a Set) the team has. Aligned with `teams`. */

@@ -121,7 +121,10 @@ main.grid .section[data-section="methodology"] {
 .lib-mon:hover, .lib-mon:focus-visible { background: var(--surface-0); }
 .lib-mon__item { font-size: 11px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.lib-arch { align-self: flex-start; background: var(--accent); border: 0; cursor: pointer; }
+.lib-tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.lib-arch { background: var(--accent); border: 0; cursor: pointer; }
+.lib-arch + .lib-arch { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+.lib-stones { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--border); }
 .lib-card__actions { display: flex; gap: var(--space-2); margin-top: auto; }
 
 .lib-loadmore-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }

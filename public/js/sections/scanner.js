@@ -443,6 +443,7 @@ export default {
         line.appendChild(elm('span', 'scn-arch__label', a.label));
         if (a.ids.length > 1) line.appendChild(elm('span', 'ddv-note', `also matches: ${a.ids.slice(1).map(archLabel).join(', ')}`));
         b.appendChild(line);
+        b.appendChild(elm('div', 'ddv-note scn-stones', `Mega Stones carried: ${a.stones}${a.stones >= 2 ? ' (only one can Mega Evolve per battle)' : ''}`));
         b.appendChild(elm('div', 'ddv-note', def ? def.desc : 'No archetype rule matches this team (no weather setter, Trick Room or Tailwind user, etc.).'));
         into.appendChild(card);
       }

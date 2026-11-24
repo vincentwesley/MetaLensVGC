@@ -41,6 +41,8 @@ test('teamArchetype builds a classify()-able team', () => {
   assert.equal(r.id, 'tailwind');
   assert.equal(r.label, 'Tailwind');
   assert.equal(teamArchetype([mon('A'), mon('B')], dex).label, 'Other');
+  assert.equal(r.stones, 0);
+  assert.equal(teamArchetype([{ ...mon('A'), mega: true }, { ...mon('B'), mega: true }, mon('C')], dex).stones, 2);
 });
 
 test('similarTeams: threshold 4, falls back to 3 under 30 teams', () => {
