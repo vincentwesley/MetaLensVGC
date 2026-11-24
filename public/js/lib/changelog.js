@@ -1,6 +1,14 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.6.0', date: '2026-11-24', title: 'Ready for Regulation M-D',
+    notes: [
+      { tag: 'NEW', text: 'Regulation M-D (from 2 December) appears in the regulation picker on its start date. The site keeps opening on M-C until the first M-D tournament results are in, then switches to M-D by itself.' },
+      { tag: 'IMPROVED', text: 'The clock says when a regulation has no announced end date instead of counting down to nothing.' },
+      { tag: 'IMPROVED', text: 'Empty cards now say what is missing (for example “No teams in view”) instead of “Insufficient data”.' },
+    ],
+  },
+  {
     version: '1.5.6', date: '2026-11-18', title: 'Faster, private fonts',
     notes: [
       { tag: 'IMPROVED', text: 'The typefaces now load from this site instead of Google, so the page makes no font requests to third parties and text appears sooner. Nothing looks different.' },

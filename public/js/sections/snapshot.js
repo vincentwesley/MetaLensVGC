@@ -175,7 +175,7 @@ export default {
         body.prepend(hero); body.append(kpiRow);
         const top = merged.mons.slice(0, 6);
         if (!top.length) {
-          emptyState(hero, 'Insufficient data');
+          emptyState(hero, 'No teams in view');
         } else {
           top.forEach((m) => hero.appendChild(monCard(ctx, m.key, m.usage, null, null, '', anim)));
         }
@@ -204,13 +204,13 @@ export default {
       body.prepend(hero); body.append(kpiRow);
 
       if (!view.monTeams.length) {
-        emptyState(hero, 'Insufficient data');
+        emptyState(hero, 'No teams in view');
         return;
       }
 
       const top = rows.slice(0, 6);
       if (!top.length) {
-        emptyState(hero, 'Insufficient data');
+        emptyState(hero, 'No teams in view');
       } else {
         const prevRows = view.prev && view.prev.length ? new Map(usage(view.prev).map((r) => [r.key, r])) : null;
         const label = prevLabel(view);

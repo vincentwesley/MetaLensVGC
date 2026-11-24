@@ -337,7 +337,25 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   roster (checked: dropping Rillaboom from a copy of the data is reported), and `test/validate-data.test.js` runs
   `validateAll` on the committed data in `npm test`, so CI catches a data/validator mismatch before the Monday refresh.
 
+### v1.6.0 (Regulation M-D preparation), 2026-11-24
+- M-D added to `scripts/lib/regs.js` (start 2026-12-02, `end: null`, format `gen9championsvgc2026regmd` = the M-A..M-C pattern;
+  Showdown had not published M-D on 2026-11-24). Unit: open-ended window, `listedRegs` by date, `pickCurrent` (no/49/50 M-D
+  teams), ranked M7 -> M-D. Browser: a link without `reg=` opens `manifest.current` (state.js `setRegs(ids, current)`).
+- Simulated 2026-12-05 on a sandbox copy (fake `Date` via `--import`): the real `fetchRanked('M-D')` / `fetchLadder('M-D')`
+  (0 seasons, 0 months), `assembleTeamsFile('M-D', [])`, manifest via `pickCurrent` -> regs M-A..M-D + ND/NDD, current M-C,
+  `validateAll` OK. Browser on that data: picker lists M-D, default stays M-C, clicking M-D renders with 0 page errors.
+  (A full cold-cache `build-data` run was stopped: it refetches every official event, hours without `data-raw/`.)
+- That M-D view still showed 9 "Insufficient data" titles (usage, snapshot, speed, trends, teammates, archetypes, items,
+  types, deep dive). All retitled with what is missing; `test/empty-state-copy.test.js` keeps the string out of sections/.
+- e2e: "default regulation follows manifest.current; an explicit #reg= still wins" (manifest stubbed to current M-B).
+- 387 unit, 68 e2e green; validate.js OK.
+
 ## Not yet tested (candidates for the next pass)
+- **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
+  ranked M7 is in `ranked-M-D.json`; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only
+  once `pokemon-showdown` knows them (npm 0.11.11 predates M-C): update the package when Showdown ships the M-D mod. Verify
+  the Smogon format id (`gen9championsvgc2026regmd`) once Showdown publishes it, and the Limitless format code (`M-D`). Smogon's
+  first M-D month (2026-12) appears in early January. Set the real M-D `end` when announced.
 
 - Real Cloudflare deploy: `_headers` (CSP allows fonts + sprites; JS/CSS `no-cache` revalidation),
   the sprite fallback chain with real network, the creator image and pixel field on a real device.

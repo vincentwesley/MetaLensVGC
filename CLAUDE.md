@@ -150,8 +150,11 @@ Background: pixel field canvas.
   on 2026-09-29 (run 36573679607, 45.5 min, data commit touched only public/data). On any failed step it opens / comments
   on the issue "Weekly data refresh failed" (run link, step, log tail from `$RUNNER_TEMP/refresh.log`); the next success
   closes it. Build step has its own 300-min timeout (a job timeout would cancel and skip the alert). `data-raw/` is cached.
-  A new regulation: add it to `scripts/lib/regs.js`, `SUFFIX` in `scripts/sources/ladder.js`, `current` in build-data.js
-  (until then out-of-window ranked seasons are skipped with a warning, `reg: null`).
+  A new regulation: add ONE entry to `scripts/lib/regs.js` (`end: null` until announced = open-ended). Everything else derives
+  from it (v1.6.0): `listedRegs(today)` fetches/writes/lists a regulation only from its start date, `pickCurrent` makes it
+  the default view (`manifest.current`, which the browser opens when the link has no `reg=`) once it has 50+ tournament teams,
+  official.js maps `m-<x>` formats from `VGC_IDS`, ranked seasons land in it via `regForDate`, and the validator checks only
+  listed regs. Set its real `end` once announced. Out-of-window ranked seasons still get `reg: null` with a warning.
 - **Spread explorer** (2026-09-30): the deep dive's "Spread explorer" card (ranked season / Smogon month toggle,
   archetype strip with coverage, previous-regulation shift, per-spread Lv50 stats + speed benchmark vs the top-30
   `speedSpecies`) and the scanner's "SP check" card. Ranked rows assume the most common ranked nature (flagged `*`).

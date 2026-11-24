@@ -24,7 +24,7 @@ function card(title) {
   return { el, body, meta };
 }
 
-function emptyState(msg, title = 'Insufficient data') {
+function emptyState(msg, title = 'No Pokémon in view') {
   const div = document.createElement('div');
   div.className = 'empty-state';
   const t = document.createElement('div');
@@ -244,7 +244,7 @@ export default {
         bench.style.display = 'none';
         controls.style.display = 'none';
         legend.style.display = 'none';
-        main.body.appendChild(emptyState('Insufficient data'));
+        main.body.appendChild(emptyState('No tournament teams match this view.'));
         return;
       }
       chartEl.style.display = '';

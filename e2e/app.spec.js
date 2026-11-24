@@ -1362,3 +1362,17 @@ test('Showdown (ND): no "team(s)" wording anywhere in the main page', async ({ p
   });
   expect(text.match(/.{0,50}\bteams?\b.{0,30}/gi) || []).toEqual([]);
 });
+
+test('default regulation follows manifest.current; an explicit #reg= still wins', async ({ page }) => {
+  // Simulate the manifest naming M-B as current (as it will name M-D once M-D has results).
+  await page.route(/data\/manifest\.json/, async (route) => {
+    const res = await route.fetch();
+    const json = await res.json();
+    await route.fulfill({ json: { ...json, current: 'M-B' } });
+  });
+  await page.goto('/');
+  await expect(page.locator('[aria-label="Regulation"] [aria-pressed="true"]')).toHaveText('M-B');
+  expect(new URL(page.url()).hash).not.toContain('reg='); // the current regulation stays out of the link
+  await page.goto('/#reg=M-C');
+  await expect(page.locator('[aria-label="Regulation"] [aria-pressed="true"]')).toHaveText('M-C');
+});

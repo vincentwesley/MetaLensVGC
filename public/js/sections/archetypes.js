@@ -20,7 +20,7 @@ function card(title) {
   return { el, body, meta };
 }
 
-function emptyState(msg, title = 'Insufficient data') {
+function emptyState(msg, title = 'No teams in view') {
   const div = document.createElement('div');
   div.className = 'empty-state';
   const t = document.createElement('div');

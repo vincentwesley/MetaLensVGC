@@ -64,7 +64,7 @@ function barRow(label, pct, maxPct, { onClick, sprite, valueText, title } = {}) 
 }
 
 function barList(parent, rows, opts = {}) {
-  if (!rows.length) { emptyState(parent, 'Insufficient data'); return; }
+  if (!rows.length) { emptyState(parent, 'Nothing recorded in view'); return; }
   const max = Math.max(...rows.map((r) => r.pct), 0.0001);
   const list = elm('div', 'bar-list');
   for (const r of rows) list.appendChild(barRow(r.name, r.pct, max, { onClick: opts.onClick ? (e) => opts.onClick(r.name, e) : null }));
@@ -499,7 +499,7 @@ export default {
       if (!sd) {
       const { card: wrCard, body: wrBody } = sectionCard('Win rate with vs. without');
       if (det.withWinPct == null && det.withoutWinPct == null) {
-        emptyState(wrBody, 'Insufficient data');
+        emptyState(wrBody, 'No match results for this Pokémon in view');
       } else {
         const cmp = elm('div', 'ddv-winrate');
         const withT = elm('div', 'kpi');
@@ -572,7 +572,7 @@ export default {
       const { card: tmCard, body: tmBody } = sectionCard('Teammates');
       const teammates = useLadder ? (ladderRow?.teammates || []).map((r) => ({ name: r.name, pct: r.pct })) : det.teammates.map((r) => ({ name: r.name, pct: r.pct }));
       if (!teammates.length) {
-        emptyState(tmBody, 'Insufficient data');
+        emptyState(tmBody, 'No teammates recorded in view');
       } else {
         const grid = elm('div', 'sprite-grid');
         for (const t of teammates.slice(0, 12)) {
@@ -605,7 +605,7 @@ export default {
         sub('Abilities', mon.abilities);
         sub('Natures', mon.natures);
         rkBody.appendChild(elm('div', 'ddv-picker__label', 'Teammates (rank order, no shares published)'));
-        if (!mon.teammates.length) emptyState(rkBody, 'Insufficient data');
+        if (!mon.teammates.length) emptyState(rkBody, 'No ranked teammates listed');
         else {
           const grid = elm('div', 'sprite-grid');
           mon.teammates.forEach((t, i) => {

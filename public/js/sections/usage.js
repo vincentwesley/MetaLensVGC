@@ -156,7 +156,7 @@ export default {
       ctx.meta(meta, { source, n, unit, relaxed });
       body.querySelector('.empty-state')?.remove();
       if (!rows.length) {
-        emptyState(body, 'Insufficient data');
+        emptyState(body, 'No teams in view');
         return;
       }
 

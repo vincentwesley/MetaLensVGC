@@ -118,7 +118,7 @@ async function boot() {
   }
   clock.setManifest(manifest);
   mountModeSwitch(document.getElementById('header-mode'), store, manifest);
-  store.setRegs((manifest.regs || []).map((r) => r.id));
+  store.setRegs((manifest.regs || []).map((r) => r.id), manifest.current);
   if (isStale(manifest.generated)) {
     const note = document.getElementById('stale-notice');
     note.textContent = `Data last refreshed ${manifest.generated.slice(0, 10)} — the weekly update may have failed; figures may be out of date.`;

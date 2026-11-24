@@ -212,7 +212,7 @@ export function mountFilterbar(root, ctx, manifest) {
       if (!hasRanked) rankedBtn.setAttribute('data-tip', 'No in-game ranked data for this regulation');
       else rankedBtn.removeAttribute('data-tip');
     }
-    if (rm?.start) { fromInput.min = toInput.min = rm.start; fromInput.max = toInput.max = rm.end; }
+    if (rm?.start) { fromInput.min = toInput.min = rm.start; fromInput.max = toInput.max = rm.end || ''; }
     if (fromInput.value !== (state.from || '')) fromInput.value = state.from || '';
     if (toInput.value !== (state.to || '')) toInput.value = state.to || '';
     if (String(slider.value) !== String(state.minN)) slider.value = String(state.minN);

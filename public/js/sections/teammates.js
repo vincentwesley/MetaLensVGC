@@ -22,7 +22,7 @@ function card(title) {
   return { el, body, meta };
 }
 
-function emptyState(msg, title = 'Insufficient data') {
+function emptyState(msg, title = 'Fewer than two Pokémon in view') {
   const div = document.createElement('div');
   div.className = 'empty-state';
   const t = document.createElement('div');
@@ -208,7 +208,7 @@ export default {
       if (!lad && rows.length < 2) {
         heatChartEl.style.display = 'none';
         heatEmptyEl.textContent = '';
-        heatEmptyEl.appendChild(emptyState('Insufficient data'));
+        heatEmptyEl.appendChild(emptyState('The co-usage grid needs at least two Pokémon.'));
         lastKeys = [];
         return;
       }

@@ -3,7 +3,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { seenInCurrentReg } from './build-pokedex.js';
-import { REGULATIONS, REG_IDS, VGC_IDS, SHOWDOWN_IDS, inWindow } from './lib/regs.js';
+import { REGULATIONS, REG_IDS as ALL_REG_IDS, VGC_IDS, SHOWDOWN_IDS, inWindow, listedRegs } from './lib/regs.js';
 
 async function readJSON(file) {
   return JSON.parse(await readFile(file, 'utf8'));
@@ -15,7 +15,7 @@ function parseSP(sp) {
 }
 
 function validateTeamsFile(file, data, errors) {
-  if (data.reg == null || !REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
+  if (data.reg == null || !ALL_REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
   if (!Array.isArray(data.strings)) errors.push(`${file}: strings must be an array`);
   if (!Array.isArray(data.events)) errors.push(`${file}: events must be an array`);
   if (!Array.isArray(data.teams)) errors.push(`${file}: teams must be an array`);
@@ -75,7 +75,7 @@ function validateTeamsFile(file, data, errors) {
 }
 
 function validateLadderFile(file, data, errors) {
-  if (!REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
+  if (!ALL_REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
   if (data.source !== 'smogon') errors.push(`${file}: source must be "smogon"`);
   if (!Array.isArray(data.months)) errors.push(`${file}: months must be an array`);
   for (const month of data.months || []) {
@@ -97,7 +97,7 @@ function validateLadderFile(file, data, errors) {
 }
 
 function validateRankedFile(file, data, errors) {
-  if (!REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
+  if (!ALL_REG_IDS.includes(data.reg)) errors.push(`${file}: bad reg "${data.reg}"`);
   if (data.source !== 'championsbattledata') errors.push(`${file}: source must be "championsbattledata"`);
   if (data.format !== 'Doubles') errors.push(`${file}: format must be "Doubles"`);
   if (!Array.isArray(data.seasons)) {
@@ -167,6 +167,8 @@ export async function validateAll(dataDir) {
     errors.push(`manifest.json: ${e.message}`);
     return null;
   });
+  // Regulations listed on the day the data was built (a new one is absent until its start date).
+  const REG_IDS = listedRegs((manifest?.generated || new Date().toISOString()).slice(0, 10));
   if (manifest) {
     for (const reg of REG_IDS) {
       const entry = manifest.regs.find((r) => r.id === reg);

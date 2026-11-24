@@ -159,7 +159,7 @@ export default {
         if (!p.body.contains(p.chartEl)) p.body.append(p.hintEl, p.chartEl);
       }
       if (!n || (ladder && !merged.mons.length)) {
-        for (const p of [usagePanel, weakPanel]) emptyState(p.body, ladder ? 'No ladder data for this regulation yet' : 'Insufficient data');
+        for (const p of [usagePanel, weakPanel]) emptyState(p.body, ladder ? 'No ladder data for this regulation yet' : 'No teams in view');
         lastRows = null;
         return;
       }

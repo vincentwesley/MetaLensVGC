@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { deriveSeasonMeta, currentSeasonOf, transformRows, parseRankingTable } from '../scripts/sources/ranked.js';
-import { VGC_IDS as REG_IDS } from '../scripts/lib/regs.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixture = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'ranked-sample.json'), 'utf8'));
@@ -13,7 +12,7 @@ test('deriveSeasonMeta: maps every in-game season to exactly one regulation, mat
   const seasons = deriveSeasonMeta(fixture.dailyDataFolders);
   const byReg = {};
   for (const { season, reg } of seasons) (byReg[reg] ||= []).push(season);
-  for (const reg of REG_IDS) assert.ok(byReg[reg], `expected some season in ${reg}`);
+  for (const reg of ['M-A', 'M-B', 'M-C']) assert.ok(byReg[reg], `expected some season in ${reg}`); // the fixture predates M-D
 
   assert.deepEqual(byReg['M-A'].sort(), ['M1', 'M2']);
   assert.deepEqual(byReg['M-B'].sort(), ['M3', 'M4', 'M5']);
@@ -25,16 +24,16 @@ test('deriveSeasonMeta: maps every in-game season to exactly one regulation, mat
   assert.equal(m4.snapshot, '2026-08-05'); // finished season: its one listed (final) day
 });
 
-test('deriveSeasonMeta: an out-of-window season is kept with reg null (warns, no throw) and is the current season', () => {
+test('deriveSeasonMeta: an out-of-window season is kept with reg null (warns, no throw); M7 lands in M-D', () => {
   const warn = console.warn;
   const warned = [];
   console.warn = (m) => warned.push(m);
   try {
     assert.deepEqual(deriveSeasonMeta(['M0/01_01_2020']).map((s) => s.reg), [null]);
+    assert.ok(warned.some((m) => m.includes('M0')));
     const seasons = deriveSeasonMeta([...fixture.dailyDataFolders, 'M6/02_12_2026', 'M7/20_12_2026']); // M7 starts after M-C's end
-    assert.deepEqual(seasons.map((s) => [s.season, s.reg]), [['M1', 'M-A'], ['M2', 'M-A'], ['M3', 'M-B'], ['M4', 'M-B'], ['M5', 'M-B'], ['M6', 'M-C'], ['M7', null]]);
-    assert.ok(warned.some((m) => m.includes('M7')));
-    assert.equal(currentSeasonOf(seasons), 'M7'); // so no reg gets the live ranking and M6 is reused, not refetched as current
+    assert.deepEqual(seasons.map((s) => [s.season, s.reg]), [['M1', 'M-A'], ['M2', 'M-A'], ['M3', 'M-B'], ['M4', 'M-B'], ['M5', 'M-B'], ['M6', 'M-C'], ['M7', 'M-D']]);
+    assert.equal(currentSeasonOf(seasons), 'M7'); // M6 is finished (reused, not refetched); M7 is M-D's live season
     assert.equal(currentSeasonOf([]), null);
   } finally {
     console.warn = warn;

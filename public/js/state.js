@@ -5,9 +5,12 @@ import { DEFAULT_STATE, PREF_KEYS, toHash, fromHash, sanitizeState } from './lib
 
 // Known regulation ids, once the manifest has loaded (store.setRegs).
 let regs = null;
+// Defaults, with `reg` replaced by the manifest's current regulation once it is known (store.setRegs): a link without
+// `reg=` opens the current one, and the current one stays out of the hash.
+let defaults = DEFAULT_STATE;
 // Every state (hand-edited hash, back/forward, UI) goes through sanitizeState,
 // so sections only ever see valid values.
-const clean = (s) => sanitizeState(s, { regs });
+const clean = (s) => sanitizeState(s, { regs }, defaults);
 const PREFS_KEY = 'metalens.prefs';
 
 function loadPrefs() {
@@ -23,7 +26,7 @@ function savePrefs(s) {
 // Hash gives filters (+ legacy skin/theme); look prefs come from `base` unless the hash has a legacy value.
 function parseHash(base) {
   const h = location.hash.slice(1);
-  const parsed = fromHash(h, DEFAULT_STATE);
+  const parsed = fromHash(h, defaults);
   const legacy = ['skin', 'theme'].filter((k) => new RegExp(`(^|&)${k}=`).test(h));
   for (const k of PREF_KEYS) if (!legacy.includes(k)) parsed[k] = base[k];
   const next = clean(parsed);
@@ -45,7 +48,7 @@ function applyDom(s) {
 }
 
 function pushHash(replace) {
-  const h = toHash(state);
+  const h = toHash(state, defaults);
   if (h === location.hash.replace(/^#/, '')) return;
   const hash = h ? `#${h}` : location.pathname + location.search;
   if (replace) history.replaceState(null, '', hash);
@@ -92,10 +95,13 @@ export const store = {
 
   subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
 
-  /** Called once the manifest is known: an unknown regulation in the URL falls back to a real one. */
-  setRegs(ids) {
+  /** Called once the manifest is known: an unknown regulation in the URL falls back to a real one, and a link
+   *  without `reg=` opens `current` (the manifest's default regulation). */
+  setRegs(ids, current) {
     regs = ids;
-    const next = clean(state);
+    const hadReg = /(^|&)reg=/.test(location.hash.slice(1));
+    if (current && ids.includes(current)) defaults = { ...DEFAULT_STATE, reg: current };
+    const next = clean(hadReg ? state : { ...state, reg: defaults.reg });
     if (next.reg !== state.reg) { state = next; pushHash(true); subs.forEach((fn) => fn(state)); }
   },
 };

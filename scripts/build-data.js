@@ -7,7 +7,7 @@
 // Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--max-tournaments N]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { REG_IDS, VGC_IDS, SHOWDOWN_IDS, REGULATIONS } from './lib/regs.js';
+import { REGULATIONS, listedRegs, pickCurrent } from './lib/regs.js';
 import { fetchLimitlessOnline, RECENT_BEFORE } from './sources/limitless.js';
 import { fetchOfficialEvents } from './sources/official.js';
 import { fetchLadder, rollingMonths } from './sources/ladder.js';
@@ -19,6 +19,11 @@ import { normalizeSpecies, normalizeTerm } from '../public/js/lib/names.js';
 import { buildPokedex, build as buildRoster } from './build-pokedex.js';
 import { validateAll } from './validate.js';
 import { printReport } from './report.js';
+
+// Only regulations that have started are fetched, written and listed (a new one appears on its start date, see regs.js).
+const REG_IDS = listedRegs(new Date().toISOString().slice(0, 10));
+const VGC_IDS = REG_IDS.filter((r) => REGULATIONS[r].family === 'vgc');
+const SHOWDOWN_IDS = REG_IDS.filter((r) => REGULATIONS[r].family === 'showdown');
 
 const { Dex } = pkg;
 const DATA_DIR = path.join(process.cwd(), 'public', 'data');
@@ -329,7 +334,7 @@ async function main() {
     path.join(DATA_DIR, 'manifest.json'),
     JSON.stringify({
       generated: new Date().toISOString(),
-      current: 'M-C',
+      current: pickCurrent(manifestRegs),
       currentShowdown: 'ND',
       regs: manifestRegs,
       sources: [

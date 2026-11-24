@@ -20,10 +20,12 @@ export function mountClock(host, fmt) {
   function fill() {
     const now = new Date();
     l1.textContent = `Next data refresh in ${fmtDuration(nextRefresh(now) - now)} (Mon 08:00 GMT+8)`;
-    const reg = manifest?.regs?.find((r) => r.id === manifest.current);
+    // The newest listed VGC regulation (it can be newer than `current` in its first days, before results come in).
+    const reg = manifest?.regs?.filter((r) => r.family === 'vgc').at(-1);
     const d = reg?.end ? daysLeft(reg.end, now) : 0;
-    l2.hidden = d <= 0;
-    if (d > 0) l2.textContent = `${reg?.id} ends in ${d} day${d === 1 ? '' : 's'}`;
+    l2.hidden = !reg || (reg.end && d <= 0);
+    if (reg && !reg.end) l2.textContent = `${reg.id} end date not announced yet`;
+    else if (d > 0) l2.textContent = `${reg.id} ends in ${d} day${d === 1 ? '' : 's'}`;
     l3.hidden = !manifest?.generated;
     l3.textContent = `Data updated ${fmt.date(manifest?.generated)}`;
   }

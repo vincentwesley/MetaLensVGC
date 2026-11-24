@@ -1,14 +1,14 @@
 // Source: official events (limitlessvgc.com) — Worlds/Internationals/Regionals/Special
 // Events. Produces RawEvent objects (see build-data.js), grouped by regulation.
 import { fetchText } from '../lib/http.js';
-import { REGULATIONS } from '../lib/regs.js';
+import { REGULATIONS, VGC_IDS } from '../lib/regs.js';
 import { normalizeSpecies } from '../../public/js/lib/names.js';
 
 const BASE = 'https://limitlessvgc.com';
 const STANDINGS_BASE = 'https://standings.limitlessvgc.com';
 const LIST_TTL = 1000 * 60 * 60 * 6;
 const PERMANENT = Infinity;
-const FORMAT_TO_REG = { 'm-a': 'M-A', 'm-b': 'M-B', 'm-c': 'M-C' };
+const FORMAT_TO_REG = Object.fromEntries(VGC_IDS.map((r) => [r.toLowerCase(), r])); // 'm-c' -> 'M-C', 'm-d' -> 'M-D'
 // Budget for the standings site's per-round pairings fetches (one request/round).
 // Beyond this, skip `matches` for the event rather than hammering the host.
 const MAX_PAIRINGS_ROUNDS = 20;
@@ -170,7 +170,7 @@ export async function fetchOfficialEvents(dex, opts = {}) {
     withCut: 0,
     withMatches: 0,
   };
-  const byReg = { 'M-A': [], 'M-B': [], 'M-C': [] };
+  const byReg = Object.fromEntries(VGC_IDS.map((r) => [r, []]));
   const earliestStart = Object.values(REGULATIONS).map((w) => w.start).filter(Boolean).sort()[0];
 
   let stop = false;

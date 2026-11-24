@@ -162,7 +162,7 @@ export default {
         ctx.meta(A.meta, { source: 'Tournaments', n: view.monTeams.length, unit: 'teams' });
         rows = view.monTeams.length ? itemUsage(view.monTeams, view.dex, { megaStones: showStones }) : [];
       }
-      if (!rows.length) { chartRows = null; chartEl.hidden = true; emptyState(A.body, noLadder ? LADDER_NA : 'Insufficient data'); return; }
+      if (!rows.length) { chartRows = null; chartEl.hidden = true; emptyState(A.body, noLadder ? LADDER_NA : 'No items recorded in view'); return; }
       chartRows = { rows, mode: src };
       chartEl.style.height = `${Math.max(220, Math.min(rows.length, TOP_ITEMS) * 24 + 40)}px`;
       chart.resize();
@@ -227,7 +227,7 @@ export default {
       const q = nameMatcher(search.value); // punctuation-insensitive, same as the leaderboard search
       let rows = q ? tableRows.filter((r) => q(r.key)) : tableRows;
       if (!q && !showAll) rows = rows.slice(0, TOP_MONS);
-      if (!rows.length) { emptyState(B.body, q ? `No Pokémon matching “${search.value.trim()}”` : noLadderTable ? LADDER_NA : 'Insufficient data'); return; }
+      if (!rows.length) { emptyState(B.body, q ? `No Pokémon matching “${search.value.trim()}”` : noLadderTable ? LADDER_NA : 'No items recorded in view'); return; }
 
       const table = el('table', 'data-table items-table');
       const trh = table.createTHead().insertRow();
