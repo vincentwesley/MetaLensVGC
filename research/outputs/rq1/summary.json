@@ -1,0 +1,69 @@
+{
+  "data_snapshot": {
+    "generated": "2026-11-23T07:44:29.710Z",
+    "regs": {
+      "M-A": {
+        "start": "2026-04-08",
+        "end": "2026-06-17",
+        "teams": 24057,
+        "events": 328,
+        "matches": 64335
+      },
+      "M-B": {
+        "start": "2026-06-17",
+        "end": "2026-09-09",
+        "teams": 33316,
+        "events": 464,
+        "matches": 85114
+      },
+      "M-C": {
+        "start": "2026-09-09",
+        "end": "2026-12-02",
+        "teams": 21755,
+        "events": 409,
+        "matches": 52132
+      }
+    }
+  },
+  "n_teams": 79128,
+  "n_matches_decided": 196310,
+  "n_players": 25126,
+  "feature_vocab": 940,
+  "svd_variance_explained": 0.7635496906600976,
+  "levels": {
+    "L1": 8,
+    "L2": 16,
+    "L3": 32
+  },
+  "share_rule_other": 0.097310686482661,
+  "AMI_rules_vs_mega10": 0.3147883551821158,
+  "AMI_main": {
+    "L1": {
+      "AMI_vs_mega10": 0.3825767720468085,
+      "AMI_vs_rules10": 0.2490599038332261
+    },
+    "L2": {
+      "AMI_vs_mega10": 0.3645629687475575,
+      "AMI_vs_rules10": 0.2676996876640132
+    },
+    "L3": {
+      "AMI_vs_mega10": 0.360522074708992,
+      "AMI_vs_rules10": 0.2684430929740233
+    }
+  },
+  "hybrid_share_ge_0.9": 0.05834849863512284,
+  "hybrid_share_ge_0.8": 0.13069962592255585,
+  "teams_without_mega_stone": 0.03887372358709938,
+  "unanchored": {
+    "archetypes": [
+      31
+    ],
+    "share_by_reg": {
+      "M-A": 0.22280417342145736,
+      "M-B": 0.1034037699603794,
+      "M-C": 0.06977706274419673
+    },
+    "median_player_events_unanchored": 5.0,
+    "median_player_events_other": 7.0
+  }
+}
