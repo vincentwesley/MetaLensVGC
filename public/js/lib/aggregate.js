@@ -34,7 +34,9 @@ export async function decodeChunked(file, dex, yieldFn, size = 500) {
   return { teams, events, matches };
 }
 
-const match = ([a, b, result]) => ({ a, b, result });
+// result: 1/2 winner, 0 tie, 3 no result (files before v1.7.0: 0 = tie or unknown). round/phase/bo/games: match context
+// (phase 1 Swiss, 2 top cut; bo 0 = not published; games [won by a, won by b] when known), 0/null in older files.
+const match = ([a, b, result, round = 0, phase = 0, bo = 0, games = null]) => ({ a, b, result, round, phase, bo, games });
 
 // The per-row decoder shared by decode() and decodeChunked(): team(row, i) -> Team.
 function teamDecoder(file, dex) {
@@ -50,8 +52,9 @@ function teamDecoder(file, dex) {
     return memo.get(i);
   };
   const events = file.events;
+  const ids = new Set(); // two players with the same display name in one event get "~2", "~3"... on their team id
   const team = (row, i) => {
-    const [evIdx, player, country, placing, w, l, t, monsRaw] = row;
+    const [evIdx, player, country, placing, w, l, t, monsRaw, pid = null] = row;
     const ev = events[evIdx];
     const mons = monsRaw.map((mr) => {
       const [sIdx, itemIdx, abilityIdx, moveIdxs, natureIdx, spRaw] = mr;
@@ -68,11 +71,14 @@ function teamDecoder(file, dex) {
     const keys = mons.map((m) => m.k);
     const topCut = placing != null && (ev.cut != null ? placing <= ev.cut : placing <= 8);
     const megas = mons.filter((m) => m.mega).map((m) => m.k);
+    let id = `${ev.id}:${String(player).toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
+    for (let n = 2; ids.has(id); n++) id = `${id.replace(/~\d+$/, '')}~${n}`;
+    ids.add(id);
     const team = {
       i,
-      // stable across incremental rebuilds (pipeline dedupes player per event), so shared URLs keep working
-      id: `${ev.id}:${String(player).toLowerCase().replace(/[^a-z0-9]+/g, '')}`,
-      player, country, ev, reg: file.reg, date: ev.date, tier: ev.tier, placing,
+      // stable across incremental rebuilds (rows keep their order), so shared URLs keep working
+      id,
+      pid, player, country, ev, reg: file.reg, date: ev.date, tier: ev.tier, placing,
       w, l, t,
       topCut,
       mons,

@@ -1,6 +1,14 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.7.0', date: '2026-11-24', title: 'Research-grade data',
+    notes: [
+      { tag: 'NEW', text: 'Every match now records its round, Swiss or top cut, and best-of; every event says how many of its players published a team list.' },
+      { tag: 'NEW', text: 'A research export (tables plus a codebook) and frozen, citable data releases for “The Geometry of a Metagame” by Vincent Wesley, Vin’s Atelier.' },
+      { tag: 'FIX', text: 'Two different players with the same name at one event are no longer merged into one team.' },
+    ],
+  },
+  {
     version: '1.6.0', date: '2026-11-24', title: 'Ready for Regulation M-D',
     notes: [
       { tag: 'NEW', text: 'Regulation M-D (from 2 December) appears in the regulation picker on its start date. The site keeps opening on M-C until the first M-D tournament results are in, then switches to M-D by itself.' },

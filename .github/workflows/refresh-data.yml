@@ -3,7 +3,12 @@ name: Refresh data
 on:
   schedule:
     - cron: '0 0 * * 1' # Monday 00:00 UTC = 08:00 GMT+8
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      refetch_online:
+        description: 'Rebuild every online (Limitless) event from the source (one-time pid backfill; slower)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -50,9 +55,13 @@ jobs:
       - name: Build data
         id: build-data
         timeout-minutes: 300 # a hang fails the step (so the alert runs) instead of the job timeout cancelling everything
+        env:
+          # Salt for the pseudonymous player ids (scripts/lib/ids.js). Keep it fixed: a new salt gives new ids.
+          METALENS_ID_SALT: ${{ secrets.METALENS_ID_SALT }}
+          REFETCH_ONLINE: ${{ inputs.refetch_online && '1' || '' }}
         run: |
           set -o pipefail
-          { echo "== Build data"; npm run data; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
+          { echo "== Build data"; npm run data -- ${REFETCH_ONLINE:+--refetch-online}; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
 
       - name: Run tests
         id: test

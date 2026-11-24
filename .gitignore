@@ -19,6 +19,7 @@ qa-output/
 
 # --- house safety additions ---
 dist/
+data-export/
 .env
 .env.*
 !.env.example

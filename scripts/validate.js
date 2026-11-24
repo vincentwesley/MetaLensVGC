@@ -36,10 +36,18 @@ function validateTeamsFile(file, data, errors) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(ev.date || '')) errors.push(`${file}: events[${i}].date invalid: ${ev.date}`);
     else if (!inWindow(ev.date, data.reg)) errors.push(`${file}: events[${i}].date ${ev.date} outside ${data.reg} window`);
     if (!Number.isInteger(ev.players) || ev.players < 1) errors.push(`${file}: events[${i}].players invalid: ${ev.players}`);
+    const cov = ev.coverage;
+    if (cov != null && (!['complete', 'published-subset'].includes(cov.kind) || !Number.isInteger(cov.lists) || (cov.rate != null && (cov.rate < 0 || cov.rate > 1)))) {
+      errors.push(`${file}: events[${i}].coverage invalid`);
+    }
+    if (ev.fetched != null && !/^\d{4}-\d{2}-\d{2}$/.test(ev.fetched)) errors.push(`${file}: events[${i}].fetched invalid: ${ev.fetched}`);
   });
 
   data.teams.forEach((row, i) => {
-    const [eventIdx, player, country, placing, wins, losses, ties, mons] = row;
+    const [eventIdx, player, country, placing, wins, losses, ties, mons, pid = null, ns = 0] = row;
+    if (pid != null && !PID_RE.test(pid)) errors.push(`${file}: teams[${i}] bad pid ${pid}`);
+    if (data.idVersion === 1 && pid == null) errors.push(`${file}: teams[${i}] has no pid but idVersion is 1`);
+    if (![0, 1, 2, 3].includes(ns)) errors.push(`${file}: teams[${i}] bad id namespace ${ns}`);
     if (!Number.isInteger(eventIdx) || eventIdx < 0 || eventIdx >= data.events.length) {
       errors.push(`${file}: teams[${i}] bad eventIdx ${eventIdx}`);
     }
@@ -67,11 +75,61 @@ function validateTeamsFile(file, data, errors) {
     });
   });
 
-  data.matches.forEach(([a, b, result], i) => {
+  data.matches.forEach((m, i) => {
+    const [a, b] = m;
     if (!Number.isInteger(a) || a < 0 || a >= data.teams.length) errors.push(`${file}: matches[${i}] bad teamA ${a}`);
     if (!Number.isInteger(b) || b < 0 || b >= data.teams.length) errors.push(`${file}: matches[${i}] bad teamB ${b}`);
-    if (![0, 1, 2].includes(result)) errors.push(`${file}: matches[${i}] bad result ${result}`);
+    else if (data.teams[a]?.[0] !== data.teams[b]?.[0]) errors.push(`${file}: matches[${i}] links teams from different events`);
+    checkMatchContext(m, `${file}: matches[${i}]`, errors);
   });
+}
+
+const PID_RE = /^[0-9a-f]{16}$/;
+
+/** [a, b, result, round?, phase?, bo?, games?]: result 0 tie / 1 / 2 / 3 no result; phase 0..2; bo 0, 1, 3. */
+function checkMatchContext([, , result, round = 0, phase = 0, bo = 0, games = null], ctx, errors) {
+  if (![0, 1, 2, 3].includes(result)) errors.push(`${ctx} bad result ${result}`);
+  if (!Number.isInteger(round) || round < 0) errors.push(`${ctx} bad round ${round}`);
+  if (![0, 1, 2].includes(phase)) errors.push(`${ctx} bad phase ${phase}`);
+  if (![0, 1, 3].includes(bo)) errors.push(`${ctx} bad best-of ${bo}`);
+  if (games != null && (!Array.isArray(games) || games.length !== 2 || games.some((g) => !Number.isInteger(g) || g < 0))) errors.push(`${ctx} bad games`);
+}
+
+function validateRostersFile(file, data, teams, errors) {
+  if (data.reg !== teams?.reg) errors.push(`${file}: reg does not match its teams file`);
+  if (!Array.isArray(data.strings) || !Array.isArray(data.events)) return errors.push(`${file}: strings/events must be arrays`);
+  for (const ev of data.events) {
+    const tev = teams?.events?.[ev.event];
+    if (!tev || tev.id !== ev.id) errors.push(`${file}: event ${ev.id} does not match teams events[${ev.event}]`);
+    if (tev && tev.source !== 'limitlessvgc') errors.push(`${file}: event ${ev.id} is not an official event`);
+    ev.players.forEach(([pid, ns, , w, l, , topcut, day2, species, row], i) => {
+      const ctx = `${file}: ${ev.id} players[${i}]`;
+      if (pid != null && !PID_RE.test(pid)) errors.push(`${ctx} bad pid`);
+      if (data.idVersion === 1 && pid == null) errors.push(`${ctx} has no pid but idVersion is 1`);
+      if (![0, 1, 2, 3].includes(ns)) errors.push(`${ctx} bad id namespace`);
+      if (!Number.isInteger(w) || !Number.isInteger(l)) errors.push(`${ctx} bad record`);
+      if (![0, 1].includes(topcut) || ![0, 1].includes(day2)) errors.push(`${ctx} bad flags`);
+      if (!Array.isArray(species) || species.length > 6 || species.some((s) => !Number.isInteger(s) || s < 0 || s >= data.strings.length)) errors.push(`${ctx} bad species`);
+      if (row !== -1 && teams?.teams?.[row]?.[0] !== ev.event) errors.push(`${ctx} team row ${row} is not in this event`);
+    });
+    ev.matches.forEach((m, i) => {
+      const [a, b] = m;
+      if (!ev.players[a] || !ev.players[b]) errors.push(`${file}: ${ev.id} matches[${i}] bad player index`);
+      checkMatchContext(m, `${file}: ${ev.id} matches[${i}]`, errors);
+    });
+  }
+}
+
+function validateQualityFile(file, data, teams, errors) {
+  if (data.reg !== teams?.reg) errors.push(`${file}: reg does not match its teams file`);
+  const ids = new Set((teams?.events || []).map((e) => e.id));
+  const keys = Object.keys(data.events || {});
+  if (keys.length !== ids.size || keys.some((k) => !ids.has(k))) errors.push(`${file}: events do not match the teams file`);
+  const linked = keys.reduce((n, k) => n + (data.events[k].file?.linked ?? data.events[k].file?.matches?.linked ?? 0), 0);
+  if (linked !== (teams?.matches || []).length) errors.push(`${file}: linked matches ${linked} != teams file ${(teams?.matches || []).length}`);
+  const rows = keys.reduce((n, k) => n + (data.events[k].file?.teams ?? 0), 0);
+  if (rows !== (teams?.teams || []).length) errors.push(`${file}: team rows ${rows} != teams file ${(teams?.teams || []).length}`);
+  if (data.totals?.events !== keys.length) errors.push(`${file}: totals.events mismatch`);
 }
 
 function validateLadderFile(file, data, errors) {
@@ -213,6 +271,15 @@ export async function validateAll(dataDir) {
       return null;
     });
     if (teams) validateTeamsFile(`teams-${reg}.json`, teams, errors);
+    // quality / rosters files exist from v1.7.0 on: required once the teams file is from that pipeline (has idVersion)
+    if (teams) {
+      for (const [kind, check] of [['quality', validateQualityFile], ['rosters', validateRostersFile]]) {
+        const f = `${kind}-${reg}.json`;
+        const data = await readJSON(path.join(dataDir, f)).catch(() => null);
+        if (data) check(f, data, teams, errors);
+        else if (teams.idVersion != null) errors.push(`${f}: missing`);
+      }
+    }
 
     const ladderPath = path.join(dataDir, `ladder-${reg}.json`);
     const ladder = await readJSON(ladderPath).catch((e) => {

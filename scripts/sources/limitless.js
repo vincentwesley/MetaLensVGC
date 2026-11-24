@@ -3,6 +3,7 @@
 import { fetchJSON } from '../lib/http.js';
 import { inWindow } from '../lib/regs.js';
 import { normalizeSpecies } from '../../public/js/lib/names.js';
+import { ltKey } from '../lib/ids.js';
 
 const API = 'https://play.limitlesstcg.com/api';
 const MIN_PLAYERS = 16;
@@ -71,8 +72,10 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
 
     const standings = await fetchJSON(`${API}/tournaments/${t.id}/standings`, { ttl: ttl });
     const rows = [];
+    const drops = { noDecklist: 0, emptyTeam: 0, overSix: 0 };
     for (const p of standings) {
-      if (!p.decklist || !p.decklist.length) continue;
+      if (!p.decklist || !p.decklist.length) { drops.noDecklist++; continue; }
+      if (p.decklist.length > 6) drops.overSix++;
       const mons = p.decklist.slice(0, 6).map((mon) => ({
         species: normalizeSpecies(mon.id || mon.name, dex),
         item: mon.item || null,
@@ -81,9 +84,10 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
         nature: mon.nature || null,
         sp: null, // Limitless online decklists don't carry Stat Points
       }));
-      if (!mons.length) continue;
+      if (!mons.length) { drops.emptyTeam++; continue; }
       rows.push({
-        player: p.player,
+        player: ltKey(p.player), // source key: stable Limitless username
+        dropped: p.drop ?? null,
         name: p.name,
         country: p.country || '',
         placing: p.placing ?? null,
@@ -99,20 +103,7 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
     }
 
     const pairings = await fetchJSON(`${API}/tournaments/${t.id}/pairings`, { ttl: ttl });
-    const bracketPlayers = new Set();
-    const matches = [];
-    for (const pr of pairings) {
-      if (pr.phase >= 2) {
-        if (pr.player1) bracketPlayers.add(pr.player1);
-        if (pr.player2) bracketPlayers.add(pr.player2);
-      }
-      if (!pr.player1 || !pr.player2) continue; // bye / unplayed
-      let result = 0;
-      if (pr.winner === pr.player1) result = 1;
-      else if (pr.winner === pr.player2) result = 2;
-      matches.push([pr.player1, pr.player2, result]);
-    }
-    const cut = bracketPlayers.size || null;
+    const { matches, pairingStats, cut } = limitlessMatches(pairings, details.phases);
     const rounds = details.phases?.[0]?.rounds ?? null;
 
     rawEvents.push({
@@ -126,12 +117,66 @@ export async function fetchLimitlessOnline(reg, dex, opts = {}) {
       players: t.players,
       cut,
       rounds,
+      phases: eventPhases(details.phases),
+      coverage: coverageOf(t.players, rows.length),
       rows,
       matches,
+      pairingStats,
+      drops,
     });
     stats.included++;
     log(`  [limitless ${reg}] +${t.name} (${t.players}p, ${rows.length} decklists)`);
   }
 
   return { rawEvents, stats };
+}
+
+// Phase types and match modes as Limitless publishes them (details.phases[]).
+const PHASE = { SWISS: 1 }; // anything else (SINGLE_BRACKET, DOUBLE_BRACKET...) is top cut = 2
+const BEST_OF = { BO1: 1, BO3: 3 };
+
+/** details.phases -> [{phase, type, rounds, bo}] (bo 0 = not published). Pure, exported for testing. */
+export function eventPhases(phases) {
+  return (phases || []).map((ph) => ({ phase: ph.phase, type: ph.type || null, rounds: ph.rounds ?? null, bo: BEST_OF[ph.mode] || 0 }));
+}
+
+/** Coverage of published team lists: online events publish a list for every player who submitted one. */
+export function coverageOf(players, lists) {
+  const rate = players ? Math.min(1, lists / players) : null;
+  return { players: players ?? null, lists, rate: rate == null ? null : Math.round(rate * 1000) / 1000, kind: rate != null && rate >= 0.95 ? 'complete' : 'published-subset' };
+}
+
+/**
+ * Limitless pairings -> matches [keyA, keyB, result, round, phase, bo, games?] plus why pairings did not become a
+ * result. result: 1/2 winner, 0 tie (winner 0), 3 no result (winner -1: double loss / unreported). phase 1 Swiss,
+ * 2 top cut. games: [gamesWonByA, gamesWonByB] when the source lists per-game winners. Pure, exported for testing.
+ */
+export function limitlessMatches(pairings, phases) {
+  const meta = new Map((phases || []).map((ph) => [ph.phase, ph]));
+  const bracketPlayers = new Set();
+  const stats = { total: 0, byes: 0, decisive: 0, ties: 0, noResult: 0 };
+  const matches = [];
+  for (const pr of pairings || []) {
+    stats.total++;
+    const ph = meta.get(pr.phase);
+    const phase = ph ? (PHASE[ph.type] || 2) : (pr.phase >= 2 ? 2 : 1);
+    if (phase === 2) {
+      if (pr.player1) bracketPlayers.add(pr.player1);
+      if (pr.player2) bracketPlayers.add(pr.player2);
+    }
+    if (!pr.player1 || !pr.player2) { stats.byes++; continue; }
+    let result;
+    if (pr.winner === pr.player1) result = 1;
+    else if (pr.winner === pr.player2) result = 2;
+    else if (pr.winner === 0 || pr.winner === '0') result = 0;
+    else result = 3;
+    if (result === 0) stats.ties++;
+    else if (result === 3) stats.noResult++;
+    else stats.decisive++;
+    const m = [ltKey(pr.player1), ltKey(pr.player2), result, pr.round ?? 0, phase, BEST_OF[ph?.mode] || 0];
+    const games = Object.values(pr.games || {});
+    if (games.length) m.push([games.filter((g) => g.winner === pr.player1).length, games.filter((g) => g.winner === pr.player2).length]);
+    matches.push(m);
+  }
+  return { matches, pairingStats: stats, cut: bracketPlayers.size || null };
 }

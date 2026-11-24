@@ -89,6 +89,25 @@ components and data are listed in `THIRD_PARTY_NOTICES.md`.
 - No analytics, no cookies, no accounts.
 - The site only calls its own origin and the sprite host (typefaces are self-hosted).
 
+## Research data
+
+MetaLens is the data source for *The Geometry of a Metagame* (Vincent Wesley, Vin's Atelier). The same pipeline that
+feeds the dashboard also writes a research export: tidy CSV tables (events, teams, team members, matches, archetype
+labels, official-event rosters) and a generated `CODEBOOK.md`, into `data-export/` on every `npm run data`.
+
+- **Players** are pseudonymized: a salted HMAC of the stable source id (Limitless username, or the official standings
+  site's player id), set by the `METALENS_ID_SALT` secret. The export carries no names.
+- **Matches** carry round, phase (Swiss / top cut), best-of and, online, the game score. Official events also get
+  species-only rosters for every player and every pairing (`rosters-<REG>.json`), since full lists exist for top
+  finishers only.
+- **Quality**: `quality-<REG>.json` records what was kept, dropped and normalized per event.
+- **Archetype labels** come from a versioned, sourced rule set (`ARCHETYPE_RULESET` in `public/js/lib/archetypes.js`).
+- **Frozen releases**: `npm run release -- freeze data-v1.0` builds `dist/data-v1.0/` (CSVs, codebook, quality files,
+  README, CITATION.cff, .zenodo.json, RELEASE.json with SHA-256 checksums), commits `releases/data-v1.0.json` and tags
+  `data-v1.0`; `npm run release -- verify data-v1.0` rebuilds it from the tag and compares every checksum. Upload the
+  folder to Zenodo by hand: the GitHub integration would archive the whole repository, including the in-game ranked
+  data, which must not be redistributed. Releases never include Pokémon Champions Battle Data or Smogon statistics.
+
 ## Decisions and known gaps
 
 Decisions made while building, and the gaps they leave:

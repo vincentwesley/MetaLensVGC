@@ -4,7 +4,7 @@
 // tournaments and finished ranked seasons already present in public/data are reused rather
 // than refetched.
 //
-// Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--max-tournaments N]
+// Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--no-fetch-official] [--max-tournaments N] [--refetch-online]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { REGULATIONS, listedRegs, pickCurrent } from './lib/regs.js';
@@ -16,8 +16,13 @@ import pkg from 'pokemon-showdown';
 import { buildDex } from './dex.js';
 import { resolveSprites } from './sprites.js';
 import { normalizeSpecies, normalizeTerm } from '../public/js/lib/names.js';
+import { ARCHETYPE_RULESET } from '../public/js/lib/archetypes.js';
+import { writeExport } from './lib/research-export.js';
 import { buildPokedex, build as buildRoster } from './build-pokedex.js';
 import { validateAll } from './validate.js';
+import { idSalt } from './lib/ids.js';
+import { decodeExistingTeamsFile, assembleTeamsFile, buildRostersFile } from './lib/teams-file.js';
+import { newNormStats, countNormalization, qualityFile } from './lib/quality.js';
 import { printReport } from './report.js';
 
 // Only regulations that have started are fetched, written and listed (a new one appears on its start date, see regs.js).
@@ -29,10 +34,12 @@ const { Dex } = pkg;
 const DATA_DIR = path.join(process.cwd(), 'public', 'data');
 
 function parseArgs(argv) {
-  const args = { reg: null, noFetchLimitless: false, maxTournaments: null };
+  const args = { reg: null, noFetchLimitless: false, noFetchOfficial: false, maxTournaments: null, refetchOnline: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--reg') args.reg = argv[++i];
+    else if (argv[i] === '--refetch-online') args.refetchOnline = true; // rebuild every online event from the source (pids, lost duplicates)
     else if (argv[i] === '--no-fetch-limitless') args.noFetchLimitless = true;
+    else if (argv[i] === '--no-fetch-official') args.noFetchOfficial = true; // dev runs: reuse committed official events (no rosters)
     else if (argv[i] === '--max-tournaments') args.maxTournaments = Number(argv[++i]);
   }
   return args;
@@ -44,110 +51,6 @@ async function readJSONIfExists(file) {
   } catch {
     return null;
   }
-}
-
-// Turns an already-written teams-<REG>.json back into RawEvents, so completed
-// tournaments never need to be refetched.
-function decodeExistingTeamsFile(file) {
-  if (!file) return [];
-  const { strings, events, teams, matches } = file;
-  const str = (i) => (i == null || i < 0 ? null : strings[i]);
-  const rawEvents = events.map((ev, idx) => {
-    const key = ev.source === 'limitless' ? `limitless:${ev.id.slice(3)}` : ev.id;
-    return { ...ev, key, eventIdx: idx, rows: [], matches: [] };
-  });
-  const rowToEvent = [];
-  teams.forEach((row) => {
-    const [eventIdx, player, country, placing, wins, losses, ties, mons] = row;
-    const decodedMons = mons.map(([species, item, ability, moves, nature, sp]) => ({
-      species: str(species),
-      item: str(item),
-      ability: str(ability),
-      moves: moves.map((m) => str(m)).filter(Boolean),
-      nature: str(nature),
-      sp: typeof sp === 'string' ? sp : null,
-    }));
-    rawEvents[eventIdx].rows.push({ player, name: player, country, placing, wins, losses, ties, mons: decodedMons });
-    rowToEvent.push(eventIdx);
-  });
-  // Rebuild per-event matches as [playerA, playerB, result] using row->player lookup.
-  const rowPlayer = teams.map((row) => row[1]);
-  matches.forEach(([a, b, result]) => {
-    const evIdx = rowToEvent[a];
-    if (evIdx == null || rowToEvent[b] !== evIdx) return;
-    rawEvents[evIdx].matches.push([rowPlayer[a], rowPlayer[b], result]);
-  });
-  return rawEvents.map(({ eventIdx, ...rest }) => rest);
-}
-
-// Official events are always fully rebuilt (see fetchOfficialEvents), so the same id
-// can appear twice here: once from the stale decoded teams-<REG>.json, once freshly
-// rebuilt (pushed after). Map dedup keeps the later value but not its insertion slot,
-// so the freshly rebuilt event wins while event order (and eventIdx) stays stable.
-function dedupeEvents(rawEvents) {
-  const byId = new Map();
-  for (const ev of rawEvents) byId.set(ev.id, ev);
-  return [...byId.values()];
-}
-
-function assembleTeamsFile(reg, rawEvents) {
-  rawEvents = dedupeEvents(rawEvents);
-  const strings = [];
-  const internIndex = new Map();
-  const intern = (s) => {
-    if (s == null || s === '') return -1;
-    if (internIndex.has(s)) return internIndex.get(s);
-    const i = strings.length;
-    strings.push(s);
-    internIndex.set(s, i);
-    return i;
-  };
-
-  const events = [];
-  const teams = [];
-  const matches = [];
-
-  rawEvents.forEach((ev, eventIdx) => {
-    events.push({
-      id: ev.id,
-      name: ev.name,
-      date: ev.date,
-      tier: ev.tier,
-      source: ev.source,
-      url: ev.url,
-      players: ev.players,
-      cut: ev.cut,
-      rounds: ev.rounds,
-    });
-
-    // Dedupe rows by player name within the event, keep the first.
-    const seenPlayers = new Set();
-    const rowIndexByPlayer = new Map();
-    for (const row of ev.rows) {
-      if (seenPlayers.has(row.name)) continue;
-      seenPlayers.add(row.name);
-      const mons = row.mons.slice(0, 6).map((mon) => [
-        intern(mon.species),
-        intern(mon.item),
-        intern(mon.ability),
-        mon.moves.slice(0, 4).map(intern),
-        intern(mon.nature),
-        mon.sp || 0,
-      ]);
-      const rowIdx = teams.length;
-      teams.push([eventIdx, row.name, row.country || '', row.placing ?? null, row.wins || 0, row.losses || 0, row.ties || 0, mons]);
-      rowIndexByPlayer.set(row.player, rowIdx); // `player` (stable username) is only used to link pairings; display `name` is what's stored
-    }
-
-    for (const [pA, pB, result] of ev.matches) {
-      const a = rowIndexByPlayer.get(pA);
-      const b = rowIndexByPlayer.get(pB);
-      if (a == null || b == null) continue;
-      matches.push([a, b, result]);
-    }
-  });
-
-  return { reg, generated: new Date().toISOString(), strings, events, teams, matches };
 }
 
 async function main() {
@@ -168,20 +71,32 @@ async function main() {
 
   // 1) Load whatever already exists, so completed tournaments are reused.
   const existingFiles = {};
+  const existingQuality = {};
+  const salt = idSalt(); // METALENS_ID_SALT; without it new rows get no pid (see scripts/lib/ids.js)
+  if (!salt) log('WARNING: METALENS_ID_SALT is not set: new team rows are written without a player id (pid).');
   for (const reg of VGC_IDS) {
     existingFiles[reg] = await readJSONIfExists(path.join(DATA_DIR, `teams-${reg}.json`));
-    // online events from the last 7 days may have been captured mid-tournament: refetch them
+    existingQuality[reg] = (await readJSONIfExists(path.join(DATA_DIR, `quality-${reg}.json`)))?.events || {};
+    // online events from the last 7 days may have been captured mid-tournament: refetch them;
+    // --refetch-online rebuilds every online event (one-time backfill of pids and of teams lost to name de-duplication)
     rawEventsByReg[reg] = decodeExistingTeamsFile(existingFiles[reg])
-      .filter((e) => e.source !== 'limitless' || e.date < RECENT_BEFORE.slice(0, 10));
+      .filter((e) => e.source !== 'limitless' || (!args.refetchOnline && e.date < RECENT_BEFORE.slice(0, 10)));
   }
+  // `fetched`: the day an event was first built into MetaLens (kept across rebuilds; null for events built before v1.7.0)
+  const firstFetched = new Map();
+  for (const reg of VGC_IDS) for (const ev of existingFiles[reg]?.events || []) if (ev.fetched) firstFetched.set(ev.id, ev.fetched);
+  const today = new Date().toISOString().slice(0, 10);
+  const stampFetched = (ev) => { ev.fetched = firstFetched.get(ev.id) || ev.fetched || today; return ev; };
 
   // 2) Official events (all regs, always — fully rebuilt every run, but every
   // request uses ttl: PERMANENT, so this only costs network time on first fetch;
   // subsequent runs replay from the disk cache. See dedupeEvents below.
-  log('Fetching official events (limitlessvgc.com)...');
-  const official = await fetchOfficialEvents(null, { log });
-  for (const reg of VGC_IDS) rawEventsByReg[reg].push(...official.byReg[reg]);
-  log(`  official: ${JSON.stringify(official.stats)}`);
+  if (!args.noFetchOfficial) {
+    log('Fetching official events (limitlessvgc.com)...');
+    const official = await fetchOfficialEvents(null, { log });
+    for (const reg of VGC_IDS) rawEventsByReg[reg].push(...official.byReg[reg].map(stampFetched));
+    log(`  official: ${JSON.stringify(official.stats)}`);
+  }
 
   // 3) Limitless online tournaments, only for the regulation(s) being processed.
   for (const reg of regsToProcess) {
@@ -193,7 +108,7 @@ async function main() {
       maxTournaments: args.maxTournaments,
       log,
     });
-    rawEventsByReg[reg].push(...rawEvents);
+    rawEventsByReg[reg].push(...rawEvents.map(stampFetched));
     log(`  ${reg}: ${JSON.stringify(stats)}`);
   }
 
@@ -281,15 +196,20 @@ async function main() {
   await resolveSprites(dexNat.species);
   for (const reg of VGC_IDS) {
     for (const ev of rawEventsByReg[reg]) {
+      // Freshly built events (they carry `drops`) record what normalization did, for the quality report.
+      const norm = ev.drops ? (ev.normalization = newNormStats()) : null;
       for (const row of ev.rows) {
         for (const mon of row.mons) {
+          const raw = { species: mon.species, item: mon.item, ability: mon.ability, moves: mon.moves };
           mon.species = normalizeSpecies(mon.species, dex);
           // hand-typed sheets: "focus sash" / "U-Turn" / "None" -> dex names or null
           mon.item = normalizeTerm(mon.item, dex, 'item');
           mon.ability = normalizeTerm(mon.ability, dex, 'ability');
           mon.moves = mon.moves.map((m) => normalizeTerm(m, dex, 'move')).filter(Boolean);
+          if (norm) countNormalization(norm, raw, mon, dex);
         }
       }
+      for (const p of ev.roster || []) p.species = p.species.map((s) => normalizeSpecies(s, dex));
     }
     renormalizeRanked(rankedByReg[reg], dex);
   }
@@ -305,8 +225,12 @@ async function main() {
       manifestRegs.push({ ...common, teams: 0, events: 0, openSheets: 0, matches: 0, ladderMonths: ladderByReg[reg].map((m) => m.month), rankedSeasons: [] });
       continue;
     }
-    const teamsFile = assembleTeamsFile(reg, rawEventsByReg[reg]);
+    const quality = { ...existingQuality[reg] };
+    const teamsFile = assembleTeamsFile(reg, rawEventsByReg[reg], { salt, quality });
     await writeFile(path.join(DATA_DIR, `teams-${reg}.json`), JSON.stringify(teamsFile));
+    for (const ev of rawEventsByReg[reg]) if (ev.normalization) quality[ev.id].normalization = ev.normalization;
+    await writeFile(path.join(DATA_DIR, `quality-${reg}.json`), JSON.stringify(qualityFile(reg, teamsFile, quality)));
+    await writeFile(path.join(DATA_DIR, `rosters-${reg}.json`), JSON.stringify(buildRostersFile(reg, rawEventsByReg[reg], teamsFile, { salt })));
 
     await writeFile(path.join(DATA_DIR, `ranked-${reg}.json`), JSON.stringify(rankedByReg[reg]));
 
@@ -335,6 +259,7 @@ async function main() {
     JSON.stringify({
       generated: new Date().toISOString(),
       current: pickCurrent(manifestRegs),
+      archetypeRules: ARCHETYPE_RULESET.version, // labels are computed at read time with this rule set (lib/archetypes.js)
       currentShowdown: 'ND',
       regs: manifestRegs,
       sources: [
@@ -357,6 +282,10 @@ async function main() {
     return;
   }
   await printReport(DATA_DIR);
+
+  // 9) Research export (CSV + codebook) from the files just written; gitignored, scripts/release.js freezes it.
+  const exported = await writeExport(DATA_DIR, path.join(process.cwd(), 'data-export'), VGC_IDS);
+  log(`research export: data-export/ (${exported.join(', ')})`);
 }
 
 main().catch((err) => {

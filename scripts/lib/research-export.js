@@ -1,0 +1,241 @@
+// Research export (Vin's Atelier): tidy CSV tables + a generated codebook, built from the same committed data files
+// the dashboard reads (teams-/rosters-/quality-<REG>.json). Used by `npm run data` (-> data-export/) and by
+// scripts/release.js. Pure apart from what callers pass in.
+//
+// Never reads ranked-<REG>.json (Pokémon Champions Battle Data: its API rules forbid redistribution) or the Smogon
+// ladder files. No display names: players appear only as salted pseudonymous ids (pid).
+import { decode } from '../../public/js/lib/aggregate.js';
+import { ARCHETYPES, ARCHETYPE_RULESET } from '../../public/js/lib/archetypes.js';
+
+const RESULT = '1 = side A won, 2 = side B won, 0 = tie, 3 = no result (double loss / unreported). Rows built before ' +
+  'MetaLens v1.7.0 use 0 for "tie or unknown".';
+const PHASE = '1 = Swiss, 2 = top cut, 0 = unknown. Official events: a round is top cut when every player paired in it made top cut.';
+const BO = '1 or 3 = best of, from the Limitless phase mode; 0 = not published by the source (always 0 for official events, ' +
+  'although Play! Pokémon rules use best-of-three).';
+const PID = 'Pseudonymous player id: first 16 hex characters of HMAC-SHA256(secret salt, source key). The same player has the ' +
+  'same pid in every event of the same namespace. Empty when the row was built without the salt.';
+const NS = '1 = Limitless username (online events), 2 = standings.limitlessvgc.com player id (official events), ' +
+  '3 = event-scoped official id (no standings record; never links across events), 0 = unknown. Namespaces 1 and 2 cannot be linked.';
+
+/** One schema drives the CSV headers and CODEBOOK.md. */
+export const TABLES = {
+  'events.csv': {
+    desc: 'One row per tournament.',
+    columns: [
+      ['event_id', 'string', 'MetaLens event id: "lt:<Limitless id>" (online) or "lvgc:<limitlessvgc.com id>" (official).'],
+      ['regulation', 'string', 'Regulation set (M-A, M-B, M-C...).'],
+      ['name', 'string', 'Event name as published.'],
+      ['date', 'date', 'Event start date (UTC), YYYY-MM-DD.'],
+      ['tier', 'string', 'worlds | international | regional | online.'],
+      ['source', 'string', 'limitless (play.limitlesstcg.com, online) | limitlessvgc (limitlessvgc.com + standings.limitlessvgc.com, official).'],
+      ['url', 'string', 'Source page.'],
+      ['players', 'integer', 'Entrants as published.'],
+      ['lists', 'integer', 'Full team lists in teams.csv for this event.'],
+      ['coverage_rate', 'number', 'lists / players (0-1); empty when unknown.'],
+      ['coverage_kind', 'string', 'complete (lists for >= 95% of players: online events) | published-subset (official events: full lists for top finishers only; see roster_players.csv for everyone, species only).'],
+      ['cut', 'integer', 'Top-cut size; empty when unknown.'],
+      ['rounds', 'integer', 'Rounds as published (official: all rounds including top cut; online: Swiss rounds).'],
+      ['fetched', 'date', 'Day the event was first built into MetaLens; empty for events built before v1.7.0.'],
+    ],
+  },
+  'teams.csv': {
+    desc: 'One row per full team list (6 Pokémon with items, abilities and moves).',
+    columns: [
+      ['team_id', 'string', 'Release-scoped team id: <regulation>-<row number in teams-<REG>.json>.'],
+      ['event_id', 'string', 'events.csv event_id.'],
+      ['regulation', 'string', 'Regulation set.'],
+      ['pid', 'string', PID],
+      ['id_namespace', 'integer', NS],
+      ['placing', 'integer', 'Final placing; empty when not published.'],
+      ['top_cut', 'boolean', '1 if placing <= cut (cut unknown: placing <= 8).'],
+      ['wins', 'integer', 'Match wins as published (official events: from the standings site).'],
+      ['losses', 'integer', 'Match losses as published.'],
+      ['ties', 'integer', 'Ties as published (the official standings site publishes none: 0).'],
+      ['country', 'string', 'ISO 3166-1 alpha-2 country as published; empty if none.'],
+    ],
+  },
+  'team_members.csv': {
+    desc: 'One row per Pokémon on a full team list.',
+    columns: [
+      ['team_id', 'string', 'teams.csv team_id.'],
+      ['slot', 'integer', 'Position on the sheet, 1-6.'],
+      ['species', 'string', 'Battle species as listed (base or regional/gender form, never a Mega form).'],
+      ['form', 'string', 'Mega form when the Pokémon holds its own Mega Stone (e.g. Charizard-Mega-Y), else the species.'],
+      ['item', 'string', 'Held item, normalized to the game name; empty if none.'],
+      ['ability', 'string', 'Ability as listed (the pre-Mega ability for Mega Stone holders), normalized.'],
+      ['move1', 'string', 'Move, normalized; empty if fewer moves were listed.'],
+      ['move2', 'string', 'Move.'],
+      ['move3', 'string', 'Move.'],
+      ['move4', 'string', 'Move.'],
+      ['holds_own_mega_stone', 'boolean', '1 if the item is this species\' own Mega Stone.'],
+    ],
+  },
+  'matches.csv': {
+    desc: 'One row per match between two full team lists of the same event (byes excluded).',
+    columns: [
+      ['match_id', 'string', 'Release-scoped id: <regulation>-m<row number>.'],
+      ['event_id', 'string', 'events.csv event_id.'],
+      ['team_a', 'string', 'teams.csv team_id of side A.'],
+      ['team_b', 'string', 'teams.csv team_id of side B.'],
+      ['result', 'integer', RESULT],
+      ['round', 'integer', 'Round number from the source; 0 = unknown (rows built before v1.7.0).'],
+      ['phase', 'integer', PHASE],
+      ['best_of', 'integer', BO],
+      ['games_a', 'integer', 'Games won by A when the source lists per-game winners; empty otherwise.'],
+      ['games_b', 'integer', 'Games won by B; empty otherwise.'],
+    ],
+  },
+  'team_archetypes.csv': {
+    desc: 'Archetype labels of each full team under the rule set named in ruleset_version (public/js/lib/archetypes.js).',
+    columns: [
+      ['team_id', 'string', 'teams.csv team_id.'],
+      ['ruleset_version', 'string', 'ARCHETYPE_RULESET.version used for these labels.'],
+      ['archetypes', 'string', 'Every archetype the team matches, in rule priority order, "|"-separated; "other" if none.'],
+      ['primary', 'string', 'The first of those (the label the dashboard\'s primary view uses).'],
+      ['mega_stones_carried', 'integer', 'Pokémon holding their own Mega Stone (only one can Mega Evolve per battle).'],
+    ],
+  },
+  'roster_players.csv': {
+    desc: 'Official events only: every player on the standings site, with a species-only team (the source lists all teams; ' +
+      'full lists exist only for the players also in teams.csv).',
+    columns: [
+      ['roster_id', 'string', 'Release-scoped id: <regulation>-r<event index>-<player index>.'],
+      ['event_id', 'string', 'events.csv event_id.'],
+      ['pid', 'string', PID],
+      ['id_namespace', 'integer', NS],
+      ['placing', 'integer', 'Final placing; empty when not published.'],
+      ['wins', 'integer', 'Match wins.'],
+      ['losses', 'integer', 'Match losses.'],
+      ['drop_round', 'integer', 'Round the player dropped after; empty if they did not drop.'],
+      ['top_cut', 'boolean', '1 if the player made top cut.'],
+      ['day2', 'boolean', '1 if the player made day 2.'],
+      ['team_id', 'string', 'teams.csv team_id of this player\'s full list; empty if none was published.'],
+      ['species1', 'string', 'Species as listed (no Mega form: the roster has no items).'],
+      ['species2', 'string', 'Species.'],
+      ['species3', 'string', 'Species.'],
+      ['species4', 'string', 'Species.'],
+      ['species5', 'string', 'Species.'],
+      ['species6', 'string', 'Species.'],
+    ],
+  },
+  'roster_matches.csv': {
+    desc: 'Official events only: every non-bye pairing between roster players (complete, unlike matches.csv for these events).',
+    columns: [
+      ['event_id', 'string', 'events.csv event_id.'],
+      ['roster_a', 'string', 'roster_players.csv roster_id of side A.'],
+      ['roster_b', 'string', 'roster_players.csv roster_id of side B.'],
+      ['result', 'integer', RESULT],
+      ['round', 'integer', 'Round number.'],
+      ['phase', 'integer', PHASE],
+    ],
+  },
+};
+
+const cell = (v) => {
+  if (v == null) return '';
+  if (typeof v === 'boolean') return v ? '1' : '0';
+  const s = String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+function table(name) {
+  const cols = TABLES[name].columns.map((c) => c[0]);
+  const lines = [cols.join(',')];
+  return { add: (row) => lines.push(cols.map((c) => cell(row[c])).join(',')), text: () => `${lines.join('\n')}\n` };
+}
+
+/**
+ * regs: [{ reg, teams, rosters? }] (parsed teams-/rosters-<REG>.json), dex: dex.json.
+ * Returns { '<file>.csv': text, ... } in a fixed order, deterministic for the same input.
+ */
+export function buildExport(regs, dex) {
+  const t = Object.fromEntries(Object.keys(TABLES).map((n) => [n, table(n)]));
+  for (const { reg, teams: file, rosters } of regs) {
+    const { teams, events, matches } = decode(file, dex);
+    const lists = new Map();
+    for (const tm of teams) lists.set(tm.ev.id, (lists.get(tm.ev.id) || 0) + 1);
+    for (const ev of events) {
+      t['events.csv'].add({ event_id: ev.id, regulation: reg, name: ev.name, date: ev.date, tier: ev.tier, source: ev.source, url: ev.url,
+        players: ev.players, lists: lists.get(ev.id) || 0, coverage_rate: ev.coverage?.rate, coverage_kind: ev.coverage?.kind,
+        cut: ev.cut, rounds: ev.rounds, fetched: ev.fetched });
+    }
+    const tid = (i) => `${reg}-${i}`;
+    for (const tm of teams) {
+      const row = file.teams[tm.i];
+      t['teams.csv'].add({ team_id: tid(tm.i), event_id: tm.ev.id, regulation: reg, pid: row[8], id_namespace: row[9] ?? 0,
+        placing: tm.placing, top_cut: tm.topCut, wins: tm.w, losses: tm.l, ties: tm.t, country: tm.country });
+      tm.mons.forEach((m, j) => {
+        t['team_members.csv'].add({ team_id: tid(tm.i), slot: j + 1, species: m.s, form: m.k, item: m.item, ability: m.ability,
+          move1: m.moves[0], move2: m.moves[1], move3: m.moves[2], move4: m.moves[3], holds_own_mega_stone: m.mega });
+      });
+      t['team_archetypes.csv'].add({ team_id: tid(tm.i), ruleset_version: ARCHETYPE_RULESET.version, archetypes: tm.arch.join('|'),
+        primary: tm.arch[0], mega_stones_carried: tm.megas.length });
+    }
+    matches.forEach((m, i) => {
+      t['matches.csv'].add({ match_id: `${reg}-m${i}`, event_id: teams[m.a].ev.id, team_a: tid(m.a), team_b: tid(m.b), result: m.result,
+        round: m.round, phase: m.phase, best_of: m.bo, games_a: m.games?.[0], games_b: m.games?.[1] });
+    });
+    for (const ev of rosters?.events || []) {
+      const rid = (p) => `${reg}-r${ev.event}-${p}`;
+      ev.players.forEach(([pid, ns, placing, w, l, drop, topcut, day2, species, row], p) => {
+        const sp = species.map((s) => rosters.strings[s]);
+        t['roster_players.csv'].add({ roster_id: rid(p), event_id: ev.id, pid, id_namespace: ns, placing, wins: w, losses: l,
+          drop_round: drop, top_cut: topcut === 1, day2: day2 === 1, team_id: row >= 0 ? tid(row) : '',
+          ...Object.fromEntries([0, 1, 2, 3, 4, 5].map((k) => [`species${k + 1}`, sp[k]])) });
+      });
+      for (const [a, b, result, round, phase] of ev.matches) {
+        t['roster_matches.csv'].add({ event_id: ev.id, roster_a: rid(a), roster_b: rid(b), result, round, phase });
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(t).map(([n, x]) => [n, x.text()]));
+}
+
+/** CODEBOOK.md, generated from TABLES and the archetype rule set (so it can't drift from the CSVs). */
+export function codebook({ release = null, regs = [] } = {}) {
+  const out = [];
+  out.push('# MetaLens VGC research data: codebook', '');
+  out.push("Compiled by Vincent Wesley (Vin's Atelier) for MetaLens VGC (metalensvgc.pages.dev).");
+  if (release) out.push(`Release ${release}.`);
+  if (regs.length) out.push(`Regulations: ${regs.join(', ')}.`);
+  out.push('', '## Scope and caveats', '',
+    '- Sources: Limitless Play (play.limitlesstcg.com, online tournaments), limitlessvgc.com and standings.limitlessvgc.com (official events).',
+    '- Not included: Pokémon Champions Battle Data (championsbattledata.com) in-game ranked data, whose API terms forbid redistribution, and Smogon ladder statistics.',
+    '- Players are pseudonymized, not anonymous: no names are included, but the source pages are public, so a team can be traced back through event, placing and country.',
+    '- Official events publish full team lists for top finishers only (`coverage_kind = published-subset`); use roster_players.csv and roster_matches.csv for complete, species-level data on those events.',
+    '- Archetype labels are computed from the full lists with the rule set below; they are not part of the source data.',
+    '- Ids ending in a row number (team_id, match_id, roster_id) are stable within one release only; join across releases on event_id + pid.',
+    '- Text is exactly as published (UTF-8, RFC 4180 quoting). A cell starting with = + - or @ is left as is: import as text, not into a spreadsheet that evaluates formulas.',
+    '');
+  for (const [name, t] of Object.entries(TABLES)) {
+    out.push(`## ${name}`, '', t.desc, '', '| column | type | description |', '|---|---|---|');
+    for (const [c, type, d] of t.columns) out.push(`| \`${c}\` | ${type} | ${d.replace(/\|/g, '\\|')} |`);
+    out.push('');
+  }
+  out.push(`## Archetype rule set ${ARCHETYPE_RULESET.version} (fingerprint ${ARCHETYPE_RULESET.fingerprint})`, '',
+    'Rules are tested in this order; `primary` is the first match.', '', '| id | label | rule | label source |', '|---|---|---|---|');
+  for (const a of ARCHETYPES) {
+    const src = typeof a.source === 'string' ? a.source
+      : a.source.map((s) => `${s.publisher}, "${s.title}" (${s.date}), ${s.url}, accessed ${s.accessed}: "${s.quote}"`).join('; ');
+    out.push(`| ${a.id} | ${a.label} | ${a.desc.replace(/\|/g, '\\|')} | ${src.replace(/\|/g, '\\|')} |`);
+  }
+  out.push('', 'Rule set history:', '');
+  for (const c of ARCHETYPE_RULESET.changes) out.push(`- ${c.version} (${c.date}, commit ${c.commit}): ${c.note}`);
+  out.push('');
+  return out.join('\n');
+}
+
+/** Reads the committed files for `regs` from dataDir and writes the CSVs + CODEBOOK.md into outDir. Returns file names. */
+export async function writeExport(dataDir, outDir, regs, { release = null } = {}) {
+  const { readFile, writeFile, mkdir } = await import('node:fs/promises');
+  const path = await import('node:path');
+  const read = async (f) => JSON.parse(await readFile(path.join(dataDir, f), 'utf8'));
+  const readIf = (f) => read(f).catch(() => null);
+  const dex = await read('dex.json');
+  const input = [];
+  for (const reg of regs) input.push({ reg, teams: await read(`teams-${reg}.json`), rosters: await readIf(`rosters-${reg}.json`) });
+  await mkdir(outDir, { recursive: true });
+  const files = { ...buildExport(input, dex), 'CODEBOOK.md': codebook({ release, regs }) };
+  for (const [name, text] of Object.entries(files)) await writeFile(path.join(outDir, name), text);
+  return Object.keys(files);
+}

@@ -3,6 +3,8 @@
 import { fetchText } from '../lib/http.js';
 import { REGULATIONS, VGC_IDS } from '../lib/regs.js';
 import { normalizeSpecies } from '../../public/js/lib/names.js';
+import { lvKey, lvxKey } from '../lib/ids.js';
+import { coverageOf } from './limitless.js';
 
 const BASE = 'https://limitlessvgc.com';
 const STANDINGS_BASE = 'https://standings.limitlessvgc.com';
@@ -11,7 +13,7 @@ const PERMANENT = Infinity;
 const FORMAT_TO_REG = Object.fromEntries(VGC_IDS.map((r) => [r.toLowerCase(), r])); // 'm-c' -> 'M-C', 'm-d' -> 'M-D'
 // Budget for the standings site's per-round pairings fetches (one request/round).
 // Beyond this, skip `matches` for the event rather than hammering the host.
-const MAX_PAIRINGS_ROUNDS = 20;
+const MAX_PAIRINGS_ROUNDS = 24; // responses are cached permanently; Worlds-size events stay under this
 
 function tierFor(name) {
   if (/World Championships/i.test(name)) return 'worlds';
@@ -127,28 +129,65 @@ function matchStandingRow(sr, players) {
   );
 }
 
-/** One request per round (SSR-embedded pairings for that round). Matches by tp_id. */
-async function fetchOfficialMatches(code, rounds, tpIdToPlayer, log) {
-  const matches = [];
+/** One request per round (SSR-embedded pairings for that round): [{round, pairings}], or null when over budget. */
+async function fetchOfficialPairings(code, rounds, log) {
   if (!rounds || rounds > MAX_PAIRINGS_ROUNDS) {
     log(`  [official] skip pairings for ${code} (rounds=${rounds ?? 'unknown'} exceeds ${MAX_PAIRINGS_ROUNDS}-request budget)`);
-    return matches;
+    return null;
   }
+  const out = [];
   for (let round = 1; round <= rounds; round++) {
     const html = await fetchText(`${STANDINGS_BASE}/${code}/pairings?round=${round}`, { ttl: PERMANENT });
     const pairings = extractFetchedJSON(html, 'vgc/pairings')?.message;
-    if (!Array.isArray(pairings)) continue;
+    out.push({ round, pairings: Array.isArray(pairings) ? pairings : [] });
+  }
+  return out;
+}
+
+/**
+ * Standings players + per-round pairings -> matches keyed by source key [keyA, keyB, result, round, phase, 0] and
+ * pairing stats. The site publishes no match format (bo 0) and no Swiss/cut split per round: a round is top cut
+ * (phase 2) when every player paired in it made top cut. result: 1/2 winner, 3 no result. Pure, exported for testing.
+ */
+export function officialMatches(rounds, players, eventId) {
+  const key = new Map(players.map((p) => [p.tp_id, playerKey(p, eventId)]));
+  const topcut = new Set(players.filter((p) => p.topcut === 1).map((p) => p.tp_id));
+  const stats = { total: 0, byes: 0, decisive: 0, ties: 0, noResult: 0 };
+  const matches = [];
+  for (const { round, pairings } of rounds || []) {
+    const paired = pairings.flatMap((pr) => [pr.player1, pr.player2]).filter((x) => x != null);
+    const phase = topcut.size && paired.length && paired.every((tp) => topcut.has(tp)) ? 2 : 1;
     for (const pr of pairings) {
-      const a = tpIdToPlayer.get(pr.player1);
-      const b = tpIdToPlayer.get(pr.player2);
-      if (!a || !b) continue; // bye, or one side has no published team row
-      let result = 0;
+      stats.total++;
+      if (pr.player1 == null || pr.player2 == null) { stats.byes++; continue; }
+      let result = 3;
       if (pr.winner === pr.player1) result = 1;
       else if (pr.winner === pr.player2) result = 2;
-      matches.push([a, b, result]);
+      if (result === 3) stats.noResult++;
+      else stats.decisive++;
+      matches.push([key.get(pr.player1) || lvxKey(eventId, `tp${pr.player1}`), key.get(pr.player2) || lvxKey(eventId, `tp${pr.player2}`), result, round, phase, 0]);
     }
   }
-  return matches;
+  return { matches, pairingStats: stats };
+}
+
+/** Source key of a standings player: the site-wide player_id (stable across official events), else event-scoped. */
+export function playerKey(p, eventId) {
+  return p.player_id != null ? lvKey(p.player_id) : lvxKey(eventId, p.placement ?? `tp${p.tp_id}`);
+}
+
+/** Every standings player as a species-only roster entry (the site lists all teams, limitlessvgc.com only ~14% in full). */
+export function rosterOf(players, eventId) {
+  return players.map((p) => ({
+    player: playerKey(p, eventId),
+    placing: p.placement ?? null,
+    wins: p.wins ?? 0,
+    losses: p.losses ?? 0,
+    dropRound: p.drop_round ?? null,
+    topcut: p.topcut === 1,
+    day2: p.day2 === 1,
+    species: String(p.team || '').split(',').map((s) => s.trim()).filter(Boolean).map((id) => normalizeSpecies(id, null)),
+  }));
 }
 
 /**
@@ -207,7 +246,7 @@ export async function fetchOfficialEvents(dex, opts = {}) {
       const players = standingsData?.players || [];
 
       const rawRows = [];
-      const tpIdToPlayer = new Map();
+      const drops = { noDecklist: 0, emptyTeam: 0, overSix: 0 };
       let matchedRecords = 0;
       for (const sr of standingsRows) {
         const teamHtml = await fetchText(`${BASE}/teams/${sr.teamId}`, { ttl: PERMANENT });
@@ -222,11 +261,12 @@ export async function fetchOfficialEvents(dex, opts = {}) {
             nature: m.nature,
             sp: null, // official teamlists don't publish Stat Point spreads
           }));
-        if (!mons.length) continue;
+        if (!mons.length) { drops.emptyTeam++; continue; }
 
         const match = players.length ? matchStandingRow(sr, players) : null;
         if (match) matchedRecords++;
-        const player = `${row.id}:${sr.rank}:${sr.name}`; // no stable username on this site; scope key to the event
+        // source key: the standings site's player_id (stable across official events); event-scoped when unmatched
+        const player = match ? playerKey(match, key) : lvxKey(key, sr.rank);
         rawRows.push({
           player,
           name: sr.name,
@@ -237,7 +277,6 @@ export async function fetchOfficialEvents(dex, opts = {}) {
           ties: 0, // standings.limitlessvgc.com's player summary doesn't publish a ties field
           mons,
         });
-        if (match) tpIdToPlayer.set(match.tp_id, player);
       }
       if (!rawRows.length) continue;
       if (players.length && matchedRecords < standingsRows.length) {
@@ -247,9 +286,15 @@ export async function fetchOfficialEvents(dex, opts = {}) {
       const cutCount = players.filter((p) => p.topcut === 1).length;
       const cut = cutCount || null;
       let matches = [];
+      let pairingStats = null;
+      let skippedRoundBudget = false;
       if (players.length) {
-        matches = await fetchOfficialMatches(code, standingsData.rounds, tpIdToPlayer, log);
+        const rounds = await fetchOfficialPairings(code, standingsData.rounds, log);
+        skippedRoundBudget = rounds == null;
+        ({ matches, pairingStats } = officialMatches(rounds, players, key));
       }
+      // limitlessvgc.com links full lists for top finishers only; the standings site lists everyone (species only)
+      const listed = players.length || row.players;
 
       if (matchedRecords > 0) stats.withRecords++;
       if (cut != null) stats.withCut++;
@@ -266,8 +311,12 @@ export async function fetchOfficialEvents(dex, opts = {}) {
         players: row.players,
         cut,
         rounds: standingsData?.rounds ?? null,
+        coverage: coverageOf(listed, rawRows.length),
         rows: rawRows,
         matches,
+        pairingStats: pairingStats && { ...pairingStats, skippedRoundBudget },
+        drops,
+        roster: players.length ? rosterOf(players, key) : null,
       });
       stats.included++;
       log(`  [official] +${row.name} (${reg}, ${rawRows.length} teams, cut=${cut ?? 'n/a'}, ${matches.length} matches)`);

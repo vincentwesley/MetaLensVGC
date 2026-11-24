@@ -1,9 +1,11 @@
 {
   "name": "metalensvgc",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "scripts": {
     "data": "node scripts/build-data.js",
     "pokedex": "node scripts/build-pokedex.js",
+    "release": "node scripts/release.js",
+    "export": "node -e \"import('./scripts/lib/research-export.js').then(m=>m.writeExport('public/data','data-export',['M-A','M-B','M-C']))\"",
     "test": "node --test",
     "serve": "node scripts/serve.js",
     "e2e": "playwright test",

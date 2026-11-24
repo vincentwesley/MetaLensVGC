@@ -350,6 +350,23 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - e2e: "default regulation follows manifest.current; an explicit #reg= still wins" (manifest stubbed to current M-B).
 - 387 unit, 68 e2e green; validate.js OK.
 
+### v1.7.0 (research-grade data), 2026-11-24
+- Source shapes checked live: Limitless `/details` phases (type, rounds, mode BO1/BO3), pairings (round, phase, winner
+  username / 0 / -1, games, match); standings.limitlessvgc.com players (`player_id` stable across events: 870 of 873
+  repeat players over 10 M-C events; `team` species list for ~100% of players; topcut/day2/drop_round) and pairings
+  (byes as player2 null). São Paulo (652 players): officialMatches gives 2,601 matches, rounds 13-16 = top cut.
+- Unit (test/research-data.test.js, research-export.test.js, archetype-ruleset.test.js): pid determinism/namespaces/salt
+  rules; limitlessMatches and officialMatches mapping (result 0/1/2/3, round, phase, bo, games, byes); coverage; dedupe by
+  source key keeps two same-named players; decode -> assemble round trip keeps pids + match context; team ids `~2`;
+  rosters link to full lists; normalization + quality totals; CSV headers = codebook; no names / no ranked in export;
+  release args + default scope; committed release records; rule-set fingerprint + sources.
+- Pipeline end to end on a sandbox copy (`--no-fetch-official --reg M-C --max-tournaments 3`, test salt): 3 new online
+  events with coverage, phases, fetched, pids, 213 matches with context; quality caught unknown items "Frosslasite",
+  "Staraptorite"; validate.js OK. A full official crawl is too slow without the HTTP cache (runs in the weekly Action).
+- `node scripts/release.js build data-v0.0 --regs M-A,M-B,M-C --allow-no-pids` three times: identical bytes.
+- Not yet: the real pid backfill (needs the METALENS_ID_SALT secret, then a `refetch_online` run), `release.js freeze` /
+  `verify` on a real tag (data-v1.0 after M-C settles, ~2026-12-04).
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 is in `ranked-M-D.json`; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

@@ -317,3 +317,29 @@ These skills are available in every session. The user never types slash commands
 - v1.5.4: Spread explorer (ranked) has a "Stats assume" picker of the top 3 real ranked natures (`.spx-toggle--nature`;
   the source toggle is `.spx-toggle--source`); `rankedSpreadRows(mon, bs, rules, nature?)` applies the pick to every row
   (unknown → most common). No per-row "* Nature" tags: ranked natures are never paired with spreads (not joint).
+
+## v1.7.0: research-grade data ("The Geometry of a Metagame", Vincent Wesley, Vin's Atelier)
+- **Player ids** (`scripts/lib/ids.js`): source keys `lt:<username>` (Limitless, lowercased), `lv:<player_id>` (standings.limitlessvgc.com,
+  stable across official events: 870/873 repeat players kept one id), `lvx:<event>:<placing>` (event-scoped fallback).
+  Team row index 8 = `pid` = HMAC-SHA256(`METALENS_ID_SALT`, key) first 16 hex, index 9 = namespace code. The salt is the
+  GitHub secret `METALENS_ID_SALT`; never change it (new salt = new ids). No salt -> pid null + a warning, not a failure.
+  Rows are de-duplicated per event by source key, never by display name. Reused rows keep their pid; `--refetch-online`
+  rebuilds every online event (one-time backfill; workflow_dispatch input `refetch_online`).
+- **Matches** `[a, b, result, round, phase, bo, games?]`; result 3 = no result (0 = tie). Official phase: a round is top cut
+  when every paired player made top cut; official bo is never published (0). Readers treat 0 and 3 alike ("no winner").
+- **New files**: `quality-<REG>.json` (per-event drops, pairing reasons, normalization, file counts; carried over for reused
+  events) and `rosters-<REG>.json` (official events: every standings player's species-only team + every pairing; the
+  dashboard never loads it). The validator requires both once a teams file has `idVersion`.
+- **Pure pipeline modules** (testable; build-data.js runs main() on import): `lib/teams-file.js` (assemble/decode teams
+  file, rosters), `lib/quality.js`, `lib/research-export.js` (CSV tables + generated CODEBOOK.md; never reads ranked or
+  ladder files). `npm run data` ends by writing `data-export/` (gitignored). `--no-fetch-official` = dev runs only.
+- **Releases** (`scripts/release.js`): `build` -> `dist/<v>/` (deterministic), `freeze` (clean tree only) -> commits
+  `releases/<v>.json` + annotated tag, `verify` rebuilds from the tag in a worktree and compares SHA-256. Default scope =
+  regulations with an `end` that has passed. Zenodo: upload by hand (the GitHub integration would archive ranked data).
+- **Archetype rule set** (`ARCHETYPE_RULESET` in lib/archetypes.js): version, dated changes, `fingerprint` of the rules
+  region (test/archetype-ruleset.test.js fails on any rule change until version + changes + fingerprint are updated), and
+  a `source` per rule: a cited page with quote, or "MetaLens definition (Vin's Atelier)". Never invent a citation.
+  Labels are computed at read time, so a rule change relabels every regulation: that is why the version is in the manifest.
+- Credit all research work to Vincent Wesley (Vin's Atelier): CITATION.cff, .zenodo.json, codebook, README.
+- Known: in-game ranked season M7 started before 2026-12-02 (snapshot 2026-11-24), so `regForDate` files it under M-C,
+  not M-D (seasons are classified by start date).

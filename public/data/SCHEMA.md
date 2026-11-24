@@ -21,6 +21,8 @@ Regulation ids everywhere: `"M-A" | "M-B" | "M-C" | "M-D"` (VGC; `lib/regs.js` i
 ```
 `rankedSeasons`: in-game "Battle Data" season ids present in that regulation's `ranked-<REG>.json` (see below).
 `end` is exclusive; `null` = open-ended (the newest regulation before its end date is announced). `openSheets` = teams with an SP spread.
+`archetypeRules` (v1.7.0+): `ARCHETYPE_RULESET.version` of `lib/archetypes.js` at build time. Archetype labels are not
+stored in the data: they are computed when it is read, so the rule set version is what pins them.
 `regs` lists only regulations that have started on the build day (`listedRegs`); their files exist only then.
 `current` = the default VGC view (`pickCurrent`): the newest listed regulation once it has `MIN_CURRENT_TEAMS` (50) tournament
 teams, else the one before it. The browser opens `current` when the link has no `reg=`.
@@ -61,24 +63,76 @@ client only ever requests URLs known to exist:
   "events": [
     { "id": "lt:6ab4...", "name": "Pomelo Cup", "date": "2026-09-20", "tier": "online",
       "source": "limitless", "url": "https://play.limitlesstcg.com/tournament/6ab4.../standings",
-      "players": 143, "cut": 8, "rounds": 7 }
+      "players": 143, "cut": 8, "rounds": 7,
+      "phases": [{ "phase": 1, "type": "SWISS", "rounds": 7, "bo": 3 }, { "phase": 2, "type": "SINGLE_BRACKET", "rounds": 3, "bo": 3 }],
+      "coverage": { "players": 143, "lists": 143, "rate": 1, "kind": "complete" }, "fetched": "2026-11-24" }
   ],
+  "idVersion": 1,
   "teams": [
-    [0, "PlayerName", "US", 1, 7, 1, 0, [[0, 1, 2, [3, 5, 6, 7], 4, "0/32/0/0/2/32"], "...6 mons"]]
+    [0, "PlayerName", "US", 1, 7, 1, 0, [[0, 1, 2, [3, 5, 6, 7], 4, "0/32/0/0/2/32"], "...6 mons"], "3f9c0a1b2d4e5f60", 1]
   ],
-  "matches": [[0, 1, 1]]
+  "matches": [[0, 1, 1, 3, 1, 3, [2, 1]]]
 }
 ```
 - `strings`: intern table for species, items, abilities, moves, natures. Index `-1` = unknown.
 - `events[].tier`: `"worlds" | "international" | "regional" | "online"` (Special Events and Japan events count as `regional`; NAIC/EUIC/LAIC/OCIC count as `international`).
 - `events[].cut`: top-cut size (e.g. 8, 16, 32), or `null` if unknown.
 - `events[].source`: `"limitless"` (online, play.limitlesstcg.com) or `"limitlessvgc"` (official, limitlessvgc.com).
-- team row: `[eventIdx, player, country|"" , placing|null, wins, losses, ties, mons]`
+- `events[].phases` (online events, v1.7.0+): Limitless phases; `bo` 1 / 3, or 0 when not published.
+- `events[].coverage` (v1.7.0+): `players` (entrants; the standings site's player count for official events), `lists`
+  (team rows kept), `rate`, `kind`: `"complete"` (lists for >= 95% of players: online events) or `"published-subset"`
+  (official events: limitlessvgc.com links full lists for top finishers only, ~14%). Analyses can split on `kind`.
+- `events[].fetched` (v1.7.0+): the day the event was first built into MetaLens; `null` for events built earlier.
+- `idVersion` (v1.7.0+): 1 when every team row has a pid, else 0. Absent in files built before v1.7.0.
+- team row: `[eventIdx, player, country|"" , placing|null, wins, losses, ties, mons, pid|null, ns]`. `player` is the display
+  name as published. `pid` (v1.7.0+) = first 16 hex chars of HMAC-SHA256(METALENS_ID_SALT, source key), the same for one
+  player across events and refreshes; `null` when built without the salt or before v1.7.0. `ns`: id namespace of the
+  source key: `1` Limitless username (`lt:<username>`, every online event), `2` standings.limitlessvgc.com `player_id`
+  (`lv:<id>`, stable across official events), `3` event-scoped (`lvx:<event>:<placing>`, official team with no matching
+  standings record; never links across events), `0` unknown (pre-v1.7.0). Namespaces 1 and 2 can't be linked to each
+  other. Rows are de-duplicated per event by source key (two players with the same display name are two rows).
 - mon: `[species, item, ability, [moves...], nature, sp]` (indices into `strings`).
   `species` is the **battle species as listed** (base or regional/gender form, never a Mega form).
   `sp` is `"hp/atk/def/spa/spd/spe"` Stat Points when an open team sheet provides them, else `0`.
-- `matches`: `[teamIdxA, teamIdxB, result]` with result `1` = A won, `2` = B won, `0` = tie/unknown.
-  Only matches where both players are team rows in this file. Byes are omitted.
+- `matches`: `[teamIdxA, teamIdxB, result, round, phase, bo, games?]`. result `1` = A won, `2` = B won, `0` = tie,
+  `3` = no result (double loss / unreported; files before v1.7.0 used `0` for tie or unknown). `round` from the source
+  (0 = unknown). `phase` `1` Swiss, `2` top cut (official events: a round is top cut when every player paired in it made
+  top cut), `0` unknown. `bo` `1` / `3` from the Limitless phase mode, `0` = not published (always 0 for official events).
+  `games` = `[games won by A, games won by B]` when Limitless lists per-game winners. Older 3-element rows have no context.
+  Only matches where both players are team rows in this file. Byes are omitted (counted in quality-<REG>.json).
+
+## quality-<REG>.json (v1.7.0+, VGC regs)
+Per event (keyed by event id) what the pipeline kept and dropped, and per-regulation `totals` (sums of every numeric field).
+```json
+{ "reg": "M-C", "generated": "...", "events": { "lt:6ab4...": {
+    "rows": { "noDecklist": 0, "emptyTeam": 0, "overSix": 0, "duplicates": 1, "kept": 77 },
+    "pairings": { "total": 203, "byes": 7, "decisive": 196, "ties": 0, "noResult": 0, "linked": 196, "noTeamRow": 0, "skippedRoundBudget": false },
+    "normalization": { "item": { "exact": 400, "corrected": 12, "placeholder": 3, "unknown": 1, "unknownNames": ["..."] }, "species": {}, "ability": {}, "move": {} },
+    "file": { "teams": 77, "matches": { "linked": 196, "decisive": 196, "ties": 0, "noResult": 0, "withRound": 196 } },
+    "coverage": { "players": 77, "lists": 77, "rate": 1, "kind": "complete" } } },
+  "totals": { "events": 1, "eventsByCoverage": { "complete": 1 }, "rows": {}, "pairings": {}, "normalization": {}, "file": {} } }
+```
+`rows`/`pairings`/`normalization` are written when an event is built and carried over while it is reused, so events
+built before v1.7.0 have only `file` and `coverage`. Pairing reasons: `byes` (one side empty), `noTeamRow` (a side has no
+team row: no published list or no decklist), `noResult`/`ties` (no winner), `skippedRoundBudget` (official event with more
+rounds than the request budget: no pairings at all). `normalization`: names as typed on the sheet -> dex names
+(`exact`, `corrected`, `placeholder` = "None"-style item dropped, `unknown` = kept as typed, not in the dex; abilities
+have no dex table, so never `unknown`).
+
+## rosters-<REG>.json (v1.7.0+, official events only; not loaded by the dashboard)
+The standings site lists a species-only team for nearly every player of an official event, and every pairing, while
+limitlessvgc.com links full lists for top finishers only. This file keeps all of them, so matchups in official events
+are complete at the species level.
+```json
+{ "reg": "M-C", "generated": "...", "idVersion": 1, "strings": ["Rillaboom", "..."],
+  "events": [ { "event": 12, "id": "lvgc:450",
+    "players": [["3f9c0a1b2d4e5f60", 2, 1, 14, 2, null, 1, 1, [0, 1, 2, 3, 4, 5], 37]],
+    "matches": [[0, 1, 1, 1, 1]] } ] }
+```
+- `event`: index into `teams-<REG>.json` events. player: `[pid|null, ns, placing|null, wins, losses, dropRound|null, topcut 0/1,
+  day2 0/1, [species string idx], teamRow]` (`teamRow` = its full list in the teams file, `-1` if none). Species are
+  battle species as listed (no Mega form: the roster has no items). match: `[playerIdxA, playerIdxB, result, round, phase]`
+  with the codes above (bo is never published for official events).
 
 ## ladder-<REG>.json (Smogon chaos, cutoff 1760, standard not bo3)
 ```json
