@@ -395,7 +395,11 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - `release.js build` twice, rows and `--aggregates-only` (M-A..M-C): byte-identical. Split counts: M-A 230/98, M-B 325/139,
   M-C 286/123 (explore/confirm). Throwaway clone: freeze (random 128-bit seed) + verify for rows (12 files) and aggregates
   (9 files) reproduce byte for byte; the record's split sha256 equals the file checksum; a tampered tag fails verify.
-- Not yet: drop rounds in the committed data (needs a `refetch_online` run after the current backfill).
+- Backfill run 45338020325 (all online events) hit the 300-min build limit inside M-C (M-A 1 h 46 min, M-B 2 h 31 min):
+  Limitless spacing 6.5 s x 3 requests per event. The salt was set (log: `METALENS_ID_SALT: ***`, no missing-salt warning).
+  Fix: `--refetch-online=<regs>` + string workflow input (one regulation per run), cache restore/save split so a failed
+  build still saves its downloads. A bad regulation fails before any request.
+- Not yet: drop rounds and pids in the committed data (per-regulation refetch runs).
 
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,

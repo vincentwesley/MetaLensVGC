@@ -6,9 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       refetch_online:
-        description: 'Rebuild every online (Limitless) event from the source (one-time pid backfill; slower)'
-        type: boolean
-        default: false
+        # Limitless allows ~50 requests / 5 min (3 per event): one regulation is ~2-2.5 h, all of them ~6.5 h (over the
+        # 300-min build limit), so run one regulation per dispatch.
+        description: 'Rebuild online (Limitless) events from the source for these regulations (e.g. M-A, or M-A,M-B; "all"); empty = normal refresh'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -40,7 +42,8 @@ jobs:
         id: cache
         # data-raw/ is the gitignored HTTP cache. Entries carry their own TTL
         # (scripts/lib/http.js), so only permanent (official events) entries stay valid.
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        # Restore and save are separate steps so a failed or timed-out build still saves what it fetched.
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data-raw
           key: data-raw-${{ github.run_id }}
@@ -58,10 +61,20 @@ jobs:
         env:
           # Salt for the pseudonymous player ids (scripts/lib/ids.js). Keep it fixed: a new salt gives new ids.
           METALENS_ID_SALT: ${{ secrets.METALENS_ID_SALT }}
-          REFETCH_ONLINE: ${{ inputs.refetch_online && '1' || '' }}
+          REFETCH_ONLINE: ${{ inputs.refetch_online }}
         run: |
           set -o pipefail
-          { echo "== Build data"; npm run data -- ${REFETCH_ONLINE:+--refetch-online}; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
+          ARGS=()
+          if [ -n "$REFETCH_ONLINE" ]; then ARGS+=("--refetch-online=${REFETCH_ONLINE// /}"); fi
+          { echo "== Build data"; npm run data -- "${ARGS[@]}"; } 2>&1 | tee -a "$RUNNER_TEMP/refresh.log"
+
+      - name: Save HTTP cache
+        id: cache-save
+        if: always() && steps.cache.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data-raw
+          key: data-raw-${{ github.run_id }}
 
       - name: Run tests
         id: test

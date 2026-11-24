@@ -325,7 +325,9 @@ These skills are available in every session. The user never types slash commands
   Team row index 8 = `pid` = HMAC-SHA256(`METALENS_ID_SALT`, key) first 16 hex, index 9 = namespace code. The salt is the
   GitHub secret `METALENS_ID_SALT`; never change it (new salt = new ids). No salt -> pid null + a warning, not a failure.
   Rows are de-duplicated per event by source key, never by display name. Reused rows keep their pid; `--refetch-online`
-  rebuilds every online event (one-time backfill; workflow_dispatch input `refetch_online`).
+  rebuilds online events (one-time backfill; workflow_dispatch input `refetch_online` = regulation list like `M-A`, or `all`).
+  Limitless allows ~50 requests / 5 min (6.5 s spacing, 3 requests per event), so all of M-A..M-C is ~6.5 h, over the
+  300-min build limit: dispatch one regulation per run (~2-2.5 h). The HTTP cache is saved even when the build fails.
 - **Matches** `[a, b, result, round, phase, bo, games?]`; result 3 = no result (0 = tie). Official phase: a round is top cut
   when every paired player made top cut; official bo is never published (0). Readers treat 0 and 3 alike ("no winner").
 - **New files**: `quality-<REG>.json` (per-event drops, pairing reasons, normalization, file counts; carried over for reused

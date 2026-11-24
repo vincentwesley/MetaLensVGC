@@ -4,7 +4,7 @@
 // tournaments and finished ranked seasons already present in public/data are reused rather
 // than refetched.
 //
-// Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--no-fetch-official] [--max-tournaments N] [--refetch-online]
+// Usage: node scripts/build-data.js [--reg M-C] [--no-fetch-limitless] [--no-fetch-official] [--max-tournaments N] [--refetch-online[=all|M-A,M-B]]
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { REGULATIONS, listedRegs, pickCurrent } from './lib/regs.js';
@@ -37,7 +37,15 @@ function parseArgs(argv) {
   const args = { reg: null, noFetchLimitless: false, noFetchOfficial: false, maxTournaments: null, refetchOnline: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--reg') args.reg = argv[++i];
-    else if (argv[i] === '--refetch-online') args.refetchOnline = true; // rebuild every online event from the source (pids, lost duplicates)
+    // rebuild online events from the source (pids, drop rounds, lost duplicates): every regulation, or only the listed ones.
+    // Limitless allows ~50 requests / 5 min (3 per event), so all of M-A..M-C takes ~6.5 h: split it per regulation in CI.
+    else if (argv[i] === '--refetch-online' || argv[i] === '--refetch-online=all') args.refetchOnline = true;
+    else if (argv[i].startsWith('--refetch-online=')) {
+      const regs = argv[i].slice('--refetch-online='.length).split(',').filter(Boolean);
+      const bad = regs.filter((r) => !VGC_IDS.includes(r));
+      if (bad.length || !regs.length) throw new Error(`--refetch-online: unknown regulation(s) ${bad.join(', ') || '(none)'}; use all or ${VGC_IDS.join(',')}`);
+      args.refetchOnline = new Set(regs);
+    }
     else if (argv[i] === '--no-fetch-limitless') args.noFetchLimitless = true;
     else if (argv[i] === '--no-fetch-official') args.noFetchOfficial = true; // dev runs: reuse committed official events (no rosters)
     else if (argv[i] === '--max-tournaments') args.maxTournaments = Number(argv[++i]);
@@ -69,6 +77,8 @@ async function main() {
     console.log(s);
   };
 
+  const refetches = (reg) => args.refetchOnline === true || (args.refetchOnline instanceof Set && args.refetchOnline.has(reg));
+
   // 1) Load whatever already exists, so completed tournaments are reused.
   const existingFiles = {};
   const existingQuality = {};
@@ -80,7 +90,7 @@ async function main() {
     // online events from the last 7 days may have been captured mid-tournament: refetch them;
     // --refetch-online rebuilds every online event (one-time backfill of pids and of teams lost to name de-duplication)
     rawEventsByReg[reg] = decodeExistingTeamsFile(existingFiles[reg])
-      .filter((e) => e.source !== 'limitless' || (!args.refetchOnline && e.date < RECENT_BEFORE.slice(0, 10)));
+      .filter((e) => e.source !== 'limitless' || (!refetches(reg) && e.date < RECENT_BEFORE.slice(0, 10)));
   }
   // `fetched`: the day an event was first built into MetaLens (kept across rebuilds; null for events built before v1.7.0)
   const firstFetched = new Map();
