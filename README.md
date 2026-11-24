@@ -101,6 +101,9 @@ labels, official-event rosters) and a generated `CODEBOOK.md`, into `data-export
   species-only rosters for every player and every pairing (`rosters-<REG>.json`), since full lists exist for top
   finishers only.
 - **Quality**: `quality-<REG>.json` records what was kept, dropped and normalized per event.
+- **Country**: the internal `data-export/` keeps each sheet's country for analysis; releases never publish it as listed.
+  They drop it (default) or, with `--country region`, group it into UN M49 world regions, with a region shown only
+  when 5+ lists at the same event share it. `RELEASE.json` records the policy used.
 - **Archetype labels** come from a versioned, sourced rule set (`ARCHETYPE_RULESET` in `public/js/lib/archetypes.js`).
 - **Frozen releases**: `npm run release -- freeze data-v1.0` builds `dist/data-v1.0/` (CSVs, codebook, quality files,
   README, CITATION.cff, .zenodo.json, RELEASE.json with SHA-256 checksums), commits `releases/data-v1.0.json` and tags

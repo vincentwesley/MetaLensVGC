@@ -341,6 +341,11 @@ These skills are available in every session. The user never types slash commands
   region (test/archetype-ruleset.test.js fails on any rule change until version + changes + fingerprint are updated), and
   a `source` per rule: a cited page with quote, or "MetaLens definition (Vin's Atelier)". Never invent a citation.
   Labels are computed at read time, so a rule change relabels every regulation: that is why the version is in the manifest.
+- **Country policy** (`scripts/lib/geo-regions.js`, v1.8.1; research plan data-rights rule): country + event + placing can
+  re-identify a player from a small country, so a release never carries the sheet's country. `release.js --country drop`
+  (default: no column) | `region` (UN M49 regions, Americas split; `suppressed` when < `REGION_MIN_GROUP` (5) lists at the
+  event share it). `raw` only for the internal `npm run data` export (data-export/, gitignored); release.js refuses it.
+  `RELEASE.json.country` records the policy; `verify` rebuilds with it. The dashboard's country data and section are untouched.
 - Credit all research work to Vincent Wesley (Vin's Atelier): CITATION.cff, .zenodo.json, codebook, README.
 - Known: in-game ranked season M7 started before 2026-12-02 (snapshot 2026-11-24), so `regForDate` files it under M-C,
   not M-D (seasons are classified by start date).

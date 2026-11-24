@@ -376,6 +376,15 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Visual (1280px, pro dark): filter bar wraps Mega Stones after Placement; bars + table; library pills + badge.
 - 407 unit, 69 e2e green.
 
+### v1.8.1 (country policy for releases), 2026-11-24
+- Unit: every CSV header = codebook for drop / region / raw; drop (default) has no country or region column anywhere;
+  every country code in committed M-A..M-C data has a region (76 codes incl. the sheet spelling UK, IM); no published
+  (event, region) group under 5; region export has no ISO code; deterministic; suppression by event, unmapped codes,
+  raw refused for releases; parseArgs default `drop`; committed release records must carry a release policy.
+- `release.js build` twice per policy (M-A..M-C, --allow-no-pids): byte-identical. Region: 79,128 rows = 18,542 Northern
+  America, 24,693 Europe, 12,548 Latin America, 10,025 Asia, 334 Oceania, 26 Africa, 4,041 suppressed, 8,919 none.
+- Throwaway clone: `freeze` + `verify` for `--country region` and the default: all 11 files reproduce byte for byte.
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

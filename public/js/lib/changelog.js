@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.8.1', date: '2026-11-24', title: 'Safer research releases',
+    notes: [
+      { tag: 'IMPROVED', text: 'Published research data no longer lists each team’s country: it is left out, or grouped into world regions with small groups hidden, so players from small countries cannot be picked out. Meta by country on this site is unchanged.' },
+    ],
+  },
+  {
     version: '1.8.0', date: '2026-11-24', title: 'Teams with more than one plan',
     notes: [
       { tag: 'NEW', text: 'Archetypes count every archetype a team matches, so a Tailwind team that also sets Sun shows up under both. The split is a bar list of “share of teams matching” (it can add up past 100%); “Primary only” brings back the one-archetype donut.' },

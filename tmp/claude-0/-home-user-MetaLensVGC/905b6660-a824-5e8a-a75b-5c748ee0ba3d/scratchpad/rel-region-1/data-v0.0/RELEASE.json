@@ -1,0 +1,82 @@
+{
+  "version": "data-v0.0",
+  "regulations": [
+    "M-A",
+    "M-B",
+    "M-C"
+  ],
+  "commit": "bf051e1a7994ad29abdd9aa8b3d526bccc57de24",
+  "dataGenerated": "2026-11-23T07:44:29.710Z",
+  "pids": false,
+  "archetypeRules": {
+    "version": "1.0",
+    "fingerprint": "c98b06a4254ae8b6"
+  },
+  "country": {
+    "policy": "region",
+    "scheme": "UN M49 regions (unstats.un.org/unsd/methodology/m49), with the Americas split into its M49 sub-regions Northern America and Latin America and the Caribbean",
+    "minGroup": 5,
+    "suppressed": 4041,
+    "unmapped": 0
+  },
+  "sources": [
+    {
+      "id": "limitless",
+      "name": "Limitless Play (online tournaments)",
+      "url": "https://play.limitlesstcg.com"
+    },
+    {
+      "id": "limitlessvgc",
+      "name": "limitlessvgc.com (official events, team lists)",
+      "url": "https://limitlessvgc.com"
+    },
+    {
+      "id": "limitlessvgc-standings",
+      "name": "standings.limitlessvgc.com (official standings, pairings, species-only teams)",
+      "url": "https://standings.limitlessvgc.com"
+    }
+  ],
+  "eventDates": {
+    "first": "2026-04-08",
+    "last": "2026-11-20"
+  },
+  "fetchedDates": {
+    "first": null,
+    "last": null,
+    "eventsWithoutDate": 1201
+  },
+  "counts": {
+    "M-A": {
+      "events": 328,
+      "teams": 24057,
+      "matches": 64335
+    },
+    "M-B": {
+      "events": 464,
+      "teams": 33316,
+      "matches": 85114
+    },
+    "M-C": {
+      "events": 409,
+      "teams": 21755,
+      "matches": 52132
+    }
+  },
+  "files": {
+    ".zenodo.json": "08b920132fd85d83511e85fa854f203ac4c140d922880161c8c46af82a8db615",
+    "CITATION.cff": "743e970e074a88de761d009ebd4670deceed7b1ea9d0eaf055ecbbeecb8d89fc",
+    "CODEBOOK.md": "a9b3d7366dd3d0fb7c645739c516d3a291cf8cf498b831ca3761eb8743c0add6",
+    "README.md": "c304ad2de38f36d837f5b7e7998ba6c3fc223420cd292edabdbe94a0ae1fa5bd",
+    "events.csv": "ed1a4068cb4f8b77af82c9e587a27931be4062f40a57e39b40ad5e4274c23813",
+    "matches.csv": "983486c0ab4999d2f050f1de34dc1a7cbda9963a30b4a93977e53eb8ad3696f7",
+    "roster_matches.csv": "2ada5db4607ed2b6e914a9db8f97c4b74ab567a6eab2ffe6ce0f1c839a1f2291",
+    "roster_players.csv": "e8dcc0682b958f31c15a3c5d58c37fef64d8f4748534ed165f15b0305dc76616",
+    "team_archetypes.csv": "dc081f1318014e112222f6bff2b09040c65c9fdfe7e1f18631c2286d044a700a",
+    "team_members.csv": "fbaf6e152b2a0f871bf551c55669065df93ab4f361854ba6c482f770f4f58fcd",
+    "teams.csv": "8a7ba9b90ba772596ceea5e2ff161ec25df7920beef429277a3f7378911d5f38"
+  },
+  "author": {
+    "name": "Wesley, Vincent",
+    "affiliation": "Vin's Atelier"
+  }
+}

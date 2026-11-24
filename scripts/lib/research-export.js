@@ -6,6 +6,7 @@
 // ladder files. No display names: players appear only as salted pseudonymous ids (pid).
 import { decode } from '../../public/js/lib/aggregate.js';
 import { ARCHETYPES, ARCHETYPE_RULESET } from '../../public/js/lib/archetypes.js';
+import { DEFAULT_COUNTRY_POLICY, REGIONS, REGION_MIN_GROUP, REGION_SCHEME, checkPolicy, countryColumn } from './geo-regions.js';
 
 const RESULT = '1 = side A won, 2 = side B won, 0 = tie, 3 = no result (double loss / unreported). Rows built before ' +
   'MetaLens v1.7.0 use 0 for "tie or unknown".';
@@ -51,7 +52,7 @@ export const TABLES = {
       ['wins', 'integer', 'Match wins as published (official events: from the standings site).'],
       ['losses', 'integer', 'Match losses as published.'],
       ['ties', 'integer', 'Ties as published (the official standings site publishes none: 0).'],
-      ['country', 'string', 'ISO 3166-1 alpha-2 country as published; empty if none.'],
+      // + the country column of the chosen policy (tablesFor): none, `region` or `country`.
     ],
   },
   'team_members.csv': {
@@ -138,20 +139,42 @@ const cell = (v) => {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-function table(name) {
-  const cols = TABLES[name].columns.map((c) => c[0]);
+// The teams.csv column each country policy adds ('drop' adds none). See scripts/lib/geo-regions.js.
+const COUNTRY_COLUMN = {
+  region: ['region', 'string', `World region of the country on the sheet: ${Object.keys(REGIONS).join(' | ')} (see "Country policy"); `
+    + `"suppressed" when fewer than ${REGION_MIN_GROUP} full lists at the event share that region; empty if no country was published.`],
+  raw: ['country', 'string', 'INTERNAL EXPORT ONLY, never released: ISO 3166-1 alpha-2 country as published; empty if none.'],
+};
+
+/** TABLES with the teams.csv country column of `policy` (default 'drop': no country column at all). */
+export function tablesFor(policy = DEFAULT_COUNTRY_POLICY) {
+  checkPolicy(policy);
+  if (!COUNTRY_COLUMN[policy]) return TABLES;
+  const teams = TABLES['teams.csv'];
+  return { ...TABLES, 'teams.csv': { ...teams, columns: [...teams.columns, COUNTRY_COLUMN[policy]] } };
+}
+
+function table(tables, name) {
+  const cols = tables[name].columns.map((c) => c[0]);
   const lines = [cols.join(',')];
   return { add: (row) => lines.push(cols.map((c) => cell(row[c])).join(',')), text: () => `${lines.join('\n')}\n` };
 }
 
 /**
  * regs: [{ reg, teams, rosters? }] (parsed teams-/rosters-<REG>.json), dex: dex.json.
- * Returns { '<file>.csv': text, ... } in a fixed order, deterministic for the same input.
+ * opts.country: 'drop' (default) | 'region' | 'raw' (internal only), see geo-regions.js.
+ * Returns { '<file>.csv': text, ... } in a fixed order, deterministic for the same input, with a non-enumerable
+ * `countryStats` ({ policy, suppressed?, unmapped? } summed over regs) for the release record.
  */
-export function buildExport(regs, dex) {
-  const t = Object.fromEntries(Object.keys(TABLES).map((n) => [n, table(n)]));
+export function buildExport(regs, dex, { country = DEFAULT_COUNTRY_POLICY } = {}) {
+  const tables = tablesFor(country);
+  const t = Object.fromEntries(Object.keys(tables).map((n) => [n, table(tables, n)]));
+  const countryStats = { policy: country };
   for (const { reg, teams: file, rosters } of regs) {
     const { teams, events, matches } = decode(file, dex);
+    const col = countryColumn(teams, country);
+    for (const k of ['suppressed', 'unmapped']) if (k in col.stats) countryStats[k] = (countryStats[k] || 0) + col.stats[k];
+    const colName = COUNTRY_COLUMN[country]?.[0];
     const lists = new Map();
     for (const tm of teams) lists.set(tm.ev.id, (lists.get(tm.ev.id) || 0) + 1);
     for (const ev of events) {
@@ -160,17 +183,17 @@ export function buildExport(regs, dex) {
         cut: ev.cut, rounds: ev.rounds, fetched: ev.fetched });
     }
     const tid = (i) => `${reg}-${i}`;
-    for (const tm of teams) {
+    teams.forEach((tm, k) => {
       const row = file.teams[tm.i];
       t['teams.csv'].add({ team_id: tid(tm.i), event_id: tm.ev.id, regulation: reg, pid: row[8], id_namespace: row[9] ?? 0,
-        placing: tm.placing, top_cut: tm.topCut, wins: tm.w, losses: tm.l, ties: tm.t, country: tm.country });
+        placing: tm.placing, top_cut: tm.topCut, wins: tm.w, losses: tm.l, ties: tm.t, ...(colName ? { [colName]: col.values[k] } : {}) });
       tm.mons.forEach((m, j) => {
         t['team_members.csv'].add({ team_id: tid(tm.i), slot: j + 1, species: m.s, form: m.k, item: m.item, ability: m.ability,
           move1: m.moves[0], move2: m.moves[1], move3: m.moves[2], move4: m.moves[3], holds_own_mega_stone: m.mega });
       });
       t['team_archetypes.csv'].add({ team_id: tid(tm.i), ruleset_version: ARCHETYPE_RULESET.version, archetypes: tm.arch.join('|'),
         primary: tm.arch[0], mega_stones_carried: tm.megas.length });
-    }
+    });
     matches.forEach((m, i) => {
       t['matches.csv'].add({ match_id: `${reg}-m${i}`, event_id: teams[m.a].ev.id, team_a: tid(m.a), team_b: tid(m.b), result: m.result,
         round: m.round, phase: m.phase, best_of: m.bo, games_a: m.games?.[0], games_b: m.games?.[1] });
@@ -188,11 +211,35 @@ export function buildExport(regs, dex) {
       }
     }
   }
-  return Object.fromEntries(Object.entries(t).map(([n, x]) => [n, x.text()]));
+  const out = Object.fromEntries(Object.entries(t).map(([n, x]) => [n, x.text()]));
+  Object.defineProperty(out, 'countryStats', { value: countryStats, enumerable: false });
+  return out;
+}
+
+function countrySection(policy) {
+  const out = ['## Country policy', ''];
+  if (policy === 'drop') {
+    out.push('Country is not included: teams.csv has no country or region column. The sheet\'s country, with the event and',
+      'placing, could re-identify a player from a small country. (MetaLens uses the country internally, for example on the',
+      "dashboard's Meta by country section; it is left out of the release on purpose.)", '');
+  } else if (policy === 'region') {
+    out.push(`The sheet's ISO 3166-1 alpha-2 country is grouped into world regions (${REGION_SCHEME}) in teams.csv \`region\`.`,
+      `A region is published only when at least ${REGION_MIN_GROUP} full lists at the same event share it; otherwise the cell`,
+      'reads "suppressed", so a small group cannot point back to a country and from there to a player. Taiwan (not listed',
+      'by M49) is grouped with Eastern Asia, Kosovo (XK) with Southern Europe, and the sheet spelling UK with GB.', '',
+      '| region | label | ISO 3166-1 alpha-2 codes |', '|---|---|---|');
+    for (const [id, r] of Object.entries(REGIONS)) out.push(`| ${id} | ${r.label} | ${r.codes} |`);
+    out.push('');
+  } else {
+    out.push('INTERNAL EXPORT: teams.csv `country` is the country as published. Never publish this export; releases',
+      '(scripts/release.js) only accept the drop or region policy.', '');
+  }
+  return out;
 }
 
 /** CODEBOOK.md, generated from TABLES and the archetype rule set (so it can't drift from the CSVs). */
-export function codebook({ release = null, regs = [] } = {}) {
+export function codebook({ release = null, regs = [], country = DEFAULT_COUNTRY_POLICY } = {}) {
+  const tables = tablesFor(country);
   const out = [];
   out.push('# MetaLens VGC research data: codebook', '');
   out.push("Compiled by Vincent Wesley (Vin's Atelier) for MetaLens VGC (metalensvgc.pages.dev).");
@@ -201,13 +248,13 @@ export function codebook({ release = null, regs = [] } = {}) {
   out.push('', '## Scope and caveats', '',
     '- Sources: Limitless Play (play.limitlesstcg.com, online tournaments), limitlessvgc.com and standings.limitlessvgc.com (official events).',
     '- Not included: Pokémon Champions Battle Data (championsbattledata.com) in-game ranked data, whose API terms forbid redistribution, and Smogon ladder statistics.',
-    '- Players are pseudonymized, not anonymous: no names are included, but the source pages are public, so a team can be traced back through event, placing and country.',
+    '- Players are pseudonymized, not anonymous: no names are included, but the source pages are public, so a team can be traced back through event and placing. Country: see "Country policy".',
     '- Official events publish full team lists for top finishers only (`coverage_kind = published-subset`); use roster_players.csv and roster_matches.csv for complete, species-level data on those events.',
     '- Archetype labels are computed from the full lists with the rule set below; they are not part of the source data.',
     '- Ids ending in a row number (team_id, match_id, roster_id) are stable within one release only; join across releases on event_id + pid.',
     '- Text is exactly as published (UTF-8, RFC 4180 quoting). A cell starting with = + - or @ is left as is: import as text, not into a spreadsheet that evaluates formulas.',
-    '');
-  for (const [name, t] of Object.entries(TABLES)) {
+    '', ...countrySection(country));
+  for (const [name, t] of Object.entries(tables)) {
     out.push(`## ${name}`, '', t.desc, '', '| column | type | description |', '|---|---|---|');
     for (const [c, type, d] of t.columns) out.push(`| \`${c}\` | ${type} | ${d.replace(/\|/g, '\\|')} |`);
     out.push('');
@@ -225,8 +272,11 @@ export function codebook({ release = null, regs = [] } = {}) {
   return out.join('\n');
 }
 
-/** Reads the committed files for `regs` from dataDir and writes the CSVs + CODEBOOK.md into outDir. Returns file names. */
-export async function writeExport(dataDir, outDir, regs, { release = null } = {}) {
+/**
+ * Reads the committed files for `regs` from dataDir and writes the CSVs + CODEBOOK.md into outDir.
+ * Returns { files: names, country: countryStats }.
+ */
+export async function writeExport(dataDir, outDir, regs, { release = null, country = DEFAULT_COUNTRY_POLICY } = {}) {
   const { readFile, writeFile, mkdir } = await import('node:fs/promises');
   const path = await import('node:path');
   const read = async (f) => JSON.parse(await readFile(path.join(dataDir, f), 'utf8'));
@@ -235,7 +285,8 @@ export async function writeExport(dataDir, outDir, regs, { release = null } = {}
   const input = [];
   for (const reg of regs) input.push({ reg, teams: await read(`teams-${reg}.json`), rosters: await readIf(`rosters-${reg}.json`) });
   await mkdir(outDir, { recursive: true });
-  const files = { ...buildExport(input, dex), 'CODEBOOK.md': codebook({ release, regs }) };
+  const csv = buildExport(input, dex, { country });
+  const files = { ...csv, 'CODEBOOK.md': codebook({ release, regs, country }) };
   for (const [name, text] of Object.entries(files)) await writeFile(path.join(outDir, name), text);
-  return Object.keys(files);
+  return { files: Object.keys(files), country: csv.countryStats };
 }

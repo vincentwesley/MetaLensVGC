@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this data, please cite it as below."
+type: dataset
+title: "MetaLens VGC research data data-v0.0"
+version: "data-v0.0"
+authors:
+  - family-names: "Wesley"
+    given-names: "Vincent"
+    affiliation: "Vin's Atelier"
+url: "https://metalensvgc.pages.dev"
+repository-code: "https://github.com/vincentwesley/MetaLensVGC"

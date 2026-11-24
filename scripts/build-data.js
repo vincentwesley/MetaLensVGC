@@ -283,9 +283,10 @@ async function main() {
   }
   await printReport(DATA_DIR);
 
-  // 9) Research export (CSV + codebook) from the files just written; gitignored, scripts/release.js freezes it.
-  const exported = await writeExport(DATA_DIR, path.join(process.cwd(), 'data-export'), VGC_IDS);
-  log(`research export: data-export/ (${exported.join(', ')})`);
+  // 9) INTERNAL research export (CSV + codebook) from the files just written, gitignored. It keeps the country as
+  // published for Vin's own analysis ('raw'); releases are built by scripts/release.js, which drops or groups it.
+  const exported = await writeExport(DATA_DIR, path.join(process.cwd(), 'data-export'), VGC_IDS, { country: 'raw' });
+  log(`research export (internal, raw country): data-export/ (${exported.files.join(', ')})`);
 }
 
 main().catch((err) => {
