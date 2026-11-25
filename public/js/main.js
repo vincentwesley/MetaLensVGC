@@ -157,6 +157,8 @@ async function boot() {
     sprite: (key, opts) => sprite(key, dex, opts),
     spriteUrl: (key, opts) => spriteUrl(key, dex, opts),
     openDrawer: (key) => drawerApi.open(key),
+    // Open a Showdown player in the Players & replays lookup (from anywhere, e.g. a deep-dive "Top users" row).
+    showPlayer: (name) => { drawerApi.close(); document.dispatchEvent(new CustomEvent('metalens:player', { detail: { name } })); },
     scan: (paste) => mounted.find((m) => m.id === 'scanner')?.api?.load?.(paste), // load + scan a team in the Scanner
     teamLabel: (id) => { // "Player · Event" for a team chip, from the loaded regulation
       const t = lastView?.regTeams.find((x) => x.id === id);

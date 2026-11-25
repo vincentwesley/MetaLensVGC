@@ -4,7 +4,7 @@
 // 2. Player lookup: live from Pokémon Showdown via ctx.lookupPlayer (profile + recent public replays).
 // 3. Top-ladder replay stats from recent rated replays of the top players (showdown-replays-<REG>.json):
 //    win rate (Wilson CI), how often each Pokémon is used in battle and leads, and the most common lead pairs.
-import { aggregateReplays, toUserId } from '../lib/replays.js';
+import { aggregateReplays, toUserId, bestUsers, BEST_USER_MIN_GAMES } from '../lib/replays.js';
 import { clickHint } from '../ui/meta.js';
 
 const TOP_ROWS = 25;
@@ -63,8 +63,13 @@ export default {
     const look = card('Player lookup');
     const stats = card('Top-ladder replay stats');
     const leads = card('Most common leads (top ladder)');
-    for (const x of [lad, look]) x.c.classList.add('sb-full');
-    el.append(look.c, lad.c, stats.c, leads.c);
+    const best = card('Best user of each Pokémon');
+    for (const x of [lad, look, best]) x.c.classList.add('sb-full');
+    el.append(look.c, lad.c, best.c, stats.c, leads.c);
+    // best-user map per replay sample (one pass, memoized per file)
+    const bestCache = new WeakMap();
+    const bestOf = (R) => { if (!R?.games) return new Map(); if (!bestCache.has(R)) bestCache.set(R, bestUsers(R.games)); return bestCache.get(R); };
+    const SAMPLE_SRC = (R) => `Rated public replays of the top ${R.sample.players} · last ${R.sample.windowDays} days · shared games only · ${BEST_USER_MIN_GAMES}+ games`;
 
     // --- lookup form (built once) ---
     const form = elm('form', 'pl-form');
@@ -102,6 +107,13 @@ export default {
       renderPlayer(res, view);
     }
     form.addEventListener('submit', (e) => { e.preventDefault(); lookup(input.value.trim()); });
+    // Another section (deep dive "Top users") asks for a player: look them up here and bring the card into view.
+    document.addEventListener('metalens:player', (e) => {
+      const name = String(e.detail?.name || '').slice(0, 30);
+      if (!name) return;
+      look.c.scrollIntoView({ block: 'start' });
+      lookup(name);
+    });
 
     function renderPlayer(res, view) {
       const fmt = view.regMeta?.format;
@@ -127,6 +139,21 @@ export default {
       lookOut.appendChild(head);
       if (tracked?.peakEloManual || tracked?.bestRankManual) lookOut.appendChild(elm('p', 'ddv-note', `* Recorded by hand from the Showdown ladder (${(tracked.manual || []).map((m) => `${m.date}: #${m.rank}, ${m.elo} Elo`).join('; ')}). Other peaks come from MetaLens' daily snapshots since ${since}.`));
       if (!tracked) lookOut.appendChild(elm('p', 'ddv-note', since ? `Not in the ${label} top 500 in any MetaLens snapshot since ${since}, so no peak is recorded.` : 'Peak tracking starts with the first daily snapshot.'));
+      // Signature Pokémon: where this player is the best user in the top-ladder replay sample
+      const sig = [...bestOf(view.players?.replays)].filter(([, r]) => r.u === res.id && r.winPct >= 0.5).sort((a, b) => b[1].games - a[1].games); // winning records only
+      if (sig.length) {
+        const line = elm('div', 'pl-sig');
+        line.appendChild(elm('span', 'pl-sub', 'Best user of'));
+        for (const [key, r] of sig.slice(0, 8)) {
+          const b = elm('button', 'pl-mon');
+          b.type = 'button';
+          b.title = `Best ${key} user in the top-ladder replay sample: ${r.wins}-${r.losses} with it`;
+          b.append(ctx.sprite(key, { size: 'sm' }), elm('span', null, key), elm('span', 'pl-mon__n', `${r.wins}-${r.losses}`));
+          b.addEventListener('click', () => ctx.openDrawer(key));
+          line.appendChild(b);
+        }
+        lookOut.appendChild(line);
+      }
 
       // most used Pokémon in their recent public replays
       const mine = (g, i) => g.p[i].u === res.id;
@@ -349,12 +376,66 @@ export default {
       }
     }
 
+    // --- best user of each Pokémon ---
+    const bestSearch = elm('input', 'pl-best-search');
+    bestSearch.type = 'search';
+    bestSearch.placeholder = 'Find a Pokémon…';
+    bestSearch.setAttribute('aria-label', 'Find a Pokémon in the best-user table');
+    let bestAll = false;
+    bestSearch.addEventListener('input', () => { if (lastView) renderBest(lastView); });
+    function renderBest(view) {
+      for (const n of [...best.body.childNodes]) if (n !== bestSearch) n.remove();
+      const R = view.players?.replays;
+      if (!R?.games?.length) { ctx.meta(best.meta, { source: 'Showdown replays' }); empty(best.body, 'No replay sample yet'); return; }
+      ctx.meta(best.meta, { source: SAMPLE_SRC(R), n: R.games.length, unit: 'games' });
+      if (!best.body.contains(bestSearch)) best.body.appendChild(bestSearch);
+      best.body.insertBefore(clickHint(`Who wins most with each Pokémon: the player with the best win rate with it, weighted by how often they used it (low end of the 95% range), among players with ${BEST_USER_MIN_GAMES}+ games with it. Click a player: look them up; a Pokémon: details.`, { auto: false }), bestSearch);
+      const map = bestOf(R);
+      const used = new Map(aggregateReplays(R.games).mons.map((m) => [m.key, m.games]));
+      const test = view.speciesFilter?.test;
+      const q = toUserId(bestSearch.value);
+      const rows = [...map].filter(([k]) => (!test || test(k)) && (!q || toUserId(k).includes(q)))
+        .sort((a, b) => (used.get(b[0]) || 0) - (used.get(a[0]) || 0) || a[0].localeCompare(b[0]));
+      if (!rows.length) { empty(best.body, 'No Pokémon with a qualifying user', q ? 'Try another name.' : `No player has ${BEST_USER_MIN_GAMES}+ sampled games with the Pokémon in your filters.`); return; }
+      const ladder = view.players?.ladder;
+      const { wrap, tbody } = table([['Pokémon'], ['Best user'], ['Record with it', 'num'], ['Win %', 'num'], ['Ladder rank', 'num']]);
+      for (const [key, r] of bestAll ? rows : rows.slice(0, 40)) {
+        const tr = elm('tr');
+        const mon = elm('button', 'pl-link pl-best-mon');
+        mon.type = 'button';
+        mon.append(ctx.sprite(key, { size: 'xs' }), ` ${key}`);
+        mon.addEventListener('click', () => ctx.openDrawer(key));
+        const tdM = td('');
+        tdM.appendChild(mon);
+        const who = elm('button', 'pl-link', ladder?.players?.[r.u]?.name || r.name); // the ladder's spelling when known
+        who.type = 'button';
+        who.addEventListener('click', () => { look.c.scrollIntoView({ block: 'start' }); lookup(who.textContent); });
+        const tdU = td('');
+        tdU.appendChild(who);
+        const p = ladder?.players?.[r.u];
+        const now = p?.h?.at(-1);
+        const rank = now && now[0] === ladder.tracking.last ? `#${now[1]} (${now[2]})` : '—';
+        const rk = td(rank, 'num');
+        if (rank === '—') rk.dataset.tip = 'Not in today’s top 500';
+        tr.append(tdM, tdU, td(`${r.wins}-${r.losses}`, 'num'), td(r.winPct == null ? '—' : ctx.fmt.pct(r.winPct), 'num'), rk);
+        tbody.appendChild(tr);
+      }
+      best.body.appendChild(wrap);
+      if (rows.length > 40) {
+        const more = elm('button', 'lib-btn smp-more', bestAll ? 'Show 40' : `Show all ${rows.length}`);
+        more.type = 'button';
+        more.addEventListener('click', () => { bestAll = !bestAll; renderBest(view); });
+        best.body.appendChild(more);
+      }
+    }
+
     return {
       update(view) {
         const changed = lastView?.reg !== view.reg;
         lastView = view;
-        if (changed) { lookOut.textContent = ''; showAll = false; }
+        if (changed) { lookOut.textContent = ''; showAll = false; bestAll = false; bestSearch.value = ''; }
         renderLadder(view);
+        renderBest(view);
         renderStats(view);
       },
       highlight() {},

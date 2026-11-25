@@ -449,6 +449,12 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Unit: replayPage. e2e (stubbed): All formats column, 51 -> next page via before=, Load all -> 53 "(all of them)",
   sharing note, Showdown link. 431 unit green.
 
+### v1.11.0 (best users), 2026-11-25
+- Unit: topUsers / bestUsers (8/9 outranks 2/2, min 3 games, per-Pokémon best). 432 unit green.
+- Real data (50-player sample): Cradily -> VinVGC 8-1 (88.9%), ladder #27; deep dive Top users lists him; a name click
+  closes the drawer and opens the lookup; lookup "Best user of" shows winning records only.
+- e2e: best-user table rows, deep dive Top users matches the table's best user; Showdown guard clean.
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

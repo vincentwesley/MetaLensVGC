@@ -24,3 +24,11 @@
 /* Long lists (Load all can bring hundreds) scroll inside the card instead of stretching the page. */
 .pl-replays .table-wrap { max-height: min(560px, 70vh); overflow: auto; }
 .pl-replays thead th { position: sticky; top: 0; background: var(--surface-2); z-index: 1; }
+
+/* Best users (v1.11.0) */
+.pl-sig { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: var(--space-2) 0; }
+.pl-sig .pl-sub { margin: 0 var(--space-2) 0 0; }
+.pl-best-search { width: 100%; max-width: 280px; margin-bottom: var(--space-2); }
+.pl-best-mon { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.ddv-users { margin: var(--space-2) 0; padding-left: 1.4em; display: grid; gap: 4px; }
+.ddv-users__rec { color: var(--ink-2); font-size: var(--fs-small); }

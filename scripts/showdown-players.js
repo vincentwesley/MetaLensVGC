@@ -14,9 +14,9 @@ import { REGULATIONS, SHOWDOWN_IDS } from './lib/regs.js';
 import { updateLadderHistory } from './lib/showdown-ladder.js';
 import { parseReplay } from '../public/js/lib/replays.js';
 
-export const REPLAY_PLAYERS = 50; // top players whose recent replays are sampled
+export const REPLAY_PLAYERS = 200; // top players whose recent replays are sampled (v1.11: 200 so niche Pokémon have users)
 export const WINDOW_DAYS = 30;
-export const MAX_GAMES = 800; // per format, newest first
+export const MAX_GAMES = 2000; // per format, newest first
 const DATA = path.join(process.cwd(), 'public', 'data');
 const readIf = async (f) => JSON.parse(await readFile(path.join(DATA, f), 'utf8').catch(() => 'null'));
 const log = (...a) => console.log(...a);

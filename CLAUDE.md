@@ -324,6 +324,12 @@ These skills are available in every session. The user never types slash commands
   (`ctx.listReplays` -> `data.js#listShowdownReplays`, Showdown search pages of 50 via `&before=<uploadtime>`,
   `replays.js#replayPage`), Stop, cap 40 pages (2,000) + "See them on Showdown". A replay is public only if one of the two
   players shared it (said on the page and in the replay-stats meta line).
+- v1.11.0 best users (owner: "best Cradily user is VinVGC"): `replays.js#topUsers` / `bestUsers` rank players who had a
+  Pokémon in their six in >= `BEST_USER_MIN_GAMES` (3) sampled games by the LOW end of the 95% Wilson range of their win
+  rate with it (8/9 beats 2/2), then games. Shown as: Players & replays "Best user of each Pokémon" (search, species
+  chips), lookup "Best user of" (winning records only), deep dive "Top users" (name -> `ctx.showPlayer(name)` closes the
+  drawer and fires `metalens:player`, which the players section looks up). Names use the ladder's spelling when known.
+  Replay sample widened to the top 200 players, <= 2,000 games per format.
 
 ### v1.4.0 notes
 - New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.

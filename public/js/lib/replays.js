@@ -111,3 +111,49 @@ export function replayPage(rows, size = 50) {
   const list = Array.isArray(rows) ? rows : [];
   return { rows: list.slice(0, size), before: list.length > size ? list[size - 1].uploadtime : null };
 }
+
+// --- best users of a Pokémon (v1.11.0) --------------------------------------------------------------------------
+// A player's record with a Pokémon = the sampled games where it was in their six (team preview), decided games only.
+// "Best user" ranking: lower end of the 95% Wilson range of that win rate (8 wins in 9 beats 2 in 2), then games,
+// then name. Players need minGames games with it.
+export const BEST_USER_MIN_GAMES = 3;
+
+function userRecords(games) {
+  const recs = new Map(); // key -> Map(userid -> rec)
+  for (const g of games || []) {
+    g.p.forEach((s, i) => {
+      for (const sp of s.six) {
+        let m = recs.get(sp);
+        if (!m) recs.set(sp, (m = new Map()));
+        const r = m.get(s.u) || { u: s.u, name: s.name || s.u, games: 0, wins: 0, losses: 0 };
+        r.games++;
+        if (g.w === i) r.wins++;
+        else if (g.w === 0 || g.w === 1) r.losses++;
+        m.set(s.u, r);
+      }
+    });
+  }
+  return recs;
+}
+
+function rankUsers(rows, minGames) {
+  return [...rows].filter((r) => r.games >= minGames).map((r) => {
+    const n = r.wins + r.losses;
+    return { ...r, winPct: n ? r.wins / n : null, lo: n ? wilson(r.wins, n)[0] : 0 };
+  }).sort((a, b) => b.lo - a.lo || b.games - a.games || a.u.localeCompare(b.u));
+}
+
+/** Players ranked as users of `key` (best first). */
+export function topUsers(games, key, { minGames = BEST_USER_MIN_GAMES } = {}) {
+  return rankUsers(userRecords(games).get(key)?.values() || [], minGames);
+}
+
+/** key -> the best user's row, for every Pokémon with at least one qualifying player. */
+export function bestUsers(games, { minGames = BEST_USER_MIN_GAMES } = {}) {
+  const out = new Map();
+  for (const [key, m] of userRecords(games)) {
+    const top = rankUsers(m.values(), minGames)[0];
+    if (top) out.set(key, top);
+  }
+  return out;
+}

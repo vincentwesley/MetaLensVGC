@@ -95,3 +95,20 @@ test('replayPage: 50 per page, the 51st row means more (before = the 50th upload
   assert.equal(replayPage(rows(50)).before, null);
   assert.deepEqual(replayPage(null), { rows: [], before: null });
 });
+
+test('best users: ranked by the low end of the Wilson range (8/9 beats 2/2), min games, per-Pokémon best', async () => {
+  const { topUsers, bestUsers } = await import('../public/js/lib/replays.js');
+  const g = (id, a, b, w, sixA = ['Cradily', 'Incineroar'], sixB = ['Tapu Fini']) => ({ id, p: [{ u: a, name: a.toUpperCase(), six: sixA }, { u: b, name: b, six: sixB }], w });
+  const games = [
+    ...Array.from({ length: 9 }, (_, i) => g(`v${i}`, 'vinvgc', `o${i}`, i < 8 ? 0 : 1)),
+    g('x1', 'lucky', 'ox1', 0), g('x2', 'lucky', 'ox2', 0),
+    ...Array.from({ length: 3 }, (_, i) => g(`m${i}`, 'mid', `om${i}`, i ? 0 : 1)),
+  ];
+  const top = topUsers(games, 'Cradily');
+  assert.deepEqual(top.map((r) => r.u), ['vinvgc', 'mid'], 'lucky (2 games) is under min games');
+  assert.deepEqual([top[0].games, top[0].wins, top[0].losses, top[0].name], [9, 8, 1, 'VINVGC']);
+  assert.ok(top[0].lo > topUsers(games, 'Cradily', { minGames: 2 }).find((r) => r.u === 'lucky').lo, '8/9 outranks 2/2');
+  const best = bestUsers(games);
+  assert.equal(best.get('Cradily').u, 'vinvgc');
+  assert.equal(best.get('Tapu Fini'), undefined, 'every Tapu Fini user has fewer than 3 games');
+});

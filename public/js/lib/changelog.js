@@ -1,6 +1,13 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.11.0', date: '2026-11-25', title: 'Best users of each Pokémon',
+    notes: [
+      { tag: 'NEW', text: 'See who plays each Pokémon best on the Showdown ladder: a “Best user of each Pokémon” table, a “Top users” card in every Pokémon’s details, and the Pokémon a player is best with in their lookup.' },
+      { tag: 'IMPROVED', text: 'The top-ladder replay sample now follows the top 200 players instead of 50, so rarer Pokémon have users too.' },
+    ],
+  },
+  {
     version: '1.10.1', date: '2026-11-25', title: 'Every public replay',
     notes: [
       { tag: 'NEW', text: 'Player lookup lists all of a player’s public replays: this format or every format, with Load more and Load all, and a link to the same list on Showdown. (A replay is public when either player shared it.)' },

@@ -1499,6 +1499,15 @@ test('Showdown v1.10.0: ladder top 100 with peaks (manual peak flagged), live pl
   await expect(out.locator('.pl-replays__status')).toContainText('Showing 53 public replays in every format (all of them)');
   // replay stats + leads
   await expect(sec.locator('.card', { hasText: 'Top-ladder replay stats' }).locator('tbody tr').first()).toBeVisible();
+  // best user of each Pokémon (v1.11.0): rows; a Pokémon opens the deep dive with a Top users card; a name opens the lookup
+  const best = sec.locator('.card', { hasText: 'Best user of each Pokémon' });
+  await expect(best.locator('tbody tr').first()).toBeVisible();
+  const bestName = (await best.locator('tbody tr').first().locator('td').nth(1).textContent()).trim();
+  await best.locator('tbody tr').first().locator('.pl-best-mon').click();
+  const tu = page.locator('#deepdive .card', { hasText: 'Top users' });
+  await expect(tu.locator('.ddv-users li').first()).toBeVisible();
+  await expect(tu.locator('.ddv-users li').first()).toContainText(bestName);
+  await page.keyboard.press('Escape');
   // VGC mode never shows the section
   await page.goto('/#reg=M-C');
   await page.reload();

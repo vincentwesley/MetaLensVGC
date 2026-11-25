@@ -11,6 +11,7 @@
 // is still met without new markup outside owned files.
 import { setsFor, setMon } from '../lib/samples.js';
 import { ladderMonthChange } from '../lib/ladder-field.js';
+import { topUsers, BEST_USER_MIN_GAMES } from '../lib/replays.js';
 import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, realTera, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
 import { SPREAD_ARCHETYPES, spreadArchetypeText, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
@@ -628,6 +629,37 @@ export default {
           smBody.appendChild(cr);
           content.appendChild(smCard);
         }
+      }
+
+      // Top users of this Pokémon in the top-ladder replay sample (Showdown; team preview shows Megas as their base)
+      if (sd && view.players?.replays?.games?.length) {
+        const R = view.players.replays;
+        const pre = dex.species[key]?.base || key.replace(/-Mega(-[A-Z])?$/, '');
+        let users = topUsers(R.games, key);
+        if (!users.length && pre !== key) users = topUsers(R.games, pre);
+        const { card: tuCard, body: tuBody } = sectionCard('Top users');
+        const tuMeta = elm('div');
+        ctx.meta(tuMeta, { source: `Rated public replays of the top ${R.sample.players} · last ${R.sample.windowDays} days · shared games only`, n: R.games.length, unit: 'games' });
+        tuBody.appendChild(tuMeta);
+        if (!users.length) tuBody.appendChild(elm('div', 'ddv-note', `No player has ${BEST_USER_MIN_GAMES}+ sampled games with ${pre}.`));
+        else {
+          const ladder = view.players?.ladder;
+          const list = elm('ol', 'ddv-users');
+          for (const u of users.slice(0, 10)) {
+            const li = elm('li');
+            const name = ladder?.players?.[u.u]?.name || u.name; // the ladder's spelling when known
+            const b = elm('button', 'pl-link', name);
+            b.type = 'button';
+            b.addEventListener('click', () => ctx.showPlayer(name));
+            const now = ladder?.players?.[u.u]?.h?.at(-1);
+            const rank = now && now[0] === ladder.tracking.last ? ` · ladder #${now[1]}` : '';
+            li.append(b, elm('span', 'ddv-users__rec', ` ${u.wins}-${u.losses} with it (${ctx.fmt.pct(u.winPct ?? 0)})${rank}`));
+            list.appendChild(li);
+          }
+          tuBody.appendChild(list);
+          tuBody.appendChild(elm('div', 'ddv-note', `Ranked by win rate with it, weighted by games (low end of the 95% range); ${BEST_USER_MIN_GAMES}+ games. Click a name: look the player up.`));
+        }
+        content.appendChild(tuCard);
       }
 
       // mega usage
