@@ -9,6 +9,7 @@
 // pinned to the top of the drawer body, always visible while the drawer is
 // open, so the intent (search species in the current view -> open drawer)
 // is still met without new markup outside owned files.
+import { setsFor, setMon } from '../lib/samples.js';
 import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, realTera, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
 import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
@@ -555,6 +556,49 @@ export default {
         setsBody.appendChild(copyBtn);
       }
       content.appendChild(setsCard);
+      }
+
+      // Smogon's recommended sets (Showdown formats; © Smogon, credited)
+      if (sd) {
+        const sets = setsFor(view.samples, key, dex);
+        if (sets.length) {
+          const { card: smCard, body: smBody } = sectionCard('Smogon sets');
+          const STAT = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
+          const evText = (ev) => ev.map((v, i) => (v ? `${v} ${STAT[i]}` : null)).filter(Boolean).join(' / ');
+          const list = elm('div', 'ddv-sets');
+          const species = sets === view.samples?.sets?.[key] ? key : (dex.species[key]?.base || key.replace(/-Mega(-[A-Z])?$/, ''));
+          for (const set of sets) {
+            const box = elm('div', 'ddv-set');
+            box.appendChild(elm('p', 'ddv-set__name', set.name));
+            const line = (label, vals) => { if (vals?.length) box.appendChild(elm('div', 'ddv-set__line', `${label}: ${vals.join(' / ')}`)); };
+            line('Item', set.item);
+            line('Ability', set.ability);
+            line('Nature', set.nature);
+            if (set.evs?.length) line('EVs', set.evs.map(evText));
+            line('Tera', set.tera);
+            const ul = elm('ul', 'ddv-set__moves');
+            for (const slot of set.moves) ul.appendChild(elm('li', null, [].concat(slot).join(' / ')));
+            box.appendChild(ul);
+            const copy = elm('button', 'ddv-btn', 'Copy set');
+            copy.type = 'button';
+            copy.addEventListener('click', async () => {
+              const ok = await copyText(toPaste({ mons: [setMon(species, set)] }, dex, view.rules));
+              toast(ok ? 'Copied!' : 'Could not copy', { type: ok ? 'info' : 'error' });
+            });
+            box.appendChild(copy);
+            list.appendChild(box);
+          }
+          smBody.appendChild(list);
+          const cr = elm('div', 'ddv-note');
+          cr.append('Recommended sets © Smogon and their authors. ');
+          const a = elm('a', null, 'Open on Smogon');
+          a.href = view.samples?.source?.smogon || 'https://www.smogon.com/dex/sv/';
+          a.target = '_blank';
+          a.rel = 'noopener';
+          cr.appendChild(a);
+          smBody.appendChild(cr);
+          content.appendChild(smCard);
+        }
       }
 
       // mega usage

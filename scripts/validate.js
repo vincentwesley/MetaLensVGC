@@ -290,6 +290,36 @@ export async function validateAll(dataDir) {
     });
     if (ladder) validateLadderFile(`ladder-${reg}.json`, ladder, errors);
 
+    // Showdown formats (v1.9.0): every listed rating cutoff has its own file over the same months; sample teams.
+    if (!vgc) {
+      const entry = (manifest.regs || []).find((r) => r.id === reg);
+      for (const c of (entry?.ladderCutoffs || []).filter((x) => x !== 1760)) {
+        const f = `ladder-${reg}-${c}.json`;
+        const data = await readJSON(path.join(dataDir, f)).catch(() => null);
+        if (!data) { errors.push(`${f}: missing (listed in manifest ladderCutoffs)`); continue; }
+        validateLadderFile(f, data, errors);
+        if (data.cutoff !== c) errors.push(`${f}: cutoff ${data.cutoff} != ${c}`);
+        const want = (ladder?.months || []).map((m) => m.month).join(',');
+        if (data.months.map((m) => m.month).join(',') !== want) errors.push(`${f}: months differ from ladder-${reg}.json (${want})`);
+      }
+      if (entry?.samples) {
+        const f = `samples-${reg}.json`;
+        const s = await readJSON(path.join(dataDir, f)).catch(() => null);
+        if (!s) errors.push(`${f}: missing (listed in manifest)`);
+        else {
+          if (!Array.isArray(s.teams) || s.teams.length !== entry.samples.teams) errors.push(`${f}: ${s.teams?.length} teams, manifest says ${entry.samples.teams}`);
+          for (const [i, t] of (s.teams || []).entries()) {
+            if (!t.name || !Array.isArray(t.mons) || t.mons.length < 1 || t.mons.length > 6) errors.push(`${f}: teams[${i}] bad shape`);
+            for (const m of t.mons || []) {
+              if (typeof m.species !== 'string' || !m.species) errors.push(`${f}: teams[${i}] mon without species`);
+              if (m.evs != null && (!Array.isArray(m.evs) || m.evs.length !== 6 || m.evs.reduce((a, b) => a + b, 0) > 510)) errors.push(`${f}: teams[${i}] ${m.species} bad EVs`);
+            }
+          }
+          if (!/^https:\/\/www\.smogon\.com\//.test(s.source?.smogon || '')) errors.push(`${f}: missing Smogon link (credit)`);
+        }
+      }
+    }
+
     const rankedPath = path.join(dataDir, `ranked-${reg}.json`);
     const ranked = vgc && await readJSON(rankedPath).catch((e) => {
       errors.push(`ranked-${reg}.json: ${e.message}`);

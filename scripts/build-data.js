@@ -10,7 +10,8 @@ import path from 'node:path';
 import { REGULATIONS, listedRegs, pickCurrent } from './lib/regs.js';
 import { fetchLimitlessOnline, RECENT_BEFORE } from './sources/limitless.js';
 import { fetchOfficialEvents } from './sources/official.js';
-import { fetchLadder, rollingMonths } from './sources/ladder.js';
+import { fetchLadder, keepNewest, SHOWDOWN_CUTOFFS } from './sources/ladder.js';
+import { fetchSamples } from './sources/smogon-sets.js';
 import { fetchRanked, renormalizeRanked } from './sources/ranked.js';
 import pkg from 'pokemon-showdown';
 import { buildDex } from './dex.js';
@@ -122,20 +123,32 @@ async function main() {
     log(`  ${reg}: ${JSON.stringify(stats)}`);
   }
 
-  // 4) Ladder (all regs, always).
-  for (const reg of REG_IDS) {
-    const existingLadder = await readJSONIfExists(path.join(DATA_DIR, `ladder-${reg}.json`));
-    const existingMonths = new Set((existingLadder?.months || []).map((m) => m.month));
-    log(`Fetching ladder for ${reg}...`);
-    ladderByReg[reg] = await fetchLadder(reg, null, { existingMonths, log });
+  // 4) Ladder (all regs, always). Showdown regs: every rating cutoff, the 3 newest published months each.
+  const extraCutoffs = {}; // reg -> { cutoff: months[] } for ladder-<REG>-<cutoff>.json
+  const loadLadder = async (reg, file, cutoff) => {
+    const existing = await readJSONIfExists(path.join(DATA_DIR, file));
+    const existingMonths = new Set((existing?.months || []).map((m) => m.month));
+    const fresh = await fetchLadder(reg, null, { existingMonths, log, cutoff });
     // Keep any previously-fetched months fetchLadder didn't need to touch again.
-    const have = new Set(ladderByReg[reg].map((m) => m.month));
-    for (const m of existingLadder?.months || []) if (!have.has(m.month)) ladderByReg[reg].push(m);
-    ladderByReg[reg].sort((a, b) => a.month.localeCompare(b.month));
+    const have = new Set(fresh.map((m) => m.month));
+    for (const m of existing?.months || []) if (!have.has(m.month)) fresh.push(m);
+    fresh.sort((a, b) => a.month.localeCompare(b.month));
+    return REGULATIONS[reg].family === 'showdown' ? keepNewest(fresh) : fresh;
+  };
+  for (const reg of REG_IDS) {
+    log(`Fetching ladder for ${reg}...`);
+    ladderByReg[reg] = await loadLadder(reg, `ladder-${reg}.json`, 1760);
     if (REGULATIONS[reg].family === 'showdown') {
-      const oldest = rollingMonths()[0]; // rolling window: drop stored months that aged out
-      ladderByReg[reg] = ladderByReg[reg].filter((m) => m.month >= oldest);
+      extraCutoffs[reg] = {};
+      for (const c of SHOWDOWN_CUTOFFS.filter((x) => x !== 1760)) extraCutoffs[reg][c] = await loadLadder(reg, `ladder-${reg}-${c}.json`, c);
     }
+  }
+
+  // 4a) Smogon sample teams + sets for the Showdown formats (samples-<REG>.json).
+  const samplesByReg = {};
+  for (const reg of SHOWDOWN_IDS) {
+    log(`Fetching Smogon sample teams for ${reg}...`);
+    samplesByReg[reg] = await fetchSamples(reg, log);
   }
 
   // 4b) Ranked ladder (official Champions "Battle Data", Doubles, all regs, always).
@@ -165,6 +178,14 @@ async function main() {
         for (const it of Object.keys(mon.items)) ndItems.add(it);
         for (const mv of Object.keys(mon.moves)) ndMoves.add(mv);
       }
+    }
+  }
+  // Sample teams and sets name Pokémon, items and moves the ladder may not (the deep dive and sprites need them).
+  for (const s of Object.values(samplesByReg)) {
+    for (const t of s?.teams || []) for (const m of t.mons) { ndSpecies.add(m.species); if (m.item) ndItems.add(m.item); for (const mv of m.moves) ndMoves.add(mv); }
+    for (const [species, sets] of Object.entries(s?.sets || {})) {
+      ndSpecies.add(species);
+      for (const set of sets) { for (const it of set.item) ndItems.add(it); for (const slot of set.moves) for (const mv of [].concat(slot)) ndMoves.add(mv); }
     }
   }
   for (const reg of VGC_IDS) {
@@ -230,9 +251,15 @@ async function main() {
     const meta = REGULATIONS[reg];
     const ladderFile = { reg, source: 'smogon', cutoff: 1760, months: ladderByReg[reg] };
     await writeFile(path.join(DATA_DIR, `ladder-${reg}.json`), JSON.stringify(ladderFile));
+    if (samplesByReg[reg]) await writeFile(path.join(DATA_DIR, `samples-${reg}.json`), JSON.stringify(samplesByReg[reg]));
+    for (const [c, months] of Object.entries(extraCutoffs[reg] || {})) {
+      await writeFile(path.join(DATA_DIR, `ladder-${reg}-${c}.json`), JSON.stringify({ reg, source: 'smogon', cutoff: Number(c), months }));
+    }
     const common = { id: reg, family: meta.family, format: meta.format, level: meta.level, label: meta.label };
     if (meta.family === 'showdown') {
-      manifestRegs.push({ ...common, teams: 0, events: 0, openSheets: 0, matches: 0, ladderMonths: ladderByReg[reg].map((m) => m.month), rankedSeasons: [] });
+      manifestRegs.push({ ...common, teams: 0, events: 0, openSheets: 0, matches: 0, ladderMonths: ladderByReg[reg].map((m) => m.month), rankedSeasons: [],
+        samples: samplesByReg[reg] ? { teams: samplesByReg[reg].teams.length, sets: Object.keys(samplesByReg[reg].sets).length } : null,
+        ladderCutoffs: [1760, ...Object.keys(extraCutoffs[reg] || {}).map(Number).filter((c) => extraCutoffs[reg][c].length).sort((a, b) => b - a)] });
       continue;
     }
     const quality = { ...existingQuality[reg] };

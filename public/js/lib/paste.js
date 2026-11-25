@@ -27,6 +27,11 @@ function monToPaste(m, rules) {
     if (parts.length) lines.push(`EVs: ${parts.join(' / ')}`);
   }
   if (m.nature) lines.push(`${m.nature} Nature`);
+  // IVs (Showdown/EV formats only; Champions has none): only stats below 31, e.g. "IVs: 0 Atk".
+  if (rules.mode === 'ev' && Array.isArray(m.ivs)) {
+    const ivs = m.ivs.map((v, i) => (v !== 31 ? `${v} ${STAT_LABELS[i]}` : null)).filter(Boolean);
+    if (ivs.length) lines.push(`IVs: ${ivs.join(' / ')}`);
+  }
   for (const mv of m.moves) lines.push(`- ${mv}`);
   return lines.join('\n');
 }

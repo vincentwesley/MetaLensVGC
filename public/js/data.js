@@ -20,8 +20,15 @@ export function loadDex() { return fetchJSON('data/dex.json'); }
 /** Base-game dex for the Showdown family (dex-natdex.json); the Champions one is data/dex.json. */
 export function loadDexFile(family) { return fetchJSON(`data/dex-${family}.json`); }
 export function loadTeamsFile(reg) { return fetchJSON(`data/teams-${reg}.json`); }
-export function loadLadderFile(reg) {
-  return fetchJSON(`data/ladder-${reg}.json`).catch(() => ({ reg, source: 'smogon', cutoff: null, months: [] }));
+/** rating: Smogon rating cutoff; 1760 is ladder-<REG>.json, the others ladder-<REG>-<rating>.json (Showdown regs). */
+export function loadLadderFile(reg, rating = '1760') {
+  const file = String(rating) === '1760' ? `data/ladder-${reg}.json` : `data/ladder-${reg}-${rating}.json`;
+  return fetchJSON(file).catch(() => ({ reg, source: 'smogon', cutoff: null, months: [] }));
+}
+
+/** Smogon sample teams + sets for a Showdown reg (samples-<REG>.json); null when absent. */
+export function loadSamplesFile(reg) {
+  return fetchJSON(`data/samples-${reg}.json`).catch(() => null);
 }
 
 export function loadRankedFile(reg) {

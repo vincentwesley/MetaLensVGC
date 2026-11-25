@@ -1,0 +1,30 @@
+/* v1.9.0 Sample teams (Showdown formats) + Smogon sets in the deep dive. Colours from the shared tokens only. */
+.smp-tools { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-3); }
+.smp-search { flex: 1 1 240px; min-width: 0; }
+.smp-count { color: var(--muted); font-size: var(--fs-small); }
+.smp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--space-3); }
+.smp-card { display: flex; flex-direction: column; gap: var(--space-2); background: var(--surface-1); border-radius: var(--radius); padding: var(--space-3); min-width: 0; }
+[data-skin="pro"] .smp-card { border: 1px solid var(--border); }
+.smp-card__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.smp-card__name { margin: 0; font-size: var(--fs-body); overflow-wrap: anywhere; }
+.smp-card__author { color: var(--muted); font-size: var(--fs-small); }
+.smp-mons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.smp-mon {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0;
+  background: var(--surface-0); border: 0; border-radius: var(--radius); padding: 4px; cursor: pointer; color: inherit; font: inherit;
+}
+.smp-mon:hover, .smp-mon:focus-visible { background: var(--surface-2); }
+.smp-mon__name, .smp-mon__item, .smp-mon__tera { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.smp-mon__name { color: var(--ink); font-weight: 600; }
+.smp-mon__item, .smp-mon__tera { color: var(--muted); }
+.smp-card__actions { display: flex; gap: var(--space-2); margin-top: auto; }
+.smp-card__actions a.lib-btn { text-decoration: none; display: inline-flex; align-items: center; }
+.smp-more { display: block; margin: var(--space-3) auto 0; }
+.smp-credit { color: var(--muted); font-size: var(--fs-small); margin: var(--space-3) 0 0; }
+
+/* Deep dive: Smogon sets card */
+.ddv-sets { display: grid; gap: var(--space-2); }
+.ddv-set { background: var(--surface-1); border-radius: var(--radius); padding: var(--space-2) var(--space-3); min-width: 0; }
+.ddv-set__name { font-weight: 600; margin: 0 0 2px; }
+.ddv-set__line { color: var(--ink-2); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.ddv-set__moves { margin: 4px 0; padding-left: 1.1em; font-size: var(--fs-small); }

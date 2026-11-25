@@ -12,6 +12,13 @@ const TIERS = [
   ['regional', 'Regionals'],
   ['online', 'Online'],
 ];
+// Smogon ladder rating cutoffs (Showdown formats): usage among players rated at least this much.
+const RATINGS = [
+  ['0', 'All'],
+  ['1500', '1500+'],
+  ['1630', '1630+'],
+  ['1760', '1760+'],
+];
 const PLACEMENTS = [
   ['all', 'All'],
   ['topcut', 'Top Cut'],
@@ -94,7 +101,7 @@ export function mountFilterbar(root, ctx, manifest) {
   regGroup.className = 'filterbar__group';
   const regLabel = document.createElement('span');
   regLabel.className = 'filterbar__label';
-  regLabel.textContent = 'Reg';
+  regLabel.textContent = 'Reg'; // 'Format' in Showdown (sync)
   const reg = segmented('Regulation', regIds.map((id) => [id, id]), (id) => ctx.store.set({ reg: id }));
   regGroup.append(regLabel, reg.el);
 
@@ -172,7 +179,19 @@ export function mountFilterbar(root, ctx, manifest) {
   dateGroup.append(dateLabel, fromInput, toInput);
 
   // Min-sample slider
+  // Rating cutoff (Showdown only)
+  const ratingGroup = document.createElement('div');
+  ratingGroup.className = 'filterbar__group';
+  ratingGroup.dataset.g = 'rating';
+  const ratingLabel = document.createElement('span');
+  ratingLabel.className = 'filterbar__label';
+  ratingLabel.textContent = 'Rating';
+  ratingLabel.setAttribute('data-tip', 'Smogon ladder statistics count only players rated at least this much. Higher = stronger players, fewer battles.');
+  const rating = segmented('Ladder rating cutoff', RATINGS, (v) => ctx.store.set({ rating: v }));
+  ratingGroup.append(ratingLabel, rating.el);
+
   const sliderGroup = document.createElement('div');
+  sliderGroup.dataset.g = 'minn';
   sliderGroup.className = 'filterbar__group';
   const sliderLabel = document.createElement('span');
   sliderLabel.className = 'filterbar__label';
@@ -198,7 +217,7 @@ export function mountFilterbar(root, ctx, manifest) {
   sample.className = 'filterbar__sample';
   sample.textContent = 'Loading…';
 
-  body.append(regGroup, srcGroup, tierGroup, placeGroup, stonesGroup, dateGroup, sliderGroup, sample);
+  body.append(regGroup, ratingGroup, srcGroup, tierGroup, placeGroup, stonesGroup, dateGroup, sliderGroup, sample);
 
   function regMeta(id) { return regs.find((r) => r.id === id); }
 
@@ -213,6 +232,12 @@ export function mountFilterbar(root, ctx, manifest) {
     for (const [id, btn] of source.buttons) btn.setAttribute('aria-pressed', String(id === state.source));
     for (const [id, btn] of place.buttons) btn.setAttribute('aria-pressed', String(id === state.place));
     for (const [id, btn] of stones.buttons) btn.setAttribute('aria-pressed', String(id === state.stones));
+    regLabel.textContent = fam === 'showdown' ? 'Format' : 'Reg';
+    const cutoffs = (regMeta(state.reg)?.ladderCutoffs || [1760]).map(String);
+    for (const [id, btn] of rating.buttons) {
+      btn.setAttribute('aria-pressed', String(id === state.rating));
+      btn.hidden = !cutoffs.includes(id); // only the cutoffs the data has
+    }
     for (const [value, cb] of tierInputs) cb.checked = state.tiers.includes(value);
 
     const rm = regMeta(state.reg);
@@ -257,8 +282,11 @@ export function mountFilterbar(root, ctx, manifest) {
     if (regFamily(view?.state?.reg) === 'showdown') {
       const ms = view.ladder?.months || [];
       const last = ms[ms.length - 1];
+      const battles = ms.reduce((a, m) => a + (m.battles || 0), 0);
+      const span = ms.length > 1 ? `${ms[0].month} to ${last.month}` : last?.month;
+      const cut = view.ladder?.cutoff ? `rating ${view.ladder.cutoff === 0 ? 'all' : `${view.ladder.cutoff}+`}` : '';
       sample.textContent = last
-        ? `Smogon ladder ${last.month} (cutoff 1760) · ${(last.battles || 0).toLocaleString('en-US')} battles · ${Object.keys(last.mons).length.toLocaleString('en-US')} Pokémon · updated ${updated}`
+        ? `Smogon ladder ${span} · ${cut} · ${battles.toLocaleString('en-US')} battles · updated ${updated}`
         : `No Smogon ladder data yet · updated ${updated}`;
       return;
     }
@@ -269,7 +297,10 @@ export function mountFilterbar(root, ctx, manifest) {
   function paintSummary(state) {
     if (!summary) return;
     const srcLabel = { tournaments: 'Tournaments', ladder: 'Ladder', ranked: 'Ranked (in-game)' }[state.source] || state.source;
-    const parts = [state.reg, srcLabel];
+    const showdown = regFamily(state.reg) === 'showdown';
+    const parts = showdown
+      ? [regMeta(state.reg)?.label || state.reg, `Rating ${state.rating === '0' ? 'all' : `${state.rating}+`}`]
+      : [state.reg, srcLabel];
     if (state.source === 'tournaments') {
       if (state.tiers.length !== TIERS.length) parts.push(TIERS.filter(([v]) => state.tiers.includes(v)).map(([, l]) => l).join('+') || 'No tiers');
       if (state.place !== 'all') parts.push(PLACEMENTS.find(([v]) => v === state.place)?.[1] || state.place);

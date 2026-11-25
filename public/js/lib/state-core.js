@@ -6,6 +6,7 @@ export const DEFAULT_STATE = {
   tiers: ['worlds', 'international', 'regional', 'online'],
   place: 'all',
   stones: 'any', // Mega Stones carried: 'any' | '0' | '1' | '2' (2 = two or more)
+  rating: '1760', // Showdown ladder rating cutoff: '1760' | '1630' | '1500' | '0' (VGC regs always use 1760)
   from: '',
   to: '',
   minN: 20,
@@ -69,6 +70,7 @@ const ENUMS = {
   source: ['tournaments', 'ladder', 'ranked'],
   place: ['all', 'topcut', 'top8', 'winner'],
   stones: ['any', '0', '1', '2'],
+  rating: ['1760', '1630', '1500', '0'],
   skin: ['pro', 'retro', 'glass', 'paper', 'terminal', 'soft'],
   theme: ['dark', 'light', 'auto'],
   palette: ['grass', 'ghost', 'water', 'fire', 'fairy', 'electric', 'steel'],
@@ -94,7 +96,12 @@ export function sanitizeState(state, { regs } = {}, defaults = DEFAULT_STATE) {
   for (const [key, allowed] of Object.entries(ENUMS)) if (!allowed.includes(s[key])) s[key] = defaults[key];
   if (regs?.length && !regs.includes(s.reg)) s.reg = regs.includes(defaults.reg) ? defaults.reg : regs[regs.length - 1];
   if (typeof s.reg !== 'string') s.reg = defaults.reg;
-  if (regFamily(s.reg) === 'showdown') s.source = 'ladder'; // Smogon ladder is the only source there
+  if (regFamily(s.reg) === 'showdown') {
+    s.source = 'ladder'; // Smogon ladder is the only source there
+    s.from = ''; s.to = ''; // no date controls in Showdown: whole published months only
+  } else {
+    s.rating = defaults.rating; // Champions ladders are fetched at 1760 only
+  }
   s.tiers = TIER_IDS.filter((t) => Array.isArray(state.tiers) && state.tiers.includes(t));
   s.from = validDate(s.from) ? s.from : '';
   s.to = validDate(s.to) ? s.to : '';

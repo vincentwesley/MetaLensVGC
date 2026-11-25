@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REGULATIONS, REG_IDS, VGC_IDS, SHOWDOWN_IDS, inWindow, regForDate, listedRegs, pickCurrent, MIN_CURRENT_TEAMS } from '../scripts/lib/regs.js';
-import { trimMon, rollingMonths } from '../scripts/sources/ladder.js';
+import { trimMon, rollingMonths, keepNewest } from '../scripts/sources/ladder.js';
 
 test('showdown regs have no window and never match a date', () => {
   assert.deepEqual(SHOWDOWN_IDS, ['ND', 'NDD']);
@@ -47,8 +47,12 @@ test('trimMon keeps top 12 Tera Types as fractions; empty for Champions', () => 
   assert.deepEqual(trimMon({ usage: 1 }, null).teraTypes, {});
 });
 
-test('rollingMonths = current + 2 before, across year boundary', () => {
-  assert.deepEqual(rollingMonths(new Date('2027-01-15T00:00:00Z')), ['2026-11', '2026-12', '2027-01']);
+test('rollingMonths probes the current month + 3 before (across a year boundary); keepNewest keeps the 3 newest published', () => {
+  assert.deepEqual(rollingMonths(new Date('2027-01-15T00:00:00Z')), ['2026-10', '2026-11', '2026-12', '2027-01']);
+  // Smogon has published up to 2026-10 on 2026-11-25: the window is Aug-Oct, not Sep-Nov.
+  const published = ['2026-08', '2026-09', '2026-10'].map((month) => ({ month }));
+  assert.deepEqual(keepNewest([{ month: '2026-07' }, ...published]).map((m) => m.month), ['2026-08', '2026-09', '2026-10']);
+  assert.deepEqual(keepNewest(published.slice(1)).map((m) => m.month), ['2026-09', '2026-10']);
 });
 
 test('trimMon counters: object, array, empty shapes; n<30 dropped', () => {

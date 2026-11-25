@@ -123,3 +123,13 @@ test('stones (Mega Stones carried) round-trips the hash; unknown values fall bac
   assert.equal(sanitizeState(fromHash('stones=3')).stones, 'any');
   assert.equal(toHash(DEFAULT_STATE), '');
 });
+
+test('rating (Showdown ladder cutoff) round-trips the hash; VGC regs keep 1760; Showdown clears dates', () => {
+  assert.equal(sanitizeState(fromHash('reg=NDD&rating=1500')).rating, '1500');
+  assert.equal(toHash({ ...DEFAULT_STATE, reg: 'NDD', source: 'ladder', rating: '0' }), 'reg=NDD&source=ladder&rating=0');
+  assert.equal(sanitizeState(fromHash('reg=NDD&rating=1234')).rating, '1760');
+  assert.equal(sanitizeState(fromHash('reg=M-C&rating=1500')).rating, '1760');
+  const s = sanitizeState(fromHash('reg=ND&from=2026-09-01&to=2026-10-01'));
+  assert.equal(s.from, '');
+  assert.equal(s.to, '');
+});
