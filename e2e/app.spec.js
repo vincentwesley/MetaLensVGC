@@ -1458,3 +1458,35 @@ test('Showdown v1.9.0: rating cutoff, sample teams with a Showdown paste, item c
   await expect(page.locator('#chips')).not.toContainText('Tournaments');
   expect(lead).toBeTruthy();
 });
+
+test('Showdown v1.10.0: ladder top 100 with peaks (manual peak flagged), live player lookup, replay stats', async ({ page }) => {
+  const replayLog = ['|player|p1|VinVGC|1|1724', '|player|p2|someone|2|1600', '|gametype|doubles', '|rated|',
+    '|poke|p1|Incineroar, M|', '|poke|p1|Tapu Fini|', '|poke|p2|Rillaboom, M|', '|poke|p2|Kingdra|', '|teampreview',
+    '|switch|p1a: Cat|Incineroar, M|100/100', '|switch|p1b: Fini|Tapu Fini|100/100',
+    '|switch|p2a: R|Rillaboom, M|100/100', '|switch|p2b: K|Kingdra|100/100', '|turn|1', '|win|VinVGC'].join('\n');
+  await page.route(/pokemonshowdown\.com\/users\/vinvgc\.json/, (r) => r.fulfill({ json: { username: 'VinVGC', userid: 'vinvgc', ratings: { gen9nationaldexdoubles: { elo: 1700.4, gxe: 84, w: 300, l: 120 } } } }));
+  await page.route(/replay\.pokemonshowdown\.com\/search\.json/, (r) => r.fulfill({ json: [{ id: 'gen9nationaldexdoubles-1', uploadtime: 1795573386, rating: 1700, players: ['VinVGC', 'someone'], private: 0, password: null }] }));
+  await page.route(/replay\.pokemonshowdown\.com\/gen9nationaldexdoubles-1\.json/, (r) => r.fulfill({ json: { id: 'gen9nationaldexdoubles-1', formatid: 'gen9nationaldexdoubles', uploadtime: 1795573386, rating: 1700, log: replayLog } }));
+  await page.goto('/#reg=NDD');
+  await waitForAllSections(page);
+  const sec = page.locator('main [data-section="players"]');
+  await sec.scrollIntoViewIfNeeded();
+  // ladder table from the daily snapshot
+  expect(await sec.locator('.card', { hasText: 'Ladder top 100' }).locator('tbody tr').count()).toBeGreaterThan(5);
+  // lookup (stubbed Showdown): rating, record, the manual peak with its source, replay result
+  await sec.locator('.pl-input').fill('VinVGC');
+  await sec.locator('.pl-form button').click();
+  const out = sec.locator('.pl-out');
+  await expect(out).toContainText('VinVGC');
+  await expect(out).toContainText('300-120');
+  await expect(out.locator('.kpi', { hasText: 'Best rank' })).toContainText('#7*');
+  await expect(out).toContainText('2026-11-13: #7, 1724 Elo');
+  await expect(out.locator('td.pl-win')).toHaveText('Won');
+  // replay stats + leads
+  await expect(sec.locator('.card', { hasText: 'Top-ladder replay stats' }).locator('tbody tr').first()).toBeVisible();
+  // VGC mode never shows the section
+  await page.goto('/#reg=M-C');
+  await page.reload();
+  await waitForAllSections(page);
+  await expect(page.locator('main [data-section="players"]')).toBeHidden();
+});

@@ -3,7 +3,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://play.pokemonshowdown.com; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://play.pokemonshowdown.com; connect-src 'self' https://pokemonshowdown.com https://replay.pokemonshowdown.com; base-uri 'none'; frame-ancestors 'none'
 
 /*.html
   Cache-Control: no-cache

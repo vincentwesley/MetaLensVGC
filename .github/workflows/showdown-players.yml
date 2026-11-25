@@ -1,0 +1,99 @@
+name: Showdown players snapshot
+
+# Daily: Showdown ladder top 500 (peak Elo / best rank history) + recent rated replays of the top players, for the
+# Showdown "Players & replays" section (scripts/showdown-players.js). Showdown publishes current ratings only, so
+# peaks exist only because this runs every day.
+on:
+  schedule:
+    - cron: '23 4 * * *' # daily 04:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+# Same group as the weekly refresh: never two jobs pushing data at once.
+concurrency:
+  group: refresh-data-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Restore replay cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data-raw
+          key: showdown-raw-${{ github.run_id }}
+          restore-keys: showdown-raw-
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Snapshot ladder and replays
+        run: node scripts/showdown-players.js
+
+      - name: Save replay cache
+        if: always() && steps.cache.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data-raw
+          key: showdown-raw-${{ github.run_id }}
+
+      - name: Validate and test
+        run: |
+          node scripts/validate.js
+          npm test
+
+      - name: Commit data if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/data/showdown-*.json
+          if git diff --cached --quiet; then echo "No changes."; exit 0; fi
+          git commit -m 'chore: Showdown ladder + replays snapshot'
+          branch="${GITHUB_REF_NAME}"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase --autostash -X theirs origin "$branch" && git push origin "HEAD:$branch"; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 15))
+          done
+          echo "Could not push after 5 attempts." >&2
+          exit 1
+
+      - name: Open or update failure issue
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const TITLE = 'Showdown players snapshot failed';
+            const { owner, repo } = context.repo;
+            const body = `Run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}\nThe site keeps the last good snapshot; peaks simply skip a day.`;
+            const { data: open } = await github.rest.issues.listForRepo({ owner, repo, state: 'open', per_page: 100 });
+            const existing = open.find((i) => !i.pull_request && i.title === TITLE);
+            if (existing) await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
+            else await github.rest.issues.create({ owner, repo, title: TITLE, body });
+
+      - name: Close failure issue
+        if: success()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: open } = await github.rest.issues.listForRepo({ owner, repo, state: 'open', per_page: 100 });
+            for (const i of open.filter((x) => !x.pull_request && x.title === 'Showdown players snapshot failed')) {
+              await github.rest.issues.update({ owner, repo, issue_number: i.number, state: 'closed', state_reason: 'completed' });
+            }

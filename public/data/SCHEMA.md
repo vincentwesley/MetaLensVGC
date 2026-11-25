@@ -249,5 +249,10 @@ Usage is always counted by `k` (so `Charizard-Mega-Y` and `Floette-Mega` are sep
   [{species, item, ability, tera, nature, evs: number[6]|null, ivs: number[6]|null (only when not all 31), moves}]}],
   sets: {species: [{name, moves: (string|string[])[], item[], ability[], nature[], evs: number[6][], ivs, tera[]}]}}`.
   Manifest showdown entries carry `samples: {teams, sets}` (null when absent).
+- `showdown-ladder-<REG>.json` (v1.10.0, daily): `{reg, format, source, tracking: {since, last, snapshots, dates[], top: 500},
+  top: [{rank, userid, name, elo, gxe, w, l, t, peakElo, peakEloDate, bestRank, bestRankDate, peakEloManual?, bestRankManual?}] (100),
+  players: {userid: {name, first, last, h: [[date, rank, elo]], peakElo, peakEloDate, bestRank, bestRankDate, manual?: [{date, rank, elo, source}]}}}`.
+- `showdown-replays-<REG>.json` (v1.10.0, daily): `{reg, format, source, updated, sample: {players, windowDays, rated},
+  games: [{id, date, rating, w: 0|1|null, p: [{u, name, six[], brought[], lead[], mega: {species, form}|null, tera: {species, type}|null} x2]}]}`.
 - Every ladder mon gains `teraTypes`: top 12 `"Tera Types"` as fractions of that mon's total (`{}` for Champions files).
 - `dex-natdex.json`: same shape as dex.json, built from the base (non-Champions) Showdown `Dex` for species/moves/items seen in the ND/NDD ladders. The app does not load it yet (`data.js` only reads `data/dex.json`); B3 should load it for showdown regs.

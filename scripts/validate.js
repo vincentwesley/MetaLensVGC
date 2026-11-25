@@ -302,6 +302,28 @@ export async function validateAll(dataDir) {
         const want = (ladder?.months || []).map((m) => m.month).join(',');
         if (data.months.map((m) => m.month).join(',') !== want) errors.push(`${f}: months differ from ladder-${reg}.json (${want})`);
       }
+      // Showdown players (v1.9.1, optional until the daily job has run): ladder history + replay records.
+      const sl = await readJSON(path.join(dataDir, `showdown-ladder-${reg}.json`)).catch(() => null);
+      if (sl) {
+        const f = `showdown-ladder-${reg}.json`;
+        if (!Array.isArray(sl.top) || !sl.tracking?.since) errors.push(`${f}: bad shape`);
+        for (const r of sl.top || []) {
+          const p = sl.players?.[r.userid];
+          if (!p) errors.push(`${f}: top player ${r.userid} missing from players`);
+          else if (p.peakElo < r.elo || p.bestRank > r.rank) errors.push(`${f}: ${r.userid} peak below the current rating/rank`);
+        }
+      }
+      const sr = await readJSON(path.join(dataDir, `showdown-replays-${reg}.json`)).catch(() => null);
+      if (sr) {
+        const f = `showdown-replays-${reg}.json`;
+        const ids = new Set();
+        for (const g of sr.games || []) {
+          if (ids.has(g.id)) errors.push(`${f}: duplicate game ${g.id}`);
+          ids.add(g.id);
+          if (!Array.isArray(g.p) || g.p.length !== 2 || g.p.some((s) => !s.six?.length || s.six.length > 6)) errors.push(`${f}: ${g.id} bad sides`);
+          if (![0, 1, null].includes(g.w)) errors.push(`${f}: ${g.id} bad winner`);
+        }
+      }
       if (entry?.samples) {
         const f = `samples-${reg}.json`;
         const s = await readJSON(path.join(dataDir, f)).catch(() => null);

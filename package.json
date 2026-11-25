@@ -1,6 +1,6 @@
 {
   "name": "metalensvgc",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "scripts": {
     "data": "node scripts/build-data.js",
     "pokedex": "node scripts/build-pokedex.js",
@@ -10,7 +10,8 @@
     "serve": "node scripts/serve.js",
     "e2e": "playwright test",
     "shot": "playwright test e2e/screenshots.spec.js",
-    "e2e:cloud": "playwright test -c playwright.cloud.config.js e2e/app.spec.js"
+    "e2e:cloud": "playwright test -c playwright.cloud.config.js e2e/app.spec.js",
+    "showdown": "node scripts/showdown-players.js"
   },
   "license": "MIT",
   "author": "Vin, Vin's Atelier (https://vwesley.dev)",

@@ -23,13 +23,13 @@ import { rulesFor } from './lib/stats.js';
 
 const SECTION_IDS = [
   'snapshot', 'usage', 'quadrant', 'pokedex', 'types', 'items', 'archetypes',
-  'teammates', 'speed', 'trends', 'countries', 'library', 'samples', 'scanner', 'threats', 'moves', 'compare', 'events', 'digest', 'methodology',
+  'teammates', 'speed', 'trends', 'countries', 'library', 'samples', 'players', 'scanner', 'threats', 'moves', 'compare', 'events', 'digest', 'methodology',
 ];
 
 // Sections with no data in Showdown mode (no team sheets); hidden by CSS and skipped in updates.
 const TEAM_ONLY = new Set(['archetypes', 'countries', 'library', 'scanner', 'events']);
 // Sections with data only in Showdown mode (Smogon sample teams); hidden by CSS and skipped in VGC updates.
-const SHOWDOWN_ONLY = new Set(['samples']);
+const SHOWDOWN_ONLY = new Set(['samples', 'players']);
 
 // Every chart is created through this: a full redraw (setOption with notMerge)
 // while the pointer is over a chart disposes the tooltip component while a show
@@ -162,6 +162,7 @@ async function boot() {
       const t = lastView?.regTeams.find((x) => x.id === id);
       return t ? `${t.player || 'Unknown'} · ${t.ev?.name || t.date || ''}` : null;
     },
+    lookupPlayer: async (userid, format) => data.lookupShowdownUser(userid, format, { parseReplay: (await import('./lib/replays.js')).parseReplay }), // live Showdown lookup (players section)
     loadPokedex: (family) => data.loadPokedexFile(family || 'vgc'), // lazy: the Pokédex section loads its roster after first paint
     loadLearnsets: (family) => data.loadLearnsetsFile(family || 'vgc'), // lazy: only when a Pokédex move filter first needs it
     loadRanked: (reg) => getRanked(reg), // lazy: the deep dive's regulation shift loads the previous reg's ranked file
@@ -243,6 +244,12 @@ async function boot() {
   async function getSamples(reg) {
     if (!samplesCache.has(reg)) samplesCache.set(reg, await data.loadSamplesFile(reg));
     return samplesCache.get(reg);
+  }
+
+  const playersCache = new Map();
+  async function getPlayers(reg) {
+    if (!playersCache.has(reg)) playersCache.set(reg, await data.loadPlayersFiles(reg));
+    return playersCache.get(reg);
   }
 
   async function getRanked(reg) {
@@ -417,10 +424,11 @@ async function boot() {
     try {
       const family = regFamily(state.reg);
       const regMeta = (manifest.regs || []).find((r) => r.id === state.reg);
-      const [, regData, ladder, ranked, samples] = await Promise.all([
+      const [, regData, ladder, ranked, samples, players] = await Promise.all([
         ensureDex(family), ensureReg(state.reg), getLadder(state.reg, family === 'showdown' ? state.rating : '1760'),
         family === 'showdown' ? { reg: state.reg, seasons: [] } : getRanked(state.reg), // no in-game ranked data for Showdown formats
         family === 'showdown' ? getSamples(state.reg) : null,
+        family === 'showdown' ? getPlayers(state.reg) : null,
       ]);
       const teams = filterTeams(regData.teams, state, state.chips, dex);
       // The Scanner compares one team with the rest of the field, so a team chip (one team)
@@ -439,7 +447,7 @@ async function boot() {
       const speciesFilter = speciesChipFilter(state.chips, dex, { sets: family === 'showdown' }); // Showdown: item/move chips filter ladder rows
       const view = {
         state, reg: state.reg, family: family === 'showdown' ? 'natdex' : 'vgc', officialTiers: state.reg === 'ND' /* NDD groups by usage tiers (owner 2026-11-25) */, regMeta, rules: rulesFor(regMeta), manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
-        ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams, samples,
+        ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams, samples, players,
       };
       lastView = view;
       filterbarApi.update(view);

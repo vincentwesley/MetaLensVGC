@@ -981,7 +981,9 @@ html:not([data-family="showdown"]) [data-g="rating"] { display: none; }
 [data-family="showdown"] main.grid .section[data-section="pokedex"] { order: 7; }
 [data-family="showdown"] main.grid .section[data-section="samples"] { order: 7; } /* right after the Pokédex (DOM order) */
 /* Sample teams exist only for the Showdown formats (v1.9.0). */
-html:not([data-family="showdown"]) :is([data-section="samples"], a[data-jump="samples"]) { display: none; }
+html:not([data-family="showdown"]) :is([data-section="samples"], a[data-jump="samples"], [data-section="players"], a[data-jump="players"]) { display: none; }
+[data-family="showdown"] main.grid .section[data-section="players"] { order: 7; } /* after Sample teams (DOM order) */
+[data-family="showdown"] .secnav a[data-jump="players"] { order: 6; }
 [data-family="showdown"] main.grid .section[data-section="types"] { order: 8; }
 [data-family="showdown"] main.grid .section[data-section="items"] { order: 9; }
 [data-family="showdown"] main.grid .section[data-section="speed"] { order: 10; }

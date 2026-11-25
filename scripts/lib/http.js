@@ -13,7 +13,9 @@ const HOST_SPACING = {
   'limitlessvgc.com': 1500,
   'standings.limitlessvgc.com': 1500,
   'www.smogon.com': 500,
-  'championsbattledata.com': 1100, // no fixed public limit; be polite (per-pokemon battle endpoint means many requests)
+  'championsbattledata.com': 1100,
+  'pokemonshowdown.com': 1000, // ladder + user JSON (v1.9.1)
+  'replay.pokemonshowdown.com': 1000, // replay search + logs: be polite, logs are cached forever // no fixed public limit; be polite (per-pokemon battle endpoint means many requests)
 };
 const DEFAULT_SPACING = 500;
 

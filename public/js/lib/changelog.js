@@ -1,6 +1,14 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.10.0', date: '2026-11-25', title: 'Players & replays (Showdown)',
+    notes: [
+      { tag: 'NEW', text: 'Showdown ladder top 100 for National Dex and NatDex Doubles, with each player’s peak Elo and best rank (tracked daily from today; earlier sightings can be added by hand with their source).' },
+      { tag: 'NEW', text: 'Look up any Showdown player: rating, record, peak, the Pokémon they use and their recent public replays.' },
+      { tag: 'NEW', text: 'Top-ladder replay stats: win rate, how often each Pokémon is sent out and leads, and the most common leads among the best players.' },
+    ],
+  },
+  {
     version: '1.9.0', date: '2026-11-25', title: 'A better Showdown page',
     notes: [
       { tag: 'NEW', text: 'Sample teams for National Dex and NatDex Doubles, from Smogon (credited to their authors), with one-click Showdown imports; Smogon’s recommended sets in each Pokémon’s details.' },

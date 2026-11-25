@@ -1,0 +1,6 @@
+{
+  "about": "Ladder positions observed by hand (e.g. from a Showdown ladder screenshot) before or between MetaLens' daily snapshots. Merged into showdown-ladder-<REG>.json by scripts/showdown-players.js on every run; shown with their source. Add only what was actually seen on the Showdown ladder.",
+  "observations": [
+    { "reg": "NDD", "userid": "vinvgc", "name": "VinVGC", "date": "2026-11-13", "rank": 7, "elo": 1724, "gxe": 84.0, "source": "Owner's screenshot of the Pokémon Showdown National Dex Doubles ladder (Top 500), 2026-11-13" }
+  ]
+}

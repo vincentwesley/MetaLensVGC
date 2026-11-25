@@ -306,6 +306,21 @@ These skills are available in every session. The user never types slash commands
   sources/credits, footer `.ft-vgc` / `.ft-showdown`, clock shows the next Smogon month, monthly digest. The e2e
   "Showdown (ND, NDD)" test fails on Champions terms (SP, Lv50, Battle Data, Limitless, Reg M-x) or tournament "teams".
 
+### v1.10.0 notes (Players & replays, Showdown only)
+- `scripts/showdown-players.js` (daily workflow `showdown-players.yml`, 04:23 UTC, same concurrency group as the
+  refresh; `npm run showdown`): `showdown-ladder-<REG>.json` = top 500 snapshot merged into a per-player history
+  (`scripts/lib/showdown-ladder.js`: peak Elo / best rank + dates, history <= 180 snapshots, top 100 for the page) and
+  `showdown-replays-<REG>.json` = rated public replays of the top 50 players, last 30 days, <= 800 games, parsed by
+  `public/js/lib/replays.js#parseReplay` (team preview, sent out, leads, Mega, Tera, winner; logs cached forever).
+- Showdown publishes CURRENT ratings only: every peak is "since tracking began" (tracking.since), never all-time.
+  Hand-recorded ladder sightings live in `data-manual/showdown-ladder-observations.json` (with a source; owner's first
+  entry: VinVGC #7, 1724 Elo, NDD, 2026-11-13, from a ladder screenshot); they count towards peaks, are flagged `*` with
+  the source in the tooltip, and never become snapshot dates. Add only what was actually seen on the Showdown ladder.
+- `sections/players.js`: ladder top 100 (+ peaks), live player lookup through `ctx.lookupPlayer` -> `data.js#lookupShowdownUser`
+  (the only third-party requests: pokemonshowdown.com users + replay.pokemonshowdown.com, in `_headers` connect-src; user
+  ids reduced to [a-z0-9]; rendered with textContent only), replay stats (win % + Wilson range, used / led %, lead pairs;
+  keys = team-preview species). NatDex Doubles uses all six Pokémon: "used" = sent out at least once.
+
 ### v1.4.0 notes
 - New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.
 
