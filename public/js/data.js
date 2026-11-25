@@ -110,3 +110,24 @@ export async function lookupShowdownUser(userid, format, { parseReplay, logs = 1
   job.catch(() => lookupCache.delete(key));
   return job;
 }
+
+/**
+ * One page (50) of a Showdown user's public replays, newest first: { rows, before } (replays.js#replayPage). format null
+ * = every format; before = the uploadtime from the previous page. Private / password replays are left out.
+ */
+const listCache = new Map();
+export async function listShowdownReplays(userid, { format = null, before = null, replayPage } = {}) {
+  const id = String(userid || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!id) throw new Error('empty user id');
+  const b = Number.isFinite(Number(before)) && before != null ? Math.floor(Number(before)) : null;
+  const key = `${id}|${format || '*'}|${b ?? ''}`;
+  if (listCache.has(key)) return listCache.get(key);
+  const url = `${PS_REPLAYS}search.json?user=${id}${format ? `&format=${encodeURIComponent(format)}` : ''}${b != null ? `&before=${b}` : ''}`;
+  const job = getJSON(url).then((rows) => {
+    const page = replayPage(Array.isArray(rows) ? rows : []);
+    return { ...page, rows: page.rows.filter((r) => !r.private && !r.password && /^[a-z0-9-]+$/.test(r.id || '')) };
+  });
+  listCache.set(key, job);
+  job.catch(() => listCache.delete(key));
+  return job;
+}

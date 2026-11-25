@@ -102,3 +102,12 @@ export function aggregateReplays(games, { side = () => true, minLead = 1 } = {})
     .sort((a, b) => b.games - a.games || a.pair.localeCompare(b.pair));
   return { games: (games || []).length, sides, mons: monRows, leads: leadRows };
 }
+
+/**
+ * One page of Showdown's replay search (it returns size + 1 rows when more exist): { rows, before } where `before` is
+ * the uploadtime to ask for the next page with (`&before=`), or null on the last page.
+ */
+export function replayPage(rows, size = 50) {
+  const list = Array.isArray(rows) ? rows : [];
+  return { rows: list.slice(0, size), before: list.length > size ? list[size - 1].uploadtime : null };
+}

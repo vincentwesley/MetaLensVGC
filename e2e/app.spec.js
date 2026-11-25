@@ -1482,6 +1482,21 @@ test('Showdown v1.10.0: ladder top 100 with peaks (manual peak flagged), live pl
   await expect(out.locator('.kpi', { hasText: 'Best rank' })).toContainText('#7*');
   await expect(out).toContainText('2026-11-13: #7, 1724 Elo');
   await expect(out.locator('td.pl-win')).toHaveText('Won');
+  await expect(out).toContainText('chose to share');
+  await expect(out.locator('a', { hasText: 'See them on Showdown' })).toHaveAttribute('href', 'https://replay.pokemonshowdown.com/?user=vinvgc');
+  // all formats: a Format column; paging: 51 rows = a next page, fetched with before=
+  await page.route(/replay\.pokemonshowdown\.com\/search\.json\?user=vinvgc(?!&format)/, (r) => {
+    const before = new URL(r.request().url()).searchParams.get('before');
+    const base = before ? Number(before) - 1 : 1795573386;
+    const n = before ? 3 : 51;
+    r.fulfill({ json: Array.from({ length: n }, (_, i) => ({ id: `gen9ou-${base - i}`, uploadtime: base - i, rating: null, format: '[Gen 9] OU', players: ['VinVGC', 'x'], private: 0, password: null })) });
+  });
+  await out.locator('.pl-scope button[data-value="all"]').click();
+  await expect(out.locator('.pl-replays thead')).toContainText('Format');
+  await expect(out.locator('.pl-replays tbody tr')).toHaveCount(50);
+  await out.locator('.pl-replays__actions button', { hasText: 'Load all' }).click();
+  await expect(out.locator('.pl-replays tbody tr')).toHaveCount(53);
+  await expect(out.locator('.pl-replays__status')).toContainText('Showing 53 public replays in every format (all of them)');
   // replay stats + leads
   await expect(sec.locator('.card', { hasText: 'Top-ladder replay stats' }).locator('tbody tr').first()).toBeVisible();
   // VGC mode never shows the section

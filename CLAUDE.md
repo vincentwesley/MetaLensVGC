@@ -320,6 +320,10 @@ These skills are available in every session. The user never types slash commands
   (the only third-party requests: pokemonshowdown.com users + replay.pokemonshowdown.com, in `_headers` connect-src; user
   ids reduced to [a-z0-9]; rendered with textContent only), replay stats (win % + Wilson range, used / led %, lead pairs;
   keys = team-preview species). NatDex Doubles uses all six Pokémon: "used" = sent out at least once.
+- v1.10.1: the lookup lists EVERY public replay of the player (owner): this format | all formats, Load more / Load all
+  (`ctx.listReplays` -> `data.js#listShowdownReplays`, Showdown search pages of 50 via `&before=<uploadtime>`,
+  `replays.js#replayPage`), Stop, cap 40 pages (2,000) + "See them on Showdown". A replay is public only if one of the two
+  players shared it (said on the page and in the replay-stats meta line).
 
 ### v1.4.0 notes
 - New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.

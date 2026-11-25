@@ -131,7 +131,6 @@ export default {
       // most used Pokémon in their recent public replays
       const mine = (g, i) => g.p[i].u === res.id;
       const games = res.games.filter((g) => g.p.some((s) => s.u === res.id));
-      if (!res.replays.length) { empty(lookOut, `No public ${label} replays`, 'Only replays the players chose to save are public.'); return; }
       const agg = aggregateReplays(games, { side: mine });
       if (agg.mons.length) {
         lookOut.appendChild(elm('h5', 'pl-sub', `Most used in their last ${games.length} public replays`));
@@ -147,27 +146,117 @@ export default {
         lookOut.appendChild(row);
       }
       // recent replays
-      lookOut.appendChild(elm('h5', 'pl-sub', 'Recent public replays'));
-      const byId = new Map(games.map((g) => [g.id, g]));
-      const { wrap, tbody } = table([['Date'], ['Opponent'], ['Rating', 'num'], ['Result'], ['Replay']]);
-      for (const rp of res.replays.slice(0, 20)) {
-        const g = byId.get(rp.id);
-        const side = g ? g.p.findIndex((s) => s.u === res.id) : -1;
-        const opp = (rp.players || []).find((n) => toUserId(n) !== res.id) || '—';
-        const result = !g || side < 0 ? '—' : g.w == null ? 'no result' : g.w === side ? 'Won' : 'Lost';
-        const tr = elm('tr');
-        const a = elm('a', null, 'Watch');
-        a.href = replayUrl(rp.id);
-        a.target = '_blank';
-        a.rel = 'noopener';
-        const tdA = td('');
-        tdA.appendChild(a);
-        tr.append(td(new Date(rp.uploadtime * 1000).toISOString().slice(0, 10)), td(opp), td(rp.rating ? String(rp.rating) : 'unrated', 'num'),
-          td(result, result === 'Won' ? 'pl-win' : result === 'Lost' ? 'pl-loss' : null), tdA);
-        tbody.appendChild(tr);
+      lookOut.appendChild(replayBrowser(res, view, games));
+    }
+
+    // Every public replay of the player, page by page (Showdown serves 50 at a time): this format or all formats,
+    // Load more / Load all (with progress, Stop and a cap). Results are known only for the parsed newest games.
+    const MAX_PAGES = 40; // 2,000 replays; Showdown's own page lists the rest
+    function replayBrowser(res, view, parsed) {
+      const box = elm('div', 'pl-replays');
+      const fmt = view.regMeta?.format;
+      const label = view.regMeta?.label || view.reg;
+      const byId = new Map(parsed.map((g) => [g.id, g]));
+      const head = elm('div', 'pl-replays__head');
+      head.appendChild(elm('h5', 'pl-sub', 'Public replays'));
+      const seg = elm('div', 'segmented pl-scope');
+      seg.setAttribute('role', 'radiogroup');
+      seg.setAttribute('aria-label', 'Replays to list');
+      const scopes = new Map();
+      for (const [v, t] of [['format', label], ['all', 'All formats']]) {
+        const b = elm('button', null, t);
+        b.type = 'button';
+        b.dataset.value = v;
+        b.addEventListener('click', () => { if (scope !== v) { scope = v; reset(); } });
+        seg.appendChild(b);
+        scopes.set(v, b);
       }
-      lookOut.appendChild(wrap);
-      lookOut.appendChild(elm('p', 'ddv-note', `Results and Pokémon from the newest ${games.length} replays (the others are listed without opening them). Data: Pokémon Showdown.`));
+      head.appendChild(seg);
+      box.appendChild(head);
+      box.appendChild(elm('p', 'ddv-note', 'A replay is public when either player chose to share it after the battle; unshared and private games never appear.'));
+      const status = elm('p', 'pl-replays__status');
+      const tableHost = elm('div');
+      const actions = elm('div', 'pl-replays__actions');
+      const more = elm('button', 'lib-btn', 'Load more');
+      const all = elm('button', 'lib-btn', 'Load all');
+      const stop = elm('button', 'lib-btn', 'Stop');
+      for (const x of [more, all, stop]) x.type = 'button';
+      const onSd = elm('a', 'lib-btn', 'See them on Showdown');
+      onSd.href = `https://replay.pokemonshowdown.com/?user=${res.id}`;
+      onSd.target = '_blank';
+      onSd.rel = 'noopener';
+      actions.append(more, all, stop, onSd);
+      box.append(status, tableHost, actions);
+
+      let scope = 'format';
+      let rows = [];
+      let before = null;
+      let pages = 0;
+      let token = 0;
+      let busy = false;
+
+      function paint() {
+        for (const [v, b] of scopes) b.setAttribute('aria-pressed', String(v === scope));
+        tableHost.textContent = '';
+        const allFormats = scope === 'all';
+        if (!rows.length && !busy) {
+          empty(tableHost, allFormats ? 'No public replays' : `No public ${label} replays`, allFormats ? null : 'Try All formats.');
+        } else {
+          const cols = [['Date'], ...(allFormats ? [['Format']] : []), ['Opponent'], ['Rating', 'num'], ['Result'], ['Replay']];
+          const { wrap, tbody } = table(cols);
+          for (const rp of rows) {
+            const g = byId.get(rp.id);
+            const side = g ? g.p.findIndex((x) => x.u === res.id) : -1;
+            const opp = (rp.players || []).find((n) => toUserId(n) !== res.id) || '—';
+            const result = !g || side < 0 ? '—' : g.w == null ? 'no result' : g.w === side ? 'Won' : 'Lost';
+            const tr = elm('tr');
+            const a = elm('a', null, 'Watch');
+            a.href = replayUrl(rp.id);
+            a.target = '_blank';
+            a.rel = 'noopener';
+            const tdA = td('');
+            tdA.appendChild(a);
+            tr.append(td(new Date(rp.uploadtime * 1000).toISOString().slice(0, 10)), ...(allFormats ? [td(String(rp.format || '').replace(/^\[Gen 9\] /, ''))] : []),
+              td(opp), td(rp.rating ? String(rp.rating) : 'unrated', 'num'),
+              td(result, result === 'Won' ? 'pl-win' : result === 'Lost' ? 'pl-loss' : null), tdA);
+            tbody.appendChild(tr);
+          }
+          tableHost.appendChild(wrap);
+        }
+        const capped = pages >= MAX_PAGES && before != null;
+        status.textContent = busy ? `Loading… ${rows.length} so far`
+          : `Showing ${rows.length} public replay${rows.length === 1 ? '' : 's'}${allFormats ? ' in every format' : ` in ${label}`}${before == null ? ' (all of them)' : capped ? ` (MetaLens stops at ${MAX_PAGES * 50}; the rest are on Showdown)` : ''}.`
+          + (parsed.length ? ` Results are shown for the newest ${parsed.length} in ${label}.` : '');
+        more.hidden = busy || before == null || capped;
+        all.hidden = busy || before == null || capped;
+        stop.hidden = !busy;
+      }
+
+      async function page(t) {
+        const p = await ctx.listReplays(res.id, { format: scope === 'all' ? null : fmt, before });
+        if (t !== token) return false;
+        rows = rows.concat(p.rows.filter((r) => !rows.some((x) => x.id === r.id)));
+        before = p.before;
+        pages++;
+        return true;
+      }
+      async function load(untilDone) {
+        const t = token;
+        busy = true;
+        paint();
+        try {
+          do { if (!(await page(t))) return; if (untilDone) paint(); } while (untilDone && before != null && pages < MAX_PAGES && t === token);
+        } catch { status.textContent = 'Could not reach Pokémon Showdown.'; }
+        if (t !== token) return;
+        busy = false;
+        paint();
+      }
+      function reset() { token++; rows = []; before = null; pages = 0; busy = false; load(false); }
+      more.addEventListener('click', () => load(false));
+      all.addEventListener('click', () => load(true));
+      stop.addEventListener('click', () => { token++; busy = false; paint(); });
+      reset();
+      return box;
     }
 
     function renderLadder(view) {
@@ -214,7 +303,7 @@ export default {
         for (const x of [stats, leads]) { ctx.meta(x.meta, { source: 'Showdown replays' }); empty(x.body, 'No replay sample yet', 'The daily Showdown snapshot has not collected replays for this format yet.'); }
         return;
       }
-      const src = `Rated public replays of the top ${R.sample.players} · last ${R.sample.windowDays} days`;
+      const src = `Rated public replays of the top ${R.sample.players} · last ${R.sample.windowDays} days · shared games only`;
       const agg = aggregateReplays(games);
       ctx.meta(stats.meta, { source: src, n: games.length, unit: 'games' });
       ctx.meta(leads.meta, { source: src, n: games.length, unit: 'games' });

@@ -162,6 +162,7 @@ async function boot() {
       const t = lastView?.regTeams.find((x) => x.id === id);
       return t ? `${t.player || 'Unknown'} · ${t.ev?.name || t.date || ''}` : null;
     },
+    listReplays: async (userid, opts) => data.listShowdownReplays(userid, { ...opts, replayPage: (await import('./lib/replays.js')).replayPage }), // one page of a user's public replays
     lookupPlayer: async (userid, format) => data.lookupShowdownUser(userid, format, { parseReplay: (await import('./lib/replays.js')).parseReplay }), // live Showdown lookup (players section)
     loadPokedex: (family) => data.loadPokedexFile(family || 'vgc'), // lazy: the Pokédex section loads its roster after first paint
     loadLearnsets: (family) => data.loadLearnsetsFile(family || 'vgc'), // lazy: only when a Pokédex move filter first needs it

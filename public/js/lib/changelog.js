@@ -1,6 +1,12 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.10.1', date: '2026-11-25', title: 'Every public replay',
+    notes: [
+      { tag: 'NEW', text: 'Player lookup lists all of a player’s public replays: this format or every format, with Load more and Load all, and a link to the same list on Showdown. (A replay is public when either player shared it.)' },
+    ],
+  },
+  {
     version: '1.10.0', date: '2026-11-25', title: 'Players & replays (Showdown)',
     notes: [
       { tag: 'NEW', text: 'Showdown ladder top 100 for National Dex and NatDex Doubles, with each player’s peak Elo and best rank (tracked daily from today; earlier sightings can be added by hand with their source).' },

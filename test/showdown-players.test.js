@@ -85,3 +85,13 @@ test('manual ladder observations: count towards peaks with their source, never b
   const g = updateLadderHistory(null, { reg: 'NDD', format: 'f', toplist: top([1900]), date: '2026-11-25', manual: [{ ...manual[0], userid: 'zz', name: 'ZZ' }] });
   assert.equal(g.players.zz.bestRank, 7);
 });
+
+test('replayPage: 50 per page, the 51st row means more (before = the 50th uploadtime)', async () => {
+  const { replayPage } = await import('../public/js/lib/replays.js');
+  const rows = (n) => Array.from({ length: n }, (_, i) => ({ id: `r${i}`, uploadtime: 1000 - i }));
+  const full = replayPage(rows(51));
+  assert.equal(full.rows.length, 50);
+  assert.equal(full.before, 951);
+  assert.equal(replayPage(rows(50)).before, null);
+  assert.deepEqual(replayPage(null), { rows: [], before: null });
+});

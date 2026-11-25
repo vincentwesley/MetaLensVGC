@@ -14,3 +14,13 @@
 .pl-link { background: none; border: 0; padding: 0; color: var(--ink); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-align: left; }
 .pl-win { color: var(--up); }
 .pl-loss { color: var(--down); }
+
+/* Public replay browser (v1.10.1) */
+.pl-replays__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-3); }
+.pl-replays__head .pl-sub { margin: 0; }
+.pl-replays__status { color: var(--ink-2); font-size: var(--fs-small); margin: var(--space-2) 0; }
+.pl-replays__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.pl-replays__actions a.lib-btn { text-decoration: none; display: inline-flex; align-items: center; }
+/* Long lists (Load all can bring hundreds) scroll inside the card instead of stretching the page. */
+.pl-replays .table-wrap { max-height: min(560px, 70vh); overflow: auto; }
+.pl-replays thead th { position: sticky; top: 0; background: var(--surface-2); z-index: 1; }
