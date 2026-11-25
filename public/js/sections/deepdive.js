@@ -10,6 +10,7 @@
 // open, so the intent (search species in the current view -> open drawer)
 // is still met without new markup outside owned files.
 import { setsFor, setMon } from '../lib/samples.js';
+import { ladderMonthChange } from '../lib/ladder-field.js';
 import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, realTera, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
 import { SPREAD_ARCHETYPES, spreadArchetypeText, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
@@ -68,7 +69,14 @@ function barList(parent, rows, opts = {}) {
   if (!rows.length) { emptyState(parent, 'Nothing recorded in view'); return; }
   const max = Math.max(...rows.map((r) => r.pct), 0.0001);
   const list = elm('div', 'bar-list');
-  for (const r of rows) list.appendChild(barRow(r.name, r.pct, max, { onClick: opts.onClick ? (e) => opts.onClick(r.name, e) : null }));
+  for (const r of rows) {
+    // opts.changeOf(name) -> changeVsPrev result (Showdown: newest month vs the one before), shown after the share
+    const ch = opts.changeOf ? opts.changeOf(r.name) : null;
+    const valueText = ch ? `${(r.pct * 100).toFixed(1)}% ${changeText(ch)}` : undefined;
+    const row = barRow(r.name, r.pct, max, { onClick: opts.onClick ? (e) => opts.onClick(r.name, e) : null, valueText });
+    if (ch) row.querySelector('.bar-row__val').classList.add('ddv-chg', `ddv-chg--${changeDir(ch)}`);
+    list.appendChild(row);
+  }
   parent.appendChild(list);
 }
 
@@ -396,6 +404,9 @@ export default {
       const usageKpi = elm('div', 'kpi');
       const useLadder = view.state.source === 'ladder';
       const ladderRow = useLadder ? merged?.mons.find((m) => m.key === key) : null;
+      // Showdown: month-over-month change (newest published month vs the one before, same rating cutoff)
+      const mc = sd ? ladderMonthChange(view.ladder, dex) : null;
+      const chg = (table) => (mc ? (name) => mc.tableChange(key, table, name) : null);
       usageKpi.append(elm('span', 'kpi__label', 'Usage'), elm('span', 'kpi__value', sd ? (ladderRow ? ctx.fmt.pct(ladderRow.usage) : '—') : ctx.fmt.pct(det.pct)));
       const winKpi = elm('div', 'kpi');
       winKpi.append(elm('span', 'kpi__label', 'Win % (with it)'), elm('span', 'kpi__value', ctx.fmt.pct(det.withWinPct)));
@@ -466,6 +477,24 @@ export default {
       tmuBody.appendChild(elm('div', 'ddv-note', 'Damage taken by attacking type. Abilities (e.g. Levitate) not applied.'));
       content.appendChild(tmuCard);
 
+      // Showdown: usage by month (every published month at the chosen rating) + change vs the month before
+      if (sd && mc) {
+        const { card: moCard, body: moBody } = sectionCard('Usage by month');
+        const moMeta = elm('div');
+        ctx.meta(moMeta, { source: `Smogon ladder · rating ${view.ladder?.cutoff === 0 ? 'all' : `${view.ladder?.cutoff}+`}`, n: merged?.battles, unit: 'battles' });
+        moBody.appendChild(moMeta);
+        const series = mc.series(key);
+        moBody.appendChild(sparkline(series.map((s) => s.usage), series.map((s) => s.month)));
+        moBody.appendChild(elm('div', 'ddv-note', series.map((s) => `${s.month}: ${ctx.fmt.pct(s.usage)}`).join(' · ')));
+        const ch = mc.change(key);
+        const chEl = elm('div', 'ddv-note', `Change ${mc.label}: `);
+        if (!ch) chEl.append('not on the ladder in the newest month.');
+        else chEl.appendChild(elm('strong', `sb-stat--${changeDir(ch)}`, changeText(ch)));
+        moBody.appendChild(chEl);
+        moBody.appendChild(elm('div', 'ddv-note', 'Item, ability, move and Tera shares below cover every month shown; the arrows after them compare the newest month with the one before.'));
+        content.appendChild(moCard);
+      }
+
       // usage by week (team sheets only)
       if (!sd) {
       const { card: wkCard, body: wkBody } = sectionCard('Usage by week');
@@ -516,14 +545,14 @@ export default {
       // items
       const { card: itemsCard, body: itemsBody } = sectionCard('Items');
       barList(itemsBody, useLadder ? (ladderRow?.items || []).map((r) => ({ name: r.name, pct: r.pct })) : det.items.map((r) => ({ name: r.name, pct: r.pct })),
-        { onClick: (name, e) => ctx.chip('item', name, e) });
+        { onClick: (name, e) => ctx.chip('item', name, e), changeOf: chg('items') });
       if (!(sd && !ladderRow)) content.appendChild(itemsCard);
 
       // Tera types (Showdown only; no chip kind exists for Tera, so informational)
       if (ladderRow && view.family === 'natdex') {
         const { card: teraCard, body: teraBody } = sectionCard('Tera types');
         const tera = realTera(ladderRow.tera);
-        if (tera.length) barList(teraBody, tera.map((r) => ({ name: r.name, pct: r.pct })));
+        if (tera.length) barList(teraBody, tera.map((r) => ({ name: r.name, pct: r.pct })), { changeOf: chg('tera') });
         else teraBody.appendChild(elm('div', 'ddv-note', 'Tera is banned in this format.'));
         content.appendChild(teraCard);
       }
@@ -533,13 +562,13 @@ export default {
       if (sd && !ladderRow?.abilities?.length) {
         const own = Object.values(sp.abilities || {});
         abBody.appendChild(elm('div', 'ddv-note', own.length ? `Available: ${own.join(', ')} (no usage recorded).` : 'No usage recorded.'));
-      } else barList(abBody, useLadder ? (ladderRow?.abilities || []).map((r) => ({ name: r.name, pct: r.pct })) : det.abilities.map((r) => ({ name: r.name, pct: r.pct })));
+      } else barList(abBody, useLadder ? (ladderRow?.abilities || []).map((r) => ({ name: r.name, pct: r.pct })) : det.abilities.map((r) => ({ name: r.name, pct: r.pct })), { changeOf: chg('abilities') });
       content.appendChild(abCard);
 
       // moves
       const { card: mvCard, body: mvBody } = sectionCard('Moves');
       barList(mvBody, useLadder ? (ladderRow?.moves || []).map((r) => ({ name: r.name, pct: r.pct })) : det.moves.map((r) => ({ name: r.name, pct: r.pct })),
-        { onClick: (name, e) => ctx.chip('move', name, e) });
+        { onClick: (name, e) => ctx.chip('move', name, e), changeOf: chg('moves') });
       if (!(sd && !ladderRow)) content.appendChild(mvCard);
 
       // exact 4-move sets (team sheets only)

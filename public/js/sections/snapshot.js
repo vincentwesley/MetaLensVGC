@@ -1,6 +1,7 @@
 // snapshot.js — Meta Snapshot (hero): top-6 species cards + KPI tiles.
 // Tournament mode: aggregate.usage()/kpis() over view.monTeams, delta vs view.prev.
 // Ladder mode: ladderMerge() gives usage-only rows + n=battles (no win%, no delta).
+import { ladderMonthChange } from '../lib/ladder-field.js';
 import { usage, atMinN, kpis, changeVsPrev, changeText, changeDir, ladderMerge, rankedSeason, rankedMegaKey } from '../lib/aggregate.js';
 import { rankedSource, clickHint, prevLabel } from '../ui/meta.js';
 import { effectiveSpecies } from '../lib/stats.js';
@@ -86,6 +87,7 @@ function kpiTile(label, value, opts = {}) {
   if (opts.tip) { l.setAttribute('data-tip', opts.tip); l.tabIndex = 0; }
   const v = document.createElement('div');
   v.className = 'kpi__value';
+  if (opts.sprite || opts.text) v.classList.add('kpi__value--name'); // names, not numbers: smaller type so the row doesn't collide
   if (opts.sprite) {
     // Long names (Salamence-Mega) may only break after a hyphen, never mid-word.
     const t = document.createElement('span');
@@ -174,17 +176,24 @@ export default {
         body.querySelector('.empty-state')?.remove();
         body.prepend(hero); body.append(kpiRow);
         const top = merged.mons.slice(0, 6);
+        const mc = view.family === 'natdex' ? ladderMonthChange(view.ladder, view.dex) : null;
         if (!top.length) {
           emptyState(hero, 'No ladder data in view');
         } else {
-          top.forEach((m) => hero.appendChild(monCard(ctx, m.key, m.usage, null, null, '', anim)));
+          if (mc) {
+            changeNote.textContent = `Change ${mc.label} (newest Smogon month vs the one before, same rating)`;
+            hero.after(changeNote);
+          }
+          top.forEach((m) => hero.appendChild(monCard(ctx, m.key, m.usage, null, mc ? mc.change(m.key) : null, mc ? `vs ${mc.prev}` : '', anim, mc?.prevBattles, 0)));
         }
         const megaKeys = merged.mons.filter((m) => ctx.dex.species[m.key]?.megaOf);
         const megaShare = megaKeys.reduce((a, m) => a + m.usage, 0);
         const topMega = megaKeys.slice().sort((a, b) => b.usage - a.usage)[0];
         const ms = merged.months;
         kpiRow.appendChild(kpiTile('Battles sampled', ctx.fmt.n(merged.battles)));
-        kpiRow.appendChild(kpiTile('Months', ms.length > 1 ? `${ms.length} (${ms[0]} – ${ms[ms.length - 1]})` : ms[0]));
+        const monName = (m) => new Date(`${m}-01T00:00:00Z`).toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+        const span = ms.length > 1 ? `${monName(ms[0])}–${monName(ms[ms.length - 1])} ${ms[ms.length - 1].slice(0, 4)}` : `${monName(ms[0])} ${ms[0].slice(0, 4)}`;
+        kpiRow.appendChild(kpiTile('Months', span, { text: true, tip: `Smogon months merged: ${ms.join(', ')}` }));
         kpiRow.appendChild(kpiTile('Unique species', ctx.fmt.n(merged.mons.length)));
         kpiRow.appendChild(kpiTile('Meta diversity', effectiveSpecies(merged.mons.map((m) => m.raw)).toFixed(1),
           { tip: 'Effective number of species: exp(Shannon entropy) of usage share. Higher = more balanced meta.' }));

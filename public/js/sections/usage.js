@@ -1,6 +1,7 @@
 // usage.js — Usage leaderboard: sortable table, rank/sprite/name/usage bar/
 // usage%/win% with Wilson CI/n. Tournament mode uses aggregate.usage();
 // ladder mode uses ladderMerge() (usage % + n=raw battles only, no win%).
+import { ladderMonthChange } from '../lib/ladder-field.js';
 import { usage, atMinN, ladderMerge, rankedSeason, rankedEntries, itemsBySpecies, changeVsPrev, changeText, changeDir } from '../lib/aggregate.js';
 import { rankedSource, clickHint, prevLabel } from '../ui/meta.js';
 import { nameMatcher } from '../lib/names.js';
@@ -125,7 +126,7 @@ export default {
       if (!view) return;
       const state = view.state;
       const dex = view.dex;
-      let rows, cols, unit, source, n, relaxed = false;
+      let rows, cols, unit, source, n, relaxed = false, monthLabel = null;
 
       if (state.source === 'ranked') { renderRanked(view); return; }
       body.querySelector('.ddv-note')?.remove();
@@ -141,6 +142,13 @@ export default {
         }
         n = merged.battles;
         ({ rows, relaxed } = atMinN(merged.mons.map((m) => ({ key: m.key, pct: m.usage, n: m.raw, winPct: null, ci: null, topItem: m.items[0] || null })), state.minN));
+        // Showdown: change = newest published month vs the one before (same rating cutoff).
+        const mc = view.family === 'natdex' ? ladderMonthChange(view.ladder, view.dex) : null;
+        if (mc) {
+          cols = [...COLS_SHOWDOWN, COL_CHANGE];
+          rows = rows.map((r) => { const change = mc.change(r.key) || { isNew: true, pts: null }; return { ...r, change, chgPts: change.isNew ? null : change.pts }; });
+          monthLabel = mc.label;
+        }
       } else {
         cols = COLS_TEAM; unit = 'teams'; source = 'Tournaments'; n = view.monTeams.length;
         const byItem = itemsBySpecies(view.monTeams);
@@ -156,16 +164,16 @@ export default {
       ctx.meta(meta, { source, n, unit, relaxed });
       body.querySelector('.empty-state')?.remove();
       if (!rows.length) {
-        emptyState(body, cols === COLS_SHOWDOWN ? 'No ladder data in view' : 'No teams in view');
+        emptyState(body, view.family === 'natdex' ? 'No ladder data in view' : 'No teams in view');
         return;
       }
 
       // Sorted by a column this mode doesn't show (win in ladder mode, change without a
       // previous period): fall back to N.
-      if (!cols.some((c) => (c.sortKey || c.key) === sortKey)) { sortKey = cols === COLS_SHOWDOWN ? 'pct' : 'n'; sortDir = 'desc'; }
+      if (!cols.some((c) => (c.sortKey || c.key) === sortKey)) { sortKey = view.family === 'natdex' ? 'pct' : 'n'; sortDir = 'desc'; }
 
       // Usage rank is fixed before sorting / searching, so a found row keeps its real place.
-      const rankBy = cols === COLS_SHOWDOWN ? 'pct' : 'n'; // the Showdown table is ranked by (rating-weighted) usage %
+      const rankBy = view.family === 'natdex' ? 'pct' : 'n'; // the Showdown table is ranked by (rating-weighted) usage %
       const usageRank = new Map([...rows].sort((a, b) => b[rankBy] - a[rankBy]).map((r, i) => [r.key, i + 1]));
       const maxPct = Math.max(...rows.map((r) => r.pct), 0.0001);
       const q = query();
@@ -265,7 +273,7 @@ export default {
 
         tr.append(tdRank, tdSprite, tdName, tdUsage);
 
-        if (cols !== COLS_LADDER && cols !== COLS_SHOWDOWN) {
+        if (state.source !== 'ladder') {
           const tdWin = document.createElement('td');
           tdWin.className = 'num col-win';
           if (r.winPct != null && r.ci) {
@@ -305,6 +313,14 @@ export default {
           tdN.className = 'num col-n';
           tdN.textContent = ctx.fmt.n(r.n);
           tr.append(tdN);
+        } else if (cols.includes(COL_CHANGE)) {
+          // Showdown: month-over-month change at the chosen rating cutoff
+          const tdChg = document.createElement('td');
+          const dir = changeDir(r.change);
+          tdChg.className = `num col-chg kpi__delta${dir === 'flat' ? '' : ` kpi__delta--${dir}`}`;
+          tdChg.textContent = changeText(r.change);
+          tdChg.dataset.tip = r.change.isNew ? `Not on the ladder (under 0.1%) the month before (${monthLabel})` : `Usage change ${monthLabel}, in percentage points (the Usage % column covers every month shown)`;
+          tr.appendChild(tdChg);
         }
         tbody.appendChild(tr);
       });

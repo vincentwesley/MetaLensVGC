@@ -2,6 +2,7 @@
 // month-over-month movers. Input is a raw ladder file ({months:[{month, battles, mons}]}) or,
 // for the type helpers, ladderMerge().mons rows ({key, usage}).
 import { TYPES, effectiveness } from './types.js';
+import { ladderMerge, changeVsPrev } from './aggregate.js';
 
 const inRange = (ladder, from = '', to = '') =>
   (ladder?.months || []).filter((m) => (!from || m.month >= from.slice(0, 7)) && (!to || m.month <= to.slice(0, 7)))
@@ -116,4 +117,38 @@ export function ladderQuadrant(mons, n = 40) {
   if (!sumRaw) return null;
   return ok.sort((a, b) => b.usage - a.usage).slice(0, n)
     .map((m) => ({ key: m.key, usage: m.usage, raw: m.raw, expected: (m.raw / sumRaw) * sumUse, lean: m.usage / ((m.raw / sumRaw) * sumUse) }));
+}
+
+// Month-over-month change for Showdown formats (v1.9.0): the newest published month vs the one before, at the same
+// rating cutoff, with the same changeVsPrev rules as the Champions views (absent before = NEW). Memoized per ladder.
+const monthChangeCache = new WeakMap();
+export function ladderMonthChange(ladder, dex = null) {
+  const ms = ladder?.months || [];
+  if (ms.length < 2) return null;
+  if (monthChangeCache.has(ladder)) return monthChangeCache.get(ladder);
+  const merged = ms.map((m) => ladderMerge({ ...ladder, months: [m] }, '', '', dex)); // one merge per month
+  const cur = merged[merged.length - 1];
+  const prev = merged[merged.length - 2];
+  const curRows = new Map(cur.mons.map((m) => [m.key, m]));
+  const prevRows = new Map(prev.mons.map((m) => [m.key, { pct: m.usage, n: m.raw }]));
+  const out = {
+    cur: ms[ms.length - 1].month, prev: ms[ms.length - 2].month, prevBattles: prev.battles,
+    label: `${ms[ms.length - 1].month} vs ${ms[ms.length - 2].month}`,
+    /** changeVsPrev of a Pokémon's usage in the newest month; null when it has no row that month. */
+    change(key) { const c = curRows.get(key); return c ? changeVsPrev(c.usage, prevRows.get(key), 1) : null; },
+    /**
+     * Change of one of a Pokémon's tables (items / abilities / moves / tera / teammates) entry between the two months:
+     * share within that Pokémon, in points; NEW when the entry was not in its top list the month before.
+     */
+    tableChange(key, table, name) {
+      const c = curRows.get(key)?.[table]?.find((r) => r.name === name);
+      if (!c) return null;
+      const p = prev.mons.find((m) => m.key === key)?.[table]?.find((r) => r.name === name);
+      return changeVsPrev(c.pct, p ? { pct: p.pct, n: 1 } : null, 1);
+    },
+    /** [{month, usage}] for every month (0 when absent that month). */
+    series: (key) => ms.map((m, i) => ({ month: m.month, usage: merged[i].mons.find((x) => x.key === key)?.usage ?? 0 })),
+  };
+  monthChangeCache.set(ladder, out);
+  return out;
 }

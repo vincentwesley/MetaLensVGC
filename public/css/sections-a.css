@@ -147,6 +147,7 @@ main.grid .section[data-section="quadrant"] {
 .snapshot__kpis .kpi__value { min-width: 0; }
 .snapshot__kpis .kpi__value > span { min-width: 0; overflow-wrap: normal; word-break: normal; }  /* breaks only at <wbr> after '-' */
 .snapshot__kpis .kpi__value img.sprite { flex-shrink: 0; }
+.snapshot__kpis .kpi__value--name { font-size: 20px; line-height: 1.2; }
 @media (max-width: 500px) { .snapshot__kpis .kpi__value { font-size: .85em; } }
 [data-skin="retro"] .snapshot__kpis .kpi__value { font-size: 22px; }
 .snapshot__change { margin: calc(-1 * var(--space-2)) 0 var(--space-3); color: var(--muted); font-size: var(--fs-small); }

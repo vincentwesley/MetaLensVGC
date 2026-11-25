@@ -32,3 +32,7 @@
 /* Footer credits per mode (v1.9.0): Champions sources in VGC, Smogon only in Showdown. */
 [data-family="showdown"] .site-footer .ft-vgc,
 html:not([data-family="showdown"]) .site-footer .ft-showdown { display: none; }
+
+/* Deep dive (Showdown): month-over-month change after each share */
+.ddv-chg--up { color: var(--up); }
+.ddv-chg--down { color: var(--down); }

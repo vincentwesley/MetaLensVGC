@@ -59,3 +59,22 @@ test('committed samples files: teams with 1-6 Pokémon known to the NatDex dex, 
     }
   }
 });
+
+test('ladderMonthChange: newest month vs the one before, NEW when absent, per-table changes, series', async () => {
+  const { ladderMonthChange } = await import('../public/js/lib/ladder-field.js');
+  const mon = (usage, raw, items) => ({ usage, raw, items, abilities: {}, moves: {}, spreads: {}, teammates: {}, teraTypes: {}, counters: {} });
+  const ladder = { reg: 'NDD', cutoff: 1500, months: [
+    { month: '2026-09', battles: 100, mons: { A: mon(0.2, 40, { lifeorb: 0.5, leftovers: 0.5 }) } },
+    { month: '2026-10', battles: 120, mons: { A: mon(0.25, 60, { lifeorb: 0.7, choicescarf: 0.3 }), B: mon(0.1, 20, {}) } },
+  ] };
+  const mc = ladderMonthChange(ladder);
+  assert.equal(mc.label, '2026-10 vs 2026-09');
+  assert.ok(Math.abs(mc.change('A').pts - 5) < 1e-9);
+  assert.deepEqual(mc.change('B'), { isNew: true, pts: null });
+  assert.equal(mc.change('Z'), null);
+  assert.deepEqual(mc.series('A').map((s) => s.usage), [0.2, 0.25]);
+  const items = Object.fromEntries((await import('../public/js/lib/aggregate.js')).ladderMerge({ ...ladder, months: [ladder.months[1]] }).mons[0].items.map((r) => [r.name, r]));
+  const lifeOrb = Object.keys(items).find((n) => /life/i.test(n));
+  assert.ok(mc.tableChange('A', 'items', lifeOrb).pts > 0);
+  assert.equal(ladderMonthChange({ months: [ladder.months[0]] }), null, 'one month: no change');
+});

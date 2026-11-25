@@ -1415,3 +1415,46 @@ test('default regulation follows manifest.current; an explicit #reg= still wins'
   await page.goto('/#reg=M-C');
   await expect(page.locator('[aria-label="Regulation"] [aria-pressed="true"]')).toHaveText('M-C');
 });
+
+test('Showdown v1.9.0: rating cutoff, sample teams with a Showdown paste, item chip on ladder rows, NDD usage tiers, monthly change', async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t) => { window.__copied = t; } }, configurable: true }); });
+  await page.goto('/#reg=NDD');
+  await waitForAllSections(page);
+  // 3 published months, change column vs the month before
+  await expect(page.locator('.filterbar__sample')).toContainText(/Smogon ladder \d{4}-\d{2} to \d{4}-\d{2} · rating 1760\+/);
+  await expect(page.locator('[data-section="usage"] thead')).toContainText('Change');
+  // rating cutoff: in the hash and the sample line, other battles count
+  const before = await page.locator('.filterbar__sample').textContent();
+  await page.locator('[data-g="rating"] button[data-value="1500"]').click();
+  await waitForAllSections(page);
+  expect(await page.evaluate(() => location.hash)).toContain('rating=1500');
+  await expect(page.locator('.filterbar__sample')).toContainText('rating 1500+');
+  expect(await page.locator('.filterbar__sample').textContent()).not.toBe(before);
+  // sample teams: cards, Copy gives a Showdown import with EVs and Tera at level 100
+  const sec = page.locator('main [data-section="samples"]');
+  await sec.scrollIntoViewIfNeeded();
+  expect(await sec.locator('.smp-card').count()).toBeGreaterThan(0);
+  await expect(sec).toContainText('© Smogon');
+  await sec.locator('.smp-card').first().locator('button', { hasText: 'Copy' }).click();
+  const paste = await page.evaluate(() => window.__copied);
+  expect(paste).toMatch(/Level: 100/);
+  expect(paste).toMatch(/EVs: \d+ /);
+  expect(paste).toMatch(/Tera Type: /);
+  // NDD Pokédex groups by usage tier: the most used Pokémon sits in the first (Top 12) group
+  const lead = (await page.locator('[data-section="usage"] tbody tr').first().getAttribute('data-key'));
+  const dex = page.locator('main [data-section="pokedex"]');
+  await expect(dex).not.toContainText('Untiered');
+  // item chip from the Items section filters ladder rows to Pokémon holding it
+  await page.goto('/#reg=ND');
+  await waitForAllSections(page);
+  const species = async () => Number((await page.locator('.snapshot__kpis .kpi', { hasText: 'Unique species' }).locator('.kpi__value').textContent()).replace(/\D/g, ''));
+  const all = await species();
+  await page.goto('/#reg=ND&chips=item:Choice%20Scarf');
+  await page.reload(); // a hash-only goto keeps the page: reload so the numbers below are the filtered ones
+  await waitForAllSections(page);
+  const scarf = await species();
+  expect(scarf).toBeGreaterThan(0);
+  expect(scarf).toBeLessThan(all);
+  await expect(page.locator('#chips')).not.toContainText('Tournaments');
+  expect(lead).toBeTruthy();
+});
