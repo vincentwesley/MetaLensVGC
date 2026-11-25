@@ -290,6 +290,22 @@ These skills are available in every session. The user never types slash commands
 ### v1.3.1 notes
 - Smogon chaos counters are objects `{n,p,d}`; `trimMon` stores `[p, d, n]` (n<30 dropped), `ladderMerge` sorts by p-4d. The VGC Pokédex roster = species the installed champions mod tiers, plus species with real evidence in the CURRENT regulation (`seenFrom` in scripts/build-pokedex.js: any in-game ranked season, any Smogon ladder month, or `MIN_SHEETS` (5)+ tournament sheets), even if the mod marks them Past/Illegal (untiered, sorted last). The npm `pokemon-showdown` (0.11.11) predates M-C, hence the evidence. `validate.js` requires that evidence set (not all of `dex.json`) in the roster, and `test/validate-data.test.js` runs the validator on committed data. Never feed it all of `dex.json` again: stray sheets put Calyrex-Shadow, Koraidon, Zacian etc. in the M-C Pokédex (fixed in v1.5.5). Showdown-mode text must not say "teams" (e2e guards it). The Tera card shows only in the natdex family ("Tera is banned" for ND).
 
+### v1.9.0 notes (Showdown pass, owner 2026-11-25)
+- Ladder window = 3 newest published Smogon months (`keepNewest`; the old "current + 2 before" held only 2). Rating
+  cutoffs 0/1500/1630/1760 (`ladder-<REG>-<cutoff>.json`, `state.rating` in the hash, Showdown only, filter-bar "Rating";
+  VGC regs are forced to 1760 by sanitizeState, which also clears from/to for Showdown). Counters capped at 40 per mon.
+- Sample teams (`sections/samples.js`, Showdown only via `SHOWDOWN_ONLY` in main.js + CSS) and the deep dive "Smogon sets"
+  card read `samples-<REG>.json` (`scripts/sources/smogon-sets.js`, pkmn/smogon mirror). They are © Smogon and their
+  authors: always credit + link Smogon (owner's call). Pastes carry IVs in EV mode.
+- Item / move chips filter Showdown ladder rows (`speciesChipFilter(chips, dex, {sets: true})`, `test(key, row)`; no row =
+  skipped, never failed). Move rows in Moves & Tera are clickable in Showdown.
+- Month-over-month change (`ladder-field.js#ladderMonthChange`): leaderboard Change column, snapshot cards, deep dive
+  "Usage by month" + arrows after item / ability / move / Tera shares.
+- NDD Pokédex = usage tiers (`officialTiers` only for ND): Showdown's Doubles tiers miss most NatDex Pokémon.
+- No Champions content in Showdown mode: methodology facts tagged vgc|showdown|both, Formats table, Smogon-only
+  sources/credits, footer `.ft-vgc` / `.ft-showdown`, clock shows the next Smogon month, monthly digest. The e2e
+  "Showdown (ND, NDD)" test fails on Champions terms (SP, Lv50, Battle Data, Limitless, Reg M-x) or tournament "teams".
+
 ### v1.4.0 notes
 - New sections (all `span-12`, registered in `SECTION_IDS`/index.html, own css `css/v14-<name>.css`): `threats` (counters, `lib/threats.js`), `moves` (move usage + Tera, `lib/moves-field.js`), `compare` (two ladder months, `lib/compare.js`), `events` (tournaments; in `TEAM_ONLY`), `digest` (text summary, copy/print, `lib/digest.js`). Quadrant now shows in Showdown as a ladder variant (`ladderQuadrant` in `lib/ladder-field.js`), explicitly not win rate. A Showdown `grid-column: span 12` must stay inside a min-width media query or it creates implicit tracks on phones.
 

@@ -1,6 +1,15 @@
 // Update log, newest first. Shown by ui/changelog-dialog.js; VERSION must equal package.json "version" (test/changelog.test.js).
 export const CHANGELOG = [
   {
+    version: '1.9.0', date: '2026-11-25', title: 'A better Showdown page',
+    notes: [
+      { tag: 'NEW', text: 'Sample teams for National Dex and NatDex Doubles, from Smogon (credited to their authors), with one-click Showdown imports; Smogon’s recommended sets in each Pokémon’s details.' },
+      { tag: 'NEW', text: 'Pick the ladder rating (All, 1500+, 1630+, 1760+) and see how usage changed from one month to the next, everywhere on the Showdown page.' },
+      { tag: 'IMPROVED', text: 'The Showdown page now shows the three newest months Smogon has published (it was showing two), and item and move filters work there.' },
+      { tag: 'FIX', text: 'Champions-only things no longer appear in Showdown mode: Stat Points, Lv50 and win-rate notes, regulation counts, the regulation countdown and the Champions data credits. NatDex Doubles Pokémon are grouped by how much they are used instead of landing in “Untiered”.' },
+    ],
+  },
+  {
     version: '1.8.4', date: '2026-11-24', title: 'Regulations table for the research release',
     notes: [
       { tag: 'NEW', text: 'Research releases include a regulations table: each regulation’s dates and the Pokémon and Mega forms it newly allowed, worked out from Pokémon Showdown’s rules and the tournament data rather than typed by hand.' },

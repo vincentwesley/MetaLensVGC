@@ -89,6 +89,13 @@ components and data are listed in `THIRD_PARTY_NOTICES.md`.
 - No analytics, no cookies, no accounts.
 - The site only calls its own origin and the sprite host (typefaces are self-hosted).
 
+## Showdown formats
+
+National Dex and NatDex Doubles pages use Smogon's monthly usage statistics (the 3 newest published months, at
+rating cutoffs All / 1500+ / 1630+ / 1760+) and Smogon's sample teams and recommended sets via the
+[pkmn/smogon](https://github.com/pkmn/smogon) data mirror. Sample teams and sets are © Smogon and their authors and
+are always shown with credit and a link back to Smogon.
+
 ## Research data
 
 MetaLens is the data source for *The Geometry of a Metagame* (Vincent Wesley, Vin's Atelier). The same pipeline that

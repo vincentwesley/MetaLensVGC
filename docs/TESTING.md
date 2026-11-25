@@ -416,6 +416,23 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
   418 unit green.
 - Build twice, rows and aggregates: byte-identical. Throwaway clone freeze + verify: 16 files (rows) / 13 (aggregates).
 
+### v1.9.0 (Showdown pass), 2026-11-25
+- Data: Smogon had published up to 2026-10; the old window kept only 2026-09/10. New window: 2026-08..10 for every cutoff.
+  Trimmed sizes (3 months): ND 1760 1.6 MB, 1630 2.7, 1500 4.1, 0 5.6 (11 MB before capping counters at 40); NDD
+  1.6 / 2.4 / 3.6 / 4.3 MB. Samples: ND 25 teams + sets for 100 Pokémon, NDD 19 teams + 37; every species/item is in
+  dex-natdex. validate.js checks cutoff files (same months) and samples shape. pokestats.gg (owner's reference) blocks
+  automated access (Cloudflare 403), so nothing was taken from it.
+- Unit: published-month window + keepNewest; rating state (hash, VGC forced 1760, Showdown clears dates); samples
+  normalizer, Mega keys, chip filter, Showdown paste with EVs / IVs / Tera, setsFor; spread type text in EVs;
+  ladderMonthChange (change, NEW, series, table change). 425 unit green.
+- e2e: Showdown ND + NDD guard (no Champions terms, no tournament "teams" outside Sample teams, footer included); v1.9.0
+  test (rating in hash + sample line, sample-team paste, item chip narrows ND species 244 -> 140, NDD no "Untiered",
+  Change column); nav now 19 links. 70 e2e green.
+- Visual (1280px, pro dark): rating control, sample-team cards (6 then "Show all"), snapshot change arrows + shorter
+  Months KPI, leaderboard Change column, deep dive Usage by month + Smogon sets.
+- Not yet: the pipeline end to end in the weekly Action with the new ladder/samples steps (the data here was built with the
+  same functions by a one-off script).
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

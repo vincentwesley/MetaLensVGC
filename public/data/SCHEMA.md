@@ -238,6 +238,16 @@ Usage is always counted by `k` (so `Charizard-Mega-Y` and `Floette-Mega` are sep
 ## Showdown regs (ND, NDD) and dex-natdex.json
 - `lib/regs.js` regs carry `family` ('vgc' | 'showdown'), `format` (Smogon stats format id), `level` (50 vgc, 100 showdown), `label`. Showdown regs (`ND` = gen9nationaldex, `NDD` = gen9nationaldexdoubles) have no `start`/`end`, and tournaments never map to them.
 - manifest reg entries gain `family, format, level, label`; showdown entries have `teams: 0, events: 0, matches: 0, rankedSeasons: []` and no `start`/`end`. Manifest also has `currentShowdown: 'ND'` (`current` stays the latest VGC reg).
-- Showdown regs have only `ladder-<REG>.json` (no teams-/ranked- files). Months are a rolling last 3 (current + 2 before; missing ones skipped), mons under 0.1% usage dropped.
+- Showdown regs have only ladder files (no teams-/ranked- files). Months (v1.9.0) = the 3 newest PUBLISHED months (the
+  current month is probed but Smogon publishes it early the next month), mons under 0.1% usage dropped, counters capped
+  at the top 40 per mon by p - 4d.
+- Rating cutoffs (v1.9.0): `ladder-<REG>.json` is cutoff 1760; `ladder-<REG>-<cutoff>.json` holds 1630, 1500 and 0 (same
+  shape, `cutoff` field set, same months). Manifest showdown entries list them in `ladderCutoffs` (e.g. `[1760, 1630, 1500, 0]`);
+  the validator requires each listed file. The browser loads one only when `state.rating` picks it.
+- `samples-<REG>.json` (v1.9.0): Smogon sample teams + recommended sets via the pkmn/smogon mirror, © Smogon and their
+  authors (shown with credit). `{reg, format, source: {teams, sets, smogon}, credit, teams: [{name, author|null, mons:
+  [{species, item, ability, tera, nature, evs: number[6]|null, ivs: number[6]|null (only when not all 31), moves}]}],
+  sets: {species: [{name, moves: (string|string[])[], item[], ability[], nature[], evs: number[6][], ivs, tera[]}]}}`.
+  Manifest showdown entries carry `samples: {teams, sets}` (null when absent).
 - Every ladder mon gains `teraTypes`: top 12 `"Tera Types"` as fractions of that mon's total (`{}` for Champions files).
 - `dex-natdex.json`: same shape as dex.json, built from the base (non-Champions) Showdown `Dex` for species/moves/items seen in the ND/NDD ladders. The app does not load it yet (`data.js` only reads `data/dex.json`); B3 should load it for showdown regs.
