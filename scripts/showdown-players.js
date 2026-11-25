@@ -47,7 +47,9 @@ async function run() {
     const have = new Map((prevReplays?.games || []).map((g) => [g.id, g]));
     const ids = new Set();
     const from = new Date(Date.parse(`${today}T00:00:00Z`) - WINDOW_DAYS * 86400000) / 1000;
-    for (const p of next.top.slice(0, REPLAY_PLAYERS)) {
+    // sample from today's full ladder list (the file's `top` keeps only the 100 rows the page shows)
+    const sampled = (ladder.toplist || []).slice(0, REPLAY_PLAYERS).map((e) => ({ userid: e.userid }));
+    for (const p of sampled) {
       const list = await fetchJSON(`https://replay.pokemonshowdown.com/search.json?user=${encodeURIComponent(p.userid)}&format=${format}`, { ttl: 1000 * 60 * 60 * 6 }).catch(() => []);
       for (const r of list || []) if (r.rating && !r.private && !r.password && r.uploadtime >= from) ids.add(r.id);
     }
@@ -62,7 +64,7 @@ async function run() {
     const kept = keepWindow(games, today);
     await writeFile(path.join(DATA, `showdown-replays-${reg}.json`), JSON.stringify({
       reg, format, source: 'https://replay.pokemonshowdown.com', updated: today,
-      sample: { players: Math.min(REPLAY_PLAYERS, next.top.length), windowDays: WINDOW_DAYS, rated: true }, games: kept,
+      sample: { players: sampled.length, windowDays: WINDOW_DAYS, rated: true }, games: kept,
     }));
     log(`[${reg}] replays: ${fetched} new, ${kept.length} in the last ${WINDOW_DAYS} days`);
   }
