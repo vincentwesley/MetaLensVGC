@@ -79,20 +79,25 @@ export default {
 
     // --- how stats are computed ---
     const { card: statCard, body: statBody } = sectionCard('How the numbers are computed');
+    // [label, text, family]: 'vgc' (Champions), 'showdown' (Smogon ladder formats) or 'both'.
     const facts = [
-      ['Stat Points (SP)', 'Champions replaces EVs/IVs with SP: 0–32 per stat, 66 total. Lv50 HP = base + 75 + sp; every other stat = floor((base + 20 + sp) × nature multiplier), nature multiplier 1.1 / 1.0 / 0.9.'],
-      ['Win % confidence', 'Every win rate is shown with its Wilson 95% score interval (not a normal-approximation interval), which stays well-behaved at small sample sizes.'],
-      ['Win %', 'Game wins / (wins + losses) from event standings records; ties are excluded from the denominator. Teams with no recorded games show "—" rather than 0%.'],
-      ['Effective species (meta diversity)', 'exp(Shannon entropy) of the usage-count distribution — the "effective number" of equally-common species that would produce the same entropy.'],
-      ['Previous-period comparison', 'The prior window is the immediately preceding span of equal length within the same regulation. If that span is empty or starts before the regulation began, the immediately preceding regulation’s teams are used instead.'],
-      ['Mega keying', 'A mon’s usage key is its Mega form (e.g. Charizard-Mega-Y) whenever it is shown holding its own Mega Stone, otherwise its battle species. A sheet can legally carry two different Mega Stones even though only one mon mega evolves in a given battle; Team.mega picks the first such mon in slot order, while archetypes that care about a second stone check every held key directly.'],
-      ['Spread / speed source priority', 'Limitless does not publish SP for tournament sheets, so speed tiers come from tournament open sheets when present, otherwise the in-game ranked ladder (the season’s most common Speed SP from its top spread, with its most common nature — the game reports spreads and natures separately), otherwise the same regulation’s Smogon ladder (weighted by month battle counts), otherwise — for a single species with no data at all — a theoretical range (0 SP / Speed-lowering nature to 32 SP / Speed-boosting nature). Each figure is always labelled with which source it came from.'],
-      ['In-game ranked source', 'The official Pokémon Champions ranked ladder “Battle Data” (Doubles), via Pokémon Champions Battle Data (championsbattledata.com). Per regulation it holds each in-game season’s last snapshot. The game publishes RANKS, not usage shares, so no usage % is shown or derived from it; move/item/ability/nature/spread shares are within that Pokémon’s ranked sets, and teammates are rank order only. A rank order is only published for the current season. Megas are tracked as the base species holding its Mega Stone. With a date range set, the latest season whose snapshot falls inside it is used. It has per-Pokémon sets but no teams, so team-level views (types, archetypes, quadrant, trends, library, scanner) are unavailable for it.'],
+      ['Stat Points (SP)', 'Champions replaces EVs/IVs with SP: 0–32 per stat, 66 total. Lv50 HP = base + 75 + sp; every other stat = floor((base + 20 + sp) × nature multiplier), nature multiplier 1.1 / 1.0 / 0.9.', 'vgc'],
+      ['Stats (Showdown formats)', 'National Dex formats use EVs and IVs at level 100: HP = floor((2 × base + IV + floor(EV / 4)) × 100 / 100) + 110; every other stat = floor((floor((2 × base + IV + floor(EV / 4)) × 100 / 100) + 5) × nature). IVs are taken as 31 unless a set says otherwise; EVs are at most 252 per stat, 510 total.', 'showdown'],
+      ['Ladder usage', 'Smogon’s monthly usage statistics for the format at the chosen rating cutoff (All, 1500+, 1630+ or 1760+): usage is weighted by player rating, so it is a rating-weighted share of usage, not a win rate. Pokémon under 0.1% usage are left out, and each table keeps its top 12 entries (top 20 teammates, top 40 checks and counters). The 3 newest months Smogon has published are shown; a month appears early in the following month.', 'showdown'],
+      ['Sample teams and sets', 'Smogon’s sample teams and recommended sets for the format, via the pkmn/smogon data mirror (refreshed daily, picked up by the weekly refresh). They are © Smogon and their authors; MetaLens shows them with credit and links back to Smogon.', 'showdown'],
+      ['Win % confidence', 'Every win rate is shown with its Wilson 95% score interval (not a normal-approximation interval), which stays well-behaved at small sample sizes.', 'vgc'],
+      ['Win %', 'Game wins / (wins + losses) from event standings records; ties are excluded from the denominator. Teams with no recorded games show "—" rather than 0%.', 'vgc'],
+      ['Effective species (meta diversity)', 'exp(Shannon entropy) of the usage distribution — the "effective number" of equally-common species that would produce the same entropy.', 'both'],
+      ['Previous-period comparison', 'The prior window is the immediately preceding span of equal length within the same regulation. If that span is empty or starts before the regulation began, the immediately preceding regulation’s teams are used instead.', 'vgc'],
+      ['Change vs previous month', 'Showdown formats compare the newest published month with the one before it, at the same rating cutoff. Rows absent or rare the month before show NEW.', 'showdown'],
+      ['Mega keying', 'A mon’s usage key is its Mega form (e.g. Charizard-Mega-Y) whenever it is shown holding its own Mega Stone, otherwise its battle species. A sheet can legally carry two different Mega Stones even though only one mon mega evolves in a given battle; Team.mega picks the first such mon in slot order, while archetypes that care about a second stone check every held key directly.', 'vgc'],
+      ['Spread / speed source priority', 'Limitless does not publish SP for tournament sheets, so speed tiers come from tournament open sheets when present, otherwise the in-game ranked ladder (the season’s most common Speed SP from its top spread, with its most common nature — the game reports spreads and natures separately), otherwise the same regulation’s Smogon ladder (weighted by month battle counts), otherwise — for a single species with no data at all — a theoretical range (0 SP / Speed-lowering nature to 32 SP / Speed-boosting nature). Each figure is always labelled with which source it came from.', 'vgc'],
+      ['Spreads and speed (Showdown formats)', 'EV spreads and natures come from the Smogon ladder (joint “Nature:EVs” entries), weighted by each month’s battle count; speed tiers use each Pokémon’s most common spread.', 'showdown'],
+      ['In-game ranked source', 'The official Pokémon Champions ranked ladder “Battle Data” (Doubles), via Pokémon Champions Battle Data (championsbattledata.com). Per regulation it holds each in-game season’s last snapshot. The game publishes RANKS, not usage shares, so no usage % is shown or derived from it; move/item/ability/nature/spread shares are within that Pokémon’s ranked sets, and teammates are rank order only. A rank order is only published for the current season. Megas are tracked as the base species holding its Mega Stone. With a date range set, the latest season whose snapshot falls inside it is used. It has per-Pokémon sets but no teams, so team-level views (types, archetypes, quadrant, trends, library, scanner) are unavailable for it.', 'vgc'],
     ];
     const factsList = elm('dl', 'mth-fact-list');
-    for (const [label, desc] of facts) {
-      const vgcOnly = /\bteams?\b/i.test(desc); // team-sheet prose: hidden outside VGC
-      for (const e of [elm('dt', 'mth-fact__label', label), elm('dd', 'mth-fact__desc', desc)]) { e.dataset.vgcOnly = vgcOnly; factsList.appendChild(e); }
+    for (const [label, desc, fam] of facts) {
+      for (const e of [elm('dt', 'mth-fact__label', label), elm('dd', 'mth-fact__desc', desc)]) { e.dataset.fam = fam; factsList.appendChild(e); }
     }
     statBody.appendChild(factsList);
     body.appendChild(statCard);
@@ -104,7 +109,10 @@ export default {
     // --- credits ---
     const { card: credCard, body: credBody } = sectionCard('Data credits');
     credBody.appendChild(elm('p', null, "Pokémon and its characters and sprites are trademarks and copyrighted works of Nintendo, Game Freak, Creatures Inc. and The Pokémon Company. Sprites are hot-linked from Pokémon Showdown's sprite server (play.pokemonshowdown.com); the Showdown project does not own them."));
-    credBody.appendChild(elm('p', null, 'Data from Limitless (play.limitlesstcg.com), Limitless VGC (limitlessvgc.com) and Smogon (smogon.com).'));
+    const vgcCredit = elm('p', null, 'Data from Limitless (play.limitlesstcg.com), Limitless VGC (limitlessvgc.com) and Smogon (smogon.com).');
+    credBody.appendChild(vgcCredit);
+    const sdCredit = elm('p', null, 'Usage statistics from Smogon (smogon.com/stats). Sample teams and recommended sets © Smogon and their authors, via the pkmn/smogon data mirror (github.com/pkmn/smogon).');
+    credBody.appendChild(sdCredit);
     const rankedCredit = elm('p');
     const rankedLink = document.createElement('a');
     rankedLink.href = RANKED_ATTRIBUTION.url;
@@ -125,14 +133,22 @@ export default {
       const vgc = view.family === 'vgc';
       dlCard.hidden = !vgc;
       archCard.hidden = !vgc;
-      for (const e of statBody.querySelectorAll('[data-vgc-only="true"]')) e.hidden = !vgc;
+      for (const e of statBody.querySelectorAll('[data-fam]')) e.hidden = e.dataset.fam !== 'both' && e.dataset.fam !== (vgc ? 'vgc' : 'showdown');
+      vgcCredit.hidden = !vgc;
+      rankedCredit.hidden = !vgc;
+      sdCredit.hidden = vgc;
+      regCard.querySelector('h3').textContent = vgc ? 'Per-regulation counts' : 'Formats';
       const today = new Date().toISOString().slice(0, 10);
       jsonBtn.onclick = () => download(`metalens-vgc-${view.reg}-${today}.json`, JSON.stringify(toJSONRows(view.teams), null, 2), 'application/json');
       csvBtn.onclick = () => download(`metalens-vgc-${view.reg}-${today}.csv`, toCSV(view.teams), 'text/csv');
       dlNote.textContent = `${ctx.fmt.n(view.teams.length)} teams in the current view (regulation ${view.reg}, current filters applied).`;
 
       srcBody.innerHTML = '';
-      const sources = view.manifest.sources || [];
+      // Showdown formats use Smogon only (+ the sample-team mirror); the Champions sources stay on the VGC page.
+      const sources = vgc ? (view.manifest.sources || []) : [
+        ...(view.manifest.sources || []).filter((s) => s.id === 'smogon'),
+        { name: 'Smogon sample teams and sets (pkmn/smogon mirror)', url: 'https://github.com/pkmn/smogon' },
+      ];
       if (!sources.length) {
         const box = elm('div', 'empty-state');
         box.appendChild(elm('div', 'empty-state__title', 'No source list in manifest'));
@@ -153,29 +169,37 @@ export default {
       }
 
       regBody.innerHTML = '';
-      const regs = view.manifest.regs || [];
+      const regs = (view.manifest.regs || []).filter((r) => (r.family === 'showdown') === !vgc);
       const wrap = elm('div', 'table-wrap');
-      wrap.tabIndex = 0; wrap.setAttribute('role', 'region'); wrap.setAttribute('aria-label', 'Regulations');
+      wrap.tabIndex = 0; wrap.setAttribute('role', 'region'); wrap.setAttribute('aria-label', vgc ? 'Regulations' : 'Formats');
       const table = elm('table', 'data-table');
       const thead = elm('thead');
       const trh = elm('tr');
-      const regCols = ['Reg', 'Teams', 'Events', 'Open sheets', 'Matches', 'Ladder months', 'Ranked seasons'];
-      const skipTeams = vgc ? -1 : 1; // no team counts outside VGC
-      regCols.forEach((h, i) => { if (i !== skipTeams) trh.appendChild(elm('th', i > 0 ? 'num' : null, h)); });
+      const cols = vgc ? ['Reg', 'Teams', 'Events', 'Open sheets', 'Matches', 'Ladder months', 'Ranked seasons'] : ['Format', 'Ladder months', 'Ratings', 'Sample teams'];
+      cols.forEach((h, i) => trh.appendChild(elm('th', i > 0 ? 'num' : null, h)));
       thead.appendChild(trh);
       table.appendChild(thead);
       const tbody = elm('tbody');
       for (const r of regs) {
         const tr = elm('tr');
-        tr.append(
-          elm('td', null, r.id),
-          ...(vgc ? [elm('td', 'num', ctx.fmt.n(r.teams))] : []),
-          elm('td', 'num', ctx.fmt.n(r.events)),
-          elm('td', 'num', ctx.fmt.n(r.openSheets)),
-          elm('td', 'num', ctx.fmt.n(r.matches)),
-          elm('td', 'num', ctx.fmt.n((r.ladderMonths || []).length)),
-          elm('td', 'num', (r.rankedSeasons || []).join(', ') || '—'),
-        );
+        if (vgc) {
+          tr.append(
+            elm('td', null, r.id),
+            elm('td', 'num', ctx.fmt.n(r.teams)),
+            elm('td', 'num', ctx.fmt.n(r.events)),
+            elm('td', 'num', ctx.fmt.n(r.openSheets)),
+            elm('td', 'num', ctx.fmt.n(r.matches)),
+            elm('td', 'num', ctx.fmt.n((r.ladderMonths || []).length)),
+            elm('td', 'num', (r.rankedSeasons || []).join(', ') || '—'),
+          );
+        } else {
+          tr.append(
+            elm('td', null, r.label || r.id),
+            elm('td', 'num', (r.ladderMonths || []).join(', ') || '—'),
+            elm('td', 'num', (r.ladderCutoffs || [1760]).map((c) => (c === 0 ? 'All' : `${c}+`)).join(', ')),
+            elm('td', 'num', r.samples ? ctx.fmt.n(r.samples.teams) : '—'),
+          );
+        }
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);

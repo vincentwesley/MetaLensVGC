@@ -23,7 +23,7 @@ export function digestData(view) {
   const st = view.state;
   const regMeta = (view.manifest?.regs || []).find((r) => r.id === st.reg);
   const out = {
-    regLabel: regMeta?.label || st.reg, sourceLabel: '', n: 0, unit: 'teams', range: '', updated: view.manifest?.generated?.slice(0, 10) || '',
+    regLabel: regMeta?.label || st.reg, showdown: regMeta?.family === 'showdown', sourceLabel: '', n: 0, unit: 'teams', range: '', updated: view.manifest?.generated?.slice(0, 10) || '',
     top: [], risers: [], fallers: [], compare: null, note: null, item: null, arch: null, empty: null,
   };
   if (st.source === 'ranked') {
@@ -84,7 +84,8 @@ export function digestData(view) {
 }
 
 export function digestText(d) {
-  const L = [`MetaLens VGC weekly digest: ${d.regLabel}`];
+  // Showdown formats: Smogon publishes monthly, so their digest is monthly; Champions data refreshes weekly.
+  const L = [`MetaLens VGC ${d.showdown ? 'monthly ladder' : 'weekly'} digest: ${d.regLabel}`];
   const head = [d.sourceLabel, d.n ? `${nf(d.n)} ${d.unit}` : '', d.range, d.updated ? `data updated ${d.updated}` : ''].filter(Boolean);
   L.push(head.join(' | '));
   if (d.empty) { L.push('', d.empty); return L.join('\n'); }

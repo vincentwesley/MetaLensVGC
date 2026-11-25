@@ -390,7 +390,7 @@ async function boot() {
     if (!test || !ladder?.months) return ladder;
     return {
       ...ladder,
-      months: ladder.months.map((m) => ({ ...m, mons: Object.fromEntries(Object.entries(m.mons).filter(([k]) => test(k))) })),
+      months: ladder.months.map((m) => ({ ...m, mons: Object.fromEntries(Object.entries(m.mons).filter(([k, row]) => test(k, row))) })),
     };
   }
   const megaFormsOf = (name) => Object.keys(dex.species).filter((k) => dex.species[k].megaOf === name);
@@ -436,9 +436,9 @@ async function boot() {
       // Deep dive: any Pokémon can be opened, under the type/item/move chips only.
       const ddTeams = projectTeams(teams, state.chips, dex, { keys: false });
       // Ladder / in-game ranked rows are per species: which chips can apply there.
-      const speciesFilter = speciesChipFilter(state.chips, dex);
+      const speciesFilter = speciesChipFilter(state.chips, dex, { sets: family === 'showdown' }); // Showdown: item/move chips filter ladder rows
       const view = {
-        state, reg: state.reg, family: family === 'showdown' ? 'natdex' : 'vgc', officialTiers: family === 'showdown', regMeta, rules: rulesFor(regMeta), manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
+        state, reg: state.reg, family: family === 'showdown' ? 'natdex' : 'vgc', officialTiers: state.reg === 'ND' /* NDD groups by usage tiers (owner 2026-11-25) */, regMeta, rules: rulesFor(regMeta), manifest, dex, teams, field, monTeams, ddTeams, speciesFilter, base, prev, matches: regData.matches,
         ladder: chipLadder(ladder, speciesFilter.test), ranked: chipRanked(ranked, speciesFilter.test), regTeams: regData.teams, samples,
       };
       lastView = view;

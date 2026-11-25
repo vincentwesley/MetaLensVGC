@@ -418,7 +418,7 @@ export default {
       ladderList.textContent = '';
       const key = ladderSelect.value;
       if (!rateView || !key) {
-        ladderList.appendChild(emptyState('No Pokémon with enough teams under the current filters.'));
+        ladderList.appendChild(emptyState(rateView?.family === 'natdex' ? 'No Pokémon with teammate data under the current filters.' : 'No Pokémon with enough teams under the current filters.'));
         return;
       }
       const { n, rows } = teammatesFor(key);
@@ -458,6 +458,11 @@ export default {
         rateSource = { kind: 'ladder', merged };
         options = merged.mons.slice(0, 40).map((m) => m.key);
         ctx.meta(ladderCard.meta, { source: 'Ladder (Smogon)', n: merged.battles, unit: 'battles' });
+      } else if (view.family === 'natdex') {
+        // Showdown formats have no team sheets to fall back on.
+        rateSource = { kind: 'ladder', merged: { mons: [] } };
+        options = [];
+        ctx.meta(ladderCard.meta, { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
       } else {
         rateSource = { kind: 'sheets' };
         const picked = atMinN(usage(view.teams), view.state.minN);

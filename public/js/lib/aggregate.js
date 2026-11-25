@@ -3,7 +3,7 @@
 import { parseSP, parsePoints, RULES, wilson, effectiveSpecies, calcStats, calcStat } from './stats.js';
 import { TYPES, effectiveness } from './types.js';
 import { classify } from './archetypes.js';
-import { displayName, normalizeTerm } from './names.js';
+import { displayName, normalizeTerm, toID } from './names.js';
 
 // --- decode -----------------------------------------------------------
 // Ambiguity resolved: a team sheet can legally hold two different Mega
@@ -196,14 +196,22 @@ export function projectTeams(teams, chips = [], dex, opts = {}) {
  * (Smogon ladder, in-game ranked): { test(key) -> bool | null, unsupported: Chip[] }.
  * species/mega/core, type and weak chips can be checked per species; item, move,
  * movetype, archetype, team and country chips need team sheets and are reported unsupported.
+ * opts.sets (Showdown ladder rows): item and move chips are checked against the row's own item / move tables:
+ * test(key, row) keeps a row whose items (moves) include the chip value. Without a row (e.g. the Pokédex),
+ * item / move chips are skipped, never failed.
  */
-export function speciesChipFilter(chips = [], dex) {
-  const unsupported = chips.filter((c) => !['species', 'mega', 'core', 'type', 'weak'].includes(c.kind));
+const SET_KINDS = new Set(['item', 'move']);
+const hasTerm = (table, value) => Object.keys(table || {}).some((k) => toID(k) === toID(value));
+export function speciesChipFilter(chips = [], dex, { sets = false } = {}) {
+  const supported = ['species', 'mega', 'core', 'type', 'weak', ...(sets ? SET_KINDS : [])];
+  const unsupported = chips.filter((c) => !supported.includes(c.kind));
   const usable = chips.filter((c) => !unsupported.includes(c));
   if (!usable.length) return { test: null, unsupported };
   const types = (key) => dex.species[key]?.types || [];
-  const one = (key, c) => {
+  const one = (key, c, row) => {
     switch (c.kind) {
+      case 'item': return hasTerm(row?.items, c.value);
+      case 'move': return hasTerm(row?.moves, c.value);
       case 'type': return types(key).includes(c.value);
       case 'weak': return types(key).length > 0 && effectiveness(c.value, types(key)) > 1;
       default: return chipKeys(c).includes(key);
@@ -213,8 +221,9 @@ export function speciesChipFilter(chips = [], dex) {
   const keyChips = pos.filter((c) => KEY_KINDS.has(c.kind));
   const attrChips = pos.filter((c) => !KEY_KINDS.has(c.kind));
   const neg = usable.filter((c) => c.neg);
-  const test = (key) => (!keyChips.length || keyChips.some((c) => one(key, c)))
-    && attrChips.every((c) => one(key, c)) && !neg.some((c) => one(key, c));
+  const known = (c, row) => !SET_KINDS.has(c.kind) || row !== undefined; // set chips need the row's tables
+  const test = (key, row) => (!keyChips.length || keyChips.some((c) => one(key, c)))
+    && attrChips.every((c) => !known(c, row) || one(key, c, row)) && !neg.some((c) => known(c, row) && one(key, c, row));
   return { test, unsupported };
 }
 

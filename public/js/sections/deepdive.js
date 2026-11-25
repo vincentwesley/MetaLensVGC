@@ -11,7 +11,7 @@
 // is still met without new markup outside owned files.
 import { setsFor, setMon } from '../lib/samples.js';
 import { speciesDetail, usage, weekly, changeVsPrev, changeText, changeDir, ladderMerge, realTera, rankedSeason, rankedMon, rankedEntries, speedSpecies } from '../lib/aggregate.js';
-import { SPREAD_ARCHETYPES, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
+import { SPREAD_ARCHETYPES, spreadArchetypeText, archetypeLabel, rankedSpreadRows, smogonSpreadRows, archetypeShares, speedBenchmarks, metaSpeedField } from '../lib/spreads.js';
 import { rankedSource, RANKED_ATTRIBUTION, typePill } from '../ui/meta.js';
 import { defensiveBuckets, MATCHUP_BUCKETS, statRange, allSpecies, topSetMon } from '../lib/species-info.js';
 import { toPaste } from '../lib/paste.js';
@@ -170,7 +170,7 @@ export default {
     search.type = 'search';
     search.id = 'ddv-picker-input';
     search.setAttribute('list', 'ddv-picker-list');
-    search.placeholder = 'Search species in this regulation…';
+    search.placeholder = 'Search any Pokémon…';
     const datalist = document.createElement('datalist');
     datalist.id = 'ddv-picker-list';
     search.addEventListener('change', () => {
@@ -336,7 +336,7 @@ export default {
           list.appendChild(li);
         }
         panel.appendChild(list);
-        panel.appendChild(elm('div', 'ddv-note', `Type describes the SP only (${SPREAD_ARCHETYPES.slice(0, 4).map((a) => `${a.label}: ${a.desc}`).join('; ')}; first match wins). Speed benchmark: the ${field.length} most-used Pokémon of this view with a known speed (Speed Tiers sources).`));
+        panel.appendChild(elm('div', 'ddv-note', `Type describes the ${(view.rules || RULES.sp).mode === 'ev' ? 'EVs' : 'SP'} only (${spreadArchetypeText(view.rules || RULES.sp)}; first match wins). Speed benchmark: the ${field.length} most-used Pokémon of this view with a known speed (Speed Tiers sources).`));
         if (isRanked) {
           const attr = elm('div', 'ddv-note');
           const a = document.createElement('a');

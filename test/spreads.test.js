@@ -114,3 +114,11 @@ test('metaSpeedField: real ranked speeds through metaSpeed, drops species withou
   assert.deepEqual(f.map((x) => x.key), ['Rillaboom', 'Sneasler']);
   assert.ok(f.every((x) => Number.isInteger(x.spe) && x.spe > 0));
 });
+
+test('spread type text in the rules units: SP for Champions, EVs (scaled) for Showdown', async () => {
+  const { spreadArchetypeText, spreadArchetype } = await import('../public/js/lib/spreads.js');
+  const { RULES } = await import('../public/js/lib/stats.js');
+  assert.match(spreadArchetypeText(RULES.sp), /Speed SP >= 30.*HP \+ Def \+ SpD SP >= 44/);
+  assert.match(spreadArchetypeText(RULES.ev), /Speed EVs >= 236.*HP \+ Def \+ SpD EVs >= 340/);
+  assert.equal(spreadArchetype([0, 0, 0, 252, 4, 252], RULES.ev), 'maxspeed');
+});

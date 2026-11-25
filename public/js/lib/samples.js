@@ -22,7 +22,10 @@ export function sampleTeams(samples, dex) {
  * when one of its Pokémon passes, so a species chip keeps the teams that use that Pokémon.
  */
 export function filterSampleTeams(teams, test) {
-  return test ? teams.filter((t) => t.keys.some((k) => test(k))) : teams;
+  if (!test) return teams;
+  // Each Pokémon as a one-set "row", so item / move chips (Showdown) check what it actually holds / knows.
+  const row = (m) => ({ items: m.item ? { [m.item]: 1 } : {}, moves: Object.fromEntries(m.moves.map((mv) => [mv, 1])) });
+  return teams.filter((t) => t.mons.some((m) => test(m.k, row(m))));
 }
 
 /** Smogon sets for a deep-dive key: the key's own entry, else its base species (Mega forms share the base's sets). */

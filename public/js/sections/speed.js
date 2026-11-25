@@ -224,14 +224,18 @@ export default {
       if (view.state.source === 'ranked' && season?.ranking) {
         ctx.meta(main.meta, { source: `${rankedSource(season)} · top 20 by in-game rank · speeds: sheets > ranked > Smogon > bounds` });
       } else if (view.family === 'natdex') {
-        ctx.meta(main.meta, { source: 'Smogon ladder (top 20 by usage) + bounds', n: view.ladder?.months?.at(-1)?.battles ?? 0, unit: 'battles' });
+        const battles = (view.ladder?.months || []).reduce((a, m) => a + (m.battles || 0), 0); // the rows merge every month
+        ctx.meta(main.meta, { source: 'Smogon ladder (top 20 by usage) + bounds', n: battles, unit: 'battles' });
       } else {
         const rankedTxt = season ? ` + ranked ladder ${season.season} (Pokémon Champions Battle Data)` : '';
         ctx.meta(main.meta, { source: `Team sheets${rankedTxt} + Smogon ladder + bounds (per species)`, n: view.monTeams.length, unit: 'teams' });
       }
       main.body.querySelector('.empty-state')?.remove();
 
-      if (!datalist.childElementCount && view.dex?.species) {
+      // The dex is swapped per mode (Champions vs National Dex): refill the suggestions when the mode changes.
+      if (view.dex?.species && datalist.dataset.family !== view.family) {
+        datalist.textContent = '';
+        datalist.dataset.family = view.family;
         for (const key of Object.keys(view.dex.species)) {
           const o = document.createElement('option');
           o.value = key;
@@ -244,7 +248,7 @@ export default {
         bench.style.display = 'none';
         controls.style.display = 'none';
         legend.style.display = 'none';
-        main.body.appendChild(emptyState('No tournament teams match this view.'));
+        main.body.appendChild(emptyState(view.family === 'natdex' ? 'No ladder data for the Pokémon in this view.' : 'No tournament teams match this view.'));
         return;
       }
       chartEl.style.display = '';
@@ -252,6 +256,8 @@ export default {
       controls.style.display = '';
       legend.style.display = '';
       legend.querySelector('[data-src="sheet"]').hidden = view.family === 'natdex';
+      const rankedPill = legend.querySelector('[data-src="ranked"]');
+      if (rankedPill) rankedPill.hidden = view.family === 'natdex'; // no in-game ranked data for Showdown formats
 
       const modded = rows.map((r) => {
         const min = applyMods(r.min, mods);

@@ -24,16 +24,26 @@ export const SPREAD_ARCHETYPES = [
   { id: 'other', label: 'Other', desc: 'none of the above', test: () => true },
 ];
 
-/** Archetype id of an SP array. */
-export function spreadArchetype(sp, rules = RULES.sp) {
-  // Thresholds are fractions of the rules' max / total (identical to SPREAD_THRESHOLDS for sp).
+/** Thresholds in the rules' own units: fractions of max / total (identical to SPREAD_THRESHOLDS for sp). */
+export function spreadThresholds(rules = RULES.sp) {
   const k = rules.max / 32;
-  const t = {
+  return {
     maxSpeed: Math.round(SPREAD_THRESHOLDS.maxSpeed * k),
     offense: Math.round(SPREAD_THRESHOLDS.offense * k),
     bulk: Math.round((SPREAD_THRESHOLDS.bulk * rules.total) / 66),
   };
-  return SPREAD_ARCHETYPES.find((a) => a.test(sp, t)).id;
+}
+
+/** Archetype id of an SP / EV array. */
+export function spreadArchetype(sp, rules = RULES.sp) {
+  return SPREAD_ARCHETYPES.find((a) => a.test(sp, spreadThresholds(rules))).id;
+}
+
+/** "Label: rule" for each named type, in the rules' units ("Speed EVs >= 236" in Showdown, "Speed SP >= 30" in Champions). */
+export function spreadArchetypeText(rules = RULES.sp) {
+  const t = spreadThresholds(rules);
+  const u = rules.mode === 'ev' ? 'EVs' : 'SP';
+  return [`No Speed: Speed ${u} = 0`, `Max Speed: Speed ${u} >= ${t.maxSpeed}`, `Bulk-heavy: HP + Def + SpD ${u} >= ${t.bulk}`, `Offense: Atk or SpA ${u} >= ${t.offense}`].join('; ');
 }
 
 export const archetypeLabel = (id) => SPREAD_ARCHETYPES.find((a) => a.id === id)?.label ?? id;

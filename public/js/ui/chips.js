@@ -2,6 +2,7 @@
 // Species chips get a sprite; type chips get a type-coloured swatch; everything else a plain label.
 import { fireflies } from './motion.js';
 import { fmt } from './fmt.js';
+import { regFamily } from '../lib/state-core.js';
 
 let TYPE_COLORS = {};
 try {
@@ -40,6 +41,12 @@ function labelFor(chip, teamLabel = () => null) {
 
 // One line under the chips saying what they do to the page.
 function scopeNote(state, dex, teamLabel) {
+  if (regFamily(state.reg) === 'showdown') {
+    // Smogon ladder rows are per Pokémon; item and move chips check each Pokémon's own item / move tables.
+    const un = speciesChipFilter ? speciesChipFilter(state.chips, dex, { sets: true }).unsupported : [];
+    if (!un.length) return 'Ladder rows are per Pokémon: only the Pokémon matching the chips are shown (an item or move chip keeps Pokémon that use it).';
+    return `${un.map((c) => labelFor(c, teamLabel)).join(', ')} can't be applied to Smogon ladder data and ${un.length === 1 ? 'is' : 'are'} ignored here.`;
+  }
   if (state.source !== 'tournaments') {
     const un = speciesChipFilter ? speciesChipFilter(state.chips, dex).unsupported : state.chips;
     if (!un.length) return 'Ladder and in-game ranked rows are per Pokémon: only the Pokémon matching the chips are shown.';

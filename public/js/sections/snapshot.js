@@ -175,7 +175,7 @@ export default {
         body.prepend(hero); body.append(kpiRow);
         const top = merged.mons.slice(0, 6);
         if (!top.length) {
-          emptyState(hero, 'No teams in view');
+          emptyState(hero, 'No ladder data in view');
         } else {
           top.forEach((m) => hero.appendChild(monCard(ctx, m.key, m.usage, null, null, '', anim)));
         }

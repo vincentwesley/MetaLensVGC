@@ -39,7 +39,7 @@ export default {
       const merged = ladderMerge(view.ladder, st.from, st.to, view.dex);
       ctx.meta(meta, { source: 'Ladder (Smogon)', n: merged?.battles || 0, unit: 'battles' });
       const { total, rows } = merged ? threatScores(merged.mons, TOP) : { total: 0, rows: [] };
-      if (!rows.length) return empty(`No Smogon ladder data for ${st.reg} yet`);
+      if (!rows.length) return empty(`No Smogon ladder data for ${view.regMeta?.label || st.reg} yet`);
       const max = rows[0].score || 1;
       const list = document.createElement('ol');
       list.className = 'threats__list';

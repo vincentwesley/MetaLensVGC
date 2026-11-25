@@ -673,7 +673,7 @@ test('section nav: a link scrolls to its section and aria-current follows the sc
   await page.goto('/');
   await waitForAllSections(page);
   const nav = page.locator('#secnav');
-  await expect(nav.locator('a')).toHaveCount(13);
+  await expect(nav.locator('a')).toHaveCount(19); // 18 sections + Data; Sample teams is hidden in VGC
   await nav.locator('a[data-jump="speed"]').click();
   await expect(nav.locator('[aria-current="true"]')).toHaveText('Speed');
   const top = await page.locator('main [data-section="speed"]').evaluate((e) => e.getBoundingClientRect().top);
@@ -1285,7 +1285,8 @@ test('tips strip stays pinned while scrolling; Pokédex sits after the usage + q
   const ids = await page.locator('main > section[data-section]').evaluateAll((els) => els.map((e) => e.dataset.section));
   expect(ids.indexOf('pokedex')).toBe(ids.indexOf('quadrant') + 1);
   const nav = await page.locator('#secnav a').evaluateAll((els) => els.map((e) => e.dataset.jump));
-  expect(nav.indexOf('pokedex')).toBe(nav.indexOf('usage') + 1);
+  expect(nav.indexOf('pokedex')).toBe(nav.indexOf('quadrant') + 1);
+  expect(nav.indexOf('quadrant')).toBe(nav.indexOf('usage') + 1);
 });
 
 test('animated sprites keep their proportions (a tall 52x87 sprite is not stretched into a square)', async ({ page }) => {
@@ -1374,24 +1375,31 @@ test('Showdown teammates: heatmap and top pairs are filled from ladder data; a p
   await expect(page.locator('#chips .chip')).toHaveCount(1);
 });
 
-test('Showdown (ND): no "team(s)" wording anywhere in the main page', async ({ page }) => {
-  await page.goto('/#reg=ND');
+test('Showdown (ND, NDD): no tournament "team(s)" wording and no Champions-only terms in the main page or footer', async ({ page }) => {
+  for (const reg of ['ND', 'NDD']) {
+  await page.goto(`/#reg=${reg}`);
   await waitForAllSections(page);
-  const text = await page.locator('main').evaluate((m) => {
+  // Sample teams are Smogon's teams: the only place "teams" belongs in Showdown mode.
+  const visibleText = (root) => root.evaluate((m) => {
     const out = [];
     const w = document.createTreeWalker(m, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
       const el = n.parentElement;
-      if (el.closest('script,style') || !el.checkVisibility()) continue;
+      if (el.closest('script,style,[data-section="samples"]') || !el.checkVisibility()) continue;
       out.push(n.data);
     }
     // tooltips live in attributes
     for (const el of m.querySelectorAll('[data-tip],[title],[aria-label]')) {
+      if (el.closest('[data-section="samples"]')) continue;
       if (el.checkVisibility()) out.push(el.dataset.tip || '', el.title || '', el.getAttribute('aria-label') || '');
     }
     return out.join('\n');
   });
-  expect(text.match(/.{0,50}\bteams?\b.{0,30}/gi) || []).toEqual([]);
+  const text = await visibleText(page.locator('main'));
+  expect(text.match(/.{0,50}(?<!sample )\bteams?\b.{0,30}/gi) || [], reg).toEqual([]); // Smogon's sample teams are the exception
+  const all = `${text}\n${await visibleText(page.locator('footer'))}`;
+  expect(all.match(/.{0,40}(Stat Points|\bSP\b|Lv50|Champions Battle Data|in-game ranked|Limitless|Reg M-[A-D]|\bM-[A-D] ends).{0,30}/g) || [], reg).toEqual([]);
+  }
 });
 
 test('default regulation follows manifest.current; an explicit #reg= still wins', async ({ page }) => {

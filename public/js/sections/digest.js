@@ -18,7 +18,8 @@ export default {
     const card = el('div', 'card digest-card');
     const head = el('div', 'card__head');
     const meta = el('span');
-    head.append(el('h3', null, 'Weekly Digest'), meta);
+    const h3 = el('h3', null, 'Weekly Digest');
+    head.append(h3, meta);
     const body = el('div', 'card__body');
     const tools = el('div', 'digest__tools');
     const copyBtn = el('button', 'lib-btn', 'Copy as text');
@@ -54,6 +55,7 @@ export default {
     return {
       update(view) {
         const d = digestData(view);
+        h3.textContent = d.showdown ? 'Monthly ladder digest' : 'Weekly Digest';
         text = digestText(d);
         copyBtn.disabled = !!d.empty;
         ctx.meta(meta, { source: d.sourceLabel, n: d.n, unit: d.unit });

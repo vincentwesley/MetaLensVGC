@@ -277,7 +277,7 @@ export default {
       const filters = { types: [], abilities: [], moves: [] };
       for (const t of tags) filters[t.kind].push(t.value);
       const usageMode = !official; // official tiers exist for National Dex singles only; VGC and NatDex Doubles tier by usage
-      const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort, chipTest, tierKey: view?.reg === 'NDD' ? 'dtier' : 'tier' });
+      const res = dexRows(roster, { usage: use, tierMode: usageMode ? 'usage' : 'official', filters, learnsets: typeof learn === 'object' ? learn : null, sort, chipTest, tierKey: 'tier' });
       renderTags();
       segBtns.tier.setAttribute('aria-pressed', String(sort === 'tier'));
       segBtns.name.setAttribute('aria-pressed', String(sort === 'name'));

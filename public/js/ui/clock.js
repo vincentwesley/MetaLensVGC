@@ -21,11 +21,24 @@ export function mountClock(host, fmt) {
     const now = new Date();
     l1.textContent = `Next data refresh in ${fmtDuration(nextRefresh(now) - now)} (Mon 08:00 GMT+8)`;
     // The newest listed VGC regulation (it can be newer than `current` in its first days, before results come in).
-    const reg = manifest?.regs?.filter((r) => r.family === 'vgc').at(-1);
-    const d = reg?.end ? daysLeft(reg.end, now) : 0;
-    l2.hidden = !reg || (reg.end && d <= 0);
-    if (reg && !reg.end) l2.textContent = `${reg.id} end date not announced yet`;
-    else if (d > 0) l2.textContent = `${reg.id} ends in ${d} day${d === 1 ? '' : 's'}`;
+    if (document.documentElement.dataset.family === 'showdown') {
+      // Showdown formats: no regulations; Smogon publishes each month's stats early the next month.
+      const last = manifest?.regs?.find((r) => r.family === 'showdown')?.ladderMonths?.at(-1);
+      l2.hidden = !last;
+      if (last) {
+        const [y, m] = last.split('-').map(Number);
+        const name = (yy, mm) => new Date(Date.UTC(yy, mm - 1, 1)).toLocaleString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+        const next = m === 12 ? [y + 1, 1] : [y, m + 1];
+        const pub = next[1] === 12 ? [next[0] + 1, 1] : [next[0], next[1] + 1];
+        l2.textContent = `Smogon ${name(...next)} stats expected early ${name(...pub)}`;
+      }
+    } else {
+      const reg = manifest?.regs?.filter((r) => r.family === 'vgc').at(-1);
+      const d = reg?.end ? daysLeft(reg.end, now) : 0;
+      l2.hidden = !reg || (reg.end && d <= 0);
+      if (reg && !reg.end) l2.textContent = `${reg.id} end date not announced yet`;
+      else if (d > 0) l2.textContent = `${reg.id} ends in ${d} day${d === 1 ? '' : 's'}`;
+    }
     l3.hidden = !manifest?.generated;
     l3.textContent = `Data updated ${fmt.date(manifest?.generated)}`;
   }

@@ -156,7 +156,7 @@ export default {
       ctx.meta(meta, { source, n, unit, relaxed });
       body.querySelector('.empty-state')?.remove();
       if (!rows.length) {
-        emptyState(body, 'No teams in view');
+        emptyState(body, cols === COLS_SHOWDOWN ? 'No ladder data in view' : 'No teams in view');
         return;
       }
 
@@ -165,7 +165,8 @@ export default {
       if (!cols.some((c) => (c.sortKey || c.key) === sortKey)) { sortKey = cols === COLS_SHOWDOWN ? 'pct' : 'n'; sortDir = 'desc'; }
 
       // Usage rank is fixed before sorting / searching, so a found row keeps its real place.
-      const usageRank = new Map([...rows].sort((a, b) => b.n - a.n).map((r, i) => [r.key, i + 1]));
+      const rankBy = cols === COLS_SHOWDOWN ? 'pct' : 'n'; // the Showdown table is ranked by (rating-weighted) usage %
+      const usageRank = new Map([...rows].sort((a, b) => b[rankBy] - a[rankBy]).map((r, i) => [r.key, i + 1]));
       const maxPct = Math.max(...rows.map((r) => r.pct), 0.0001);
       const q = query();
       rows = sortRows(q ? rows.filter((r) => q(r.key)) : rows);

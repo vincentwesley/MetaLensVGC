@@ -1,5 +1,6 @@
 // Moves & Tera: field-wide move usage (Smogon ladder, weighted by species usage) and, for NatDex Doubles, Tera types.
-// Move chips are not supported on ladder rows (speciesChipFilter), so rows are not clickable: the hint says so.
+// Showdown formats: a move row adds a move chip (ladder rows keep the Pokémon that run it, speciesChipFilter sets).
+// Champions ladder source: move chips don't apply to ladder rows there, so rows are not clickable and the hint says so.
 import { ladderMerge } from '../lib/aggregate.js';
 import { fieldMoves, fieldTera } from '../lib/moves-field.js';
 import { TYPE_COLORS } from '../lib/types.js';
@@ -19,9 +20,10 @@ function card(title, hint) {
   const meta = el('span');
   head.append(el('h3', null, title), meta);
   const body = el('div', 'card__body');
-  body.append(clickHint(hint));
+  const hintEl = clickHint(hint);
+  body.append(hintEl);
   c.append(head, body);
-  return { c, meta, body };
+  return { c, meta, body, hintEl };
 }
 const empty = (body, title) => {
   const b = el('div', 'empty-state');
@@ -55,6 +57,10 @@ export default {
         ctx.meta(x.meta, merged ? { source: 'Ladder (Smogon)', n: merged.battles, unit: 'battles' } : { source: 'Ladder (Smogon)' });
       }
       const mf = merged ? fieldMoves(merged.mons) : { rows: [] };
+      const clickable = view.family === 'natdex';
+      mv.hintEl.textContent = clickable
+        ? 'Share of the field Pokémon (weighted by usage) that run each move. Click a move: show only Pokémon that run it. Shift-click to exclude.'
+        : 'Share of the field Pokémon (weighted by usage) that run each move. Not clickable: move filters do not apply to ladder rows.';
       if (!mf.rows.length) {
         empty(mv.body, merged ? 'No move data in the ladder for this view' : 'No ladder data for this view (Moves & Tera needs the Smogon ladder)');
       } else {
@@ -73,15 +79,20 @@ export default {
           const tdB = el('td');
           tdB.append(bar(r.pct, max));
           tr.append(el('td', null, r.name), tdT, tdB);
+          if (clickable) {
+            tr.tabIndex = 0;
+            tr.classList.add('is-clickable');
+            tr.addEventListener('click', (e) => ctx.chip('move', r.name, e));
+          }
           tb.append(tr);
         }
         t.append(th, tb);
         mv.body.append(t);
       }
 
-      const isNDD = view.family === 'natdex'; // ND has only 'Nothing' -> banned note
-      te.c.hidden = !isNDD;
-      if (!isNDD) return;
+      const showdown = view.family === 'natdex'; // both Showdown formats; ND's Tera table is only 'Nothing' -> banned note
+      te.c.hidden = !showdown;
+      if (!showdown) return;
       const tf = merged ? fieldTera(merged.mons) : { rows: [] };
       if (!tf.rows.length) { empty(te.body, 'Tera is banned in this format'); return; }
       const g = el('div', 'moves-tera');

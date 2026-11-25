@@ -28,3 +28,7 @@
 .ddv-set__name { font-weight: 600; margin: 0 0 2px; }
 .ddv-set__line { color: var(--ink-2); font-size: var(--fs-small); overflow-wrap: anywhere; }
 .ddv-set__moves { margin: 4px 0; padding-left: 1.1em; font-size: var(--fs-small); }
+
+/* Footer credits per mode (v1.9.0): Champions sources in VGC, Smogon only in Showdown. */
+[data-family="showdown"] .site-footer .ft-vgc,
+html:not([data-family="showdown"]) .site-footer .ft-showdown { display: none; }

@@ -288,6 +288,8 @@ export default {
 
     function renderShift(view) {
       shiftWrap.textContent = '';
+      shiftCard.el.hidden = view.family === 'natdex'; // Showdown formats have no regulations: Risers & fallers covers month-over-month
+      if (shiftCard.el.hidden) return;
       if (view.state.source !== 'tournaments') {
         const ranked = view.state.source === 'ranked';
         const lad = view.state.source === 'ladder';

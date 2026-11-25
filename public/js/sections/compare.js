@@ -94,7 +94,7 @@ export default {
       if (!months.length) {
         controls.hidden = true;
         ctx.meta(meta, { source: 'Ladder (Smogon)', n: 0, unit: 'battles' });
-        out.appendChild(emptyState('No ladder data', `No Smogon ladder months are published for ${view?.reg || 'this regulation'} yet, so there is nothing to compare.`));
+        out.appendChild(emptyState('No ladder data', `No Smogon ladder months are published for ${view?.regMeta?.label || view?.reg || 'this format'} yet, so there is nothing to compare.`));
         return;
       }
       const ids = months.map((m) => m.month);
