@@ -433,6 +433,16 @@ rows (also place=winner: 67 teams). Now every member with games on both sides sh
 - Not yet: the pipeline end to end in the weekly Action with the new ladder/samples steps (the data here was built with the
   same functions by a one-off script).
 
+### v1.10.0 (Players & replays), 2026-11-25
+- Live endpoints checked: pokemonshowdown.com ladder/<format>.json (top 500), users/<id>.json, replay search/logs; all CORS-open.
+- First daily run on GitHub (run 45535785118, 13 min): ND 500 tracked / 411 replays, NDD 500 / 250; VinVGC's manual
+  NDD peak (#7, 1724, 2026-11-13, owner's screenshot) applied with its source. validate.js OK.
+- Unit: replay parsing (hidden forms, leads, Mega, Tera, winner), aggregates (Wilson range, used / led, lead pairs, side
+  filter), ladder history (peaks, same-day replace, manual observations), window. 430 unit green.
+- e2e: ladder table, stubbed live lookup (rating, record, manual peak `#7*` with source, Won), replay stats; hidden in VGC;
+  Showdown guard still clean. 71 e2e green. Visual 1280px: lookup, top 100, stats (20 + Show all), leads.
+- The weekly refresh run with the v1.9.0 steps (run 45533325101) succeeded: 3 months x 4 cutoffs, samples, manifest.
+
 ## Not yet tested (candidates for the next pass)
 - **M-D, after 2026-12-02** (check the 7 Dec refresh): `manifest.regs` lists M-D, `current` stays M-C until 50 M-D teams,
   ranked M7 stays in `ranked-M-C.json` (it started before 2 Dec; seasons file by start date), the next season lands in M-D; the refresh log has no "could not resolve" species. New M-D Pokémon/Megas resolve only

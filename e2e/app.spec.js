@@ -673,7 +673,7 @@ test('section nav: a link scrolls to its section and aria-current follows the sc
   await page.goto('/');
   await waitForAllSections(page);
   const nav = page.locator('#secnav');
-  await expect(nav.locator('a')).toHaveCount(19); // 18 sections + Data; Sample teams is hidden in VGC
+  await expect(nav.locator('a')).toHaveCount(20); // 19 sections + Data; Sample teams and Players are hidden in VGC
   await nav.locator('a[data-jump="speed"]').click();
   await expect(nav.locator('[aria-current="true"]')).toHaveText('Speed');
   const top = await page.locator('main [data-section="speed"]').evaluate((e) => e.getBoundingClientRect().top);

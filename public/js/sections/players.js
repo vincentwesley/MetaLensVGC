@@ -9,6 +9,7 @@ import { clickHint } from '../ui/meta.js';
 
 const TOP_ROWS = 25;
 const MIN_GAMES = 10;
+const STATS_ROWS = 20;
 
 function elm(tag, className, text) {
   const e = document.createElement(tag);
@@ -81,6 +82,7 @@ export default {
 
     let lastView = null;
     let showAll = false;
+    let statsAll = false;
     let lookupSeq = 0;
 
     async function lookup(name) {
@@ -218,11 +220,11 @@ export default {
       ctx.meta(leads.meta, { source: src, n: games.length, unit: 'games' });
       const test = view.speciesFilter?.test;
       const rows = agg.mons.filter((m) => m.games >= MIN_GAMES && (!test || test(m.key)));
-      stats.body.appendChild(clickHint(`Per Pokémon on a team (team preview): win rate with its 95% range, how often it was sent out and how often it led. Pokémon in ${MIN_GAMES}+ games. Click a row: details.`, { auto: false }));
+      stats.body.appendChild(clickHint(`Per Pokémon in a player’s six (as shown before the battle): win rate with its 95% range, how often it was sent out and how often it led. Pokémon in ${MIN_GAMES}+ games. Click a row: details.`, { auto: false }));
       if (!rows.length) empty(stats.body, 'No Pokémon in enough games', `None of the Pokémon in your filters appears in ${MIN_GAMES}+ sampled games.`);
       else {
         const { wrap, tbody } = table([['Pokémon'], ['Games', 'num'], ['Win %', 'num'], ['Used', 'num'], ['Led', 'num']]);
-        for (const m of rows.slice(0, 40)) {
+        for (const m of statsAll ? rows : rows.slice(0, STATS_ROWS)) {
           const tr = elm('tr');
           tr.tabIndex = 0;
           tr.classList.add('is-clickable');
@@ -235,6 +237,12 @@ export default {
           tbody.appendChild(tr);
         }
         stats.body.appendChild(wrap);
+        if (rows.length > STATS_ROWS) {
+          const more = elm('button', 'lib-btn smp-more', statsAll ? `Show top ${STATS_ROWS}` : `Show all ${rows.length}`);
+          more.type = 'button';
+          more.addEventListener('click', () => { statsAll = !statsAll; renderStats(view); });
+          stats.body.appendChild(more);
+        }
       }
       const lrows = agg.leads.filter((l) => l.games >= 3).slice(0, 12);
       if (!lrows.length) empty(leads.body, 'No lead seen 3+ times');
